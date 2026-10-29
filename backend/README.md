@@ -43,7 +43,7 @@ All settings are environment variables (see `app/core/config.py` and `../.env.ex
 
 | Variable | Default | Notes |
 |---|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://postgres:postgres@localhost:55432/strata` | |
+| `DATABASE_URL` | `postgresql+asyncpg://postgres:postgres@localhost:5432/strata` | |
 | `SECRET_KEY` | dev value | **Set in production.** Signs session JWTs. |
 | `ANTHROPIC_API_KEY` | – | Without it chat runs in retrieval-only mode. |
 | `LLM_MODEL` | `claude-opus-5-5` | Per-org override in org settings. |
@@ -95,7 +95,7 @@ uv run pytest -q
 
 Unit tests need nothing. Integration tests (`-m integration`) rebuild the schema with
 Alembic in the database at `TEST_DATABASE_URL`
-(default `postgresql+asyncpg://postgres:postgres@localhost:55432/strata_test`) and are
+(default `postgresql+asyncpg://postgres:postgres@localhost:5432/strata_test`) and are
 skipped when it isn't reachable. They cover auth, org isolation, roles, invites,
 restricted collections, cross-org scoping, upload → index → search, the SSE stream and
 Insights, and the Claude tool loop driven by a scripted client.

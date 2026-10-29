@@ -1,7 +1,7 @@
 """Test configuration.
 
 Unit tests need nothing. Integration tests (marked `integration`) run against the
-Postgres at TEST_DATABASE_URL (default: the local dev server on :55432, database
+Postgres at TEST_DATABASE_URL (default: the local dev server on :5432, database
 `strata_test`) and are skipped when it is unreachable. The schema is rebuilt with
 Alembic at the start of the session, so the migration itself is under test."""
 
@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 TEST_DB = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:55432/strata_test"
+    "TEST_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/strata_test"
 )
 os.environ["DATABASE_URL"] = TEST_DB
 os.environ["EMBEDDING_PROVIDER"] = "hash"

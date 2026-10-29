@@ -54,39 +54,90 @@ what changed.
 | AI | Anthropic Claude (`claude-opus-5-5` by default) with adaptive thinking, structured outputs and server-side refusal fallbacks |
 | Embeddings | `fastembed` (local, BAAI/bge-small-en-v1.5) by default; Voyage AI optional; deterministic `hash` provider for tests |
 
-## Quick start (Docker)
+## Run on a new laptop
+
+### Option A — Docker (recommended)
+
+Prerequisites: **git** and **Docker Desktop** (running).
 
 ```bash
-cp .env.example .env          # set SECRET_KEY (openssl rand -hex 32); add ANTHROPIC_API_KEY to enable answers
-make up                       # docker compose up -d --build
-make seed                     # optional demo data
+git clone https://github.com/Abishai95141/ORGRAG.git
+cd ORGRAG
+cp .env.example .env
 ```
 
-Open http://localhost:3000. The seed creates two organizations (Northwind Labs and
-Halcyon Health), each with sample documents, collections and an agent, plus two demo
-users:
+Edit `.env`:
+
+- `SECRET_KEY`: paste the output of `openssl rand -hex 32`
+- `ANTHROPIC_API_KEY`: your key from console.anthropic.com. Optional: without it
+  Strata runs in retrieval-only mode.
+
+```bash
+docker compose up -d --build                    # first build takes a few minutes
+docker compose exec api python -m app.seed      # demo orgs, documents and users
+```
+
+Open **http://localhost:3000** and sign in with a demo login (see below).
+Stop with `docker compose down`. Add `-v` to also delete the database.
+
+### Option B — run natively (for development)
+
+Prerequisites: **git**, **Docker Desktop** (for Postgres only), **uv**
+(`curl -LsSf https://astral.sh/uv/install.sh | sh`), **Node 22+**, and **pnpm**
+(`npm i -g pnpm`).
+
+```bash
+git clone https://github.com/Abishai95141/ORGRAG.git
+cd ORGRAG
+cp .env.example .env          # set SECRET_KEY; add ANTHROPIC_API_KEY to enable answers
+make setup                    # uv sync (with local embeddings) + pnpm install
+make dev-db                   # Postgres 16 + pgvector on :5432
+make migrate                  # create tables and indexes
+make seed                     # demo data (first run downloads the ~70 MB embedding model)
+```
+
+Then start three processes, each in its own terminal from the repo root:
+
+```bash
+make api        # FastAPI on http://localhost:8000
+make worker     # ingestion worker (web crawls, GitHub syncs, scheduled re-syncs)
+make web        # Next.js on http://localhost:3000 (proxies /api to :8000)
+```
+
+Run the tests:
+
+```bash
+make test-db
+TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/strata_test make test
+```
+
+*Postgres without Docker:* install Postgres 16+ with the `pgvector` extension
+(macOS: `brew install postgresql@17 pgvector`), create a `strata` database, and set
+`DEV_DB_URL=postgresql+asyncpg://<user>:<password>@localhost:5432/strata` when
+running `make migrate`, `make seed`, `make api` and `make worker`.
+
+### Demo logins
+
+The seed creates two organizations (Northwind Labs and Halcyon Health), each with
+sample documents, collections and an agent, plus two demo users:
 
 | Login | Password | Access |
 |---|---|---|
 | `demo@strata.dev` | `strata-demo` | owner of both orgs |
 | `sam@strata.dev` | `strata-demo` | member of Northwind (cannot see the restricted Leadership collection), viewer of Halcyon |
 
-Without an API key, Strata still searches and shows sources. The answer explains how
-to enable the agent.
+Without an API key, Strata still searches and shows sources, and the answer
+explains how to enable the agent.
 
-## Local development
+### Troubleshooting
 
-```bash
-make dev-db      # Postgres + pgvector on :5432
-make migrate     # alembic upgrade head
-make seed        # demo orgs and documents
-make api         # FastAPI on :8000
-make worker      # ingestion worker
-cd web && pnpm install && pnpm dev   # Next.js on :3000, proxies /api → :8000
-```
-
-Run the tests with `make test`. Unit tests need no services. Integration tests run
-against `TEST_DATABASE_URL` and are skipped if it can't be reached.
+- **Port already in use**: something else is using 3000, 8000 or 5432. Stop it, or
+  move Postgres: set `DB_PORT=5433` in `.env`, and for Option B also run the make
+  targets with `DEV_DB_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/strata`.
+- **`SECRET_KEY` error on `docker compose up`**: `.env` is missing or `SECRET_KEY`
+  is empty.
+- **Answers say "Answer generation is off"**: set `ANTHROPIC_API_KEY` in `.env`,
+  then restart (`docker compose up -d`, or restart `make api`).
 
 ## Repository layout
 
