@@ -1,0 +1,198 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   Strata design tokens — see docs/DESIGN.md
+   Warm paper neutrals, one ember accent, org identity by hue.
+------------------------------------------------------------------- */
+:root {
+  --bg: #f5f3ee;
+  --surface: #ffffff;
+  --surface-2: #eeebe4;
+  --surface-3: #e6e2d9;
+  --line: #e2ddd2;
+  --line-strong: #cec8bb;
+  --ink: #1b1a17;
+  --ink-2: #4d4b45;
+  --ink-3: #87837a;
+  --accent: #d4501e;
+  --accent-hover: #bf4517;
+  --accent-ink: #ffffff;
+  --accent-soft: #f7e2d6;
+  --ok: #2f7d4f;
+  --ok-soft: #dcefe2;
+  --warn: #a8660f;
+  --warn-soft: #f6ead2;
+  --err: #b42318;
+  --err-soft: #f8dcd8;
+  /* Chart series colour — validated against the chart surface (dataviz validator) */
+  --chart: #d4501e;
+  --ring: color-mix(in oklab, var(--accent) 45%, transparent);
+  --shadow-pop: 0 1px 0 rgba(27, 26, 23, 0.04), 0 12px 32px -12px rgba(27, 26, 23, 0.18);
+  --org-l: 46%;
+  --org-s: 42%;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #121211;
+  --surface: #1a1a18;
+  --surface-2: #22221f;
+  --surface-3: #2b2a27;
+  --line: #2d2c29;
+  --line-strong: #3d3b37;
+  --ink: #ece9e2;
+  --ink-2: #b6b2a8;
+  --ink-3: #7f7b72;
+  --accent: #ef6b37;
+  --accent-hover: #f5834f;
+  --accent-ink: #1a0d06;
+  --accent-soft: #3a2116;
+  --chart: #e0632f;
+  --ok: #5fbf85;
+  --ok-soft: #173223;
+  --warn: #e0a84a;
+  --warn-soft: #34270f;
+  --err: #f0786b;
+  --err-soft: #3a1714;
+  --shadow-pop: 0 1px 0 rgba(0, 0, 0, 0.3), 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+  --org-l: 62%;
+  --org-s: 40%;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-chart: var(--chart);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-err: var(--err);
+  --color-err-soft: var(--err-soft);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-instrument-serif), Georgia, serif;
+  --radius-ctl: 9px;
+  --radius-card: 14px;
+  --shadow-pop: var(--shadow-pop);
+  --animate-rise: rise 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade: fade 160ms ease-out both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes strata-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+@keyframes dash {
+  to { stroke-dashoffset: -24; }
+}
+@keyframes caret {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@layer base {
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--accent-soft); color: var(--ink); }
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+}
+
+/* Thin, quiet scrollbars */
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+
+.paper-grain {
+  background-image: radial-gradient(color-mix(in oklab, var(--ink) 7%, transparent) 0.6px, transparent 0.6px);
+  background-size: 14px 14px;
+}
+
+.strata-pulse { animation: strata-pulse 1.4s ease-in-out infinite; }
+.dash-flow { stroke-dasharray: 3 5; animation: dash 1.2s linear infinite; }
+.stream-caret::after,
+.is-streaming > :last-child:not(ul, ol, pre, table)::after,
+.is-streaming > :is(ul, ol):last-child > li:last-child::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--accent);
+  border-radius: 1px;
+  animation: caret 1s steps(1) infinite;
+}
+
+/* Answer typography */
+.prose-answer { font-size: 15px; line-height: 1.7; color: var(--ink); }
+.prose-answer > * + * { margin-top: 0.85em; }
+.prose-answer h1, .prose-answer h2, .prose-answer h3 {
+  font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; margin-top: 1.4em;
+}
+.prose-answer h1 { font-size: 1.25em; }
+.prose-answer h2 { font-size: 1.12em; }
+.prose-answer h3 { font-size: 1em; }
+.prose-answer ul, .prose-answer ol { padding-left: 1.3em; }
+.prose-answer ul { list-style: none; }
+.prose-answer ul > li { position: relative; }
+.prose-answer ul > li::before {
+  content: ""; position: absolute; left: -1em; top: 0.72em;
+  width: 5px; height: 1.5px; background: var(--ink-3);
+}
+.prose-answer ol { list-style: decimal; }
+.prose-answer ol > li::marker { color: var(--ink-3); font-family: var(--font-mono); font-size: 0.85em; }
+.prose-answer li + li { margin-top: 0.3em; }
+.prose-answer a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+.prose-answer a:hover { text-decoration-color: var(--accent); }
+.prose-answer strong { font-weight: 600; }
+.prose-answer code {
+  font-family: var(--font-mono); font-size: 0.86em;
+  background: var(--surface-2); border: 1px solid var(--line);
+  padding: 0.1em 0.35em; border-radius: 5px;
+}
+.prose-answer pre {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.6;
+}
+.prose-answer pre code { background: none; border: 0; padding: 0; }
+.prose-answer blockquote { border-left: 2px solid var(--line-strong); padding-left: 1em; color: var(--ink-2); }
+.prose-answer table { width: 100%; border-collapse: collapse; font-size: 0.92em; }
+.prose-answer th, .prose-answer td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; }
+.prose-answer th { font-weight: 600; color: var(--ink-2); }
+.prose-answer hr { border: 0; border-top: 1px solid var(--line); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}

@@ -1,0 +1,69 @@
+import random
+
+from fastapi import APIRouter, Depends, Response
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.serializers import org_summaries
+from app.core.config import get_settings
+from app.core.db import get_db
+from app.core.deps import current_user
+from app.core.errors import ApiError, conflict
+from app.core.security import create_session_token, hash_password, verify_password
+from app.models import User
+from app.schemas.common import LoginIn, MeOut, SignupIn, UserEnvelope, UserOut
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _set_cookie(response: Response, user: User) -> None:
+    s = get_settings()
+    response.set_cookie(
+        s.session_cookie,
+        create_session_token(user.id),
+        max_age=s.session_days * 86400,
+        httponly=True,
+        secure=s.cookie_secure,
+        samesite="lax",
+        path="/",
+    )
+
+
+@router.post("/signup", response_model=UserEnvelope, status_code=201)
+async def signup(body: SignupIn, response: Response, db: AsyncSession = Depends(get_db)):
+    email = body.email.lower()
+    if (await db.execute(select(User.id).where(func.lower(User.email) == email))).first():
+        raise conflict("An account with that email already exists", "email_taken")
+    user = User(
+        email=email,
+        name=body.name.strip(),
+        password_hash=hash_password(body.password),
+        avatar_hue=random.randint(0, 359),
+    )
+    db.add(user)
+    await db.commit()
+    _set_cookie(response, user)
+    return {"user": UserOut.model_validate(user)}
+
+
+@router.post("/login", response_model=UserEnvelope)
+async def login(body: LoginIn, response: Response, db: AsyncSession = Depends(get_db)):
+    user = (
+        await db.execute(select(User).where(func.lower(User.email) == body.email.lower()))
+    ).scalar_one_or_none()
+    if user is None or not verify_password(body.password, user.password_hash):
+        raise ApiError(401, "Email or password is incorrect", "invalid_credentials")
+    _set_cookie(response, user)
+    return {"user": UserOut.model_validate(user)}
+
+
+@router.post("/logout", status_code=204)
+async def logout(response: Response):
+    response.delete_cookie(get_settings().session_cookie, path="/")
+    response.status_code = 204
+    return response
+
+
+@router.get("/me", response_model=MeOut)
+async def me(user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
+    return MeOut(user=UserOut.model_validate(user), orgs=await org_summaries(db, user.id))
