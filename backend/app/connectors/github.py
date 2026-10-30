@@ -3,6 +3,7 @@
 import base64
 import re
 from collections.abc import AsyncIterator
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -52,7 +53,9 @@ class GitHubConnector(Connector):
             headers["Authorization"] = f"Bearer {token}"
         return headers
 
-    async def iter_documents(self, progress: ProgressFn) -> AsyncIterator[RawDocument]:
+    async def iter_documents(
+        self, progress: ProgressFn, since: datetime | None = None
+    ) -> AsyncIterator[RawDocument]:
         cfg = self.validate_config(self.config)
         repo = cfg["repo"]
         async with httpx.AsyncClient(base_url=_API, headers=self._headers(), timeout=30) as gh:

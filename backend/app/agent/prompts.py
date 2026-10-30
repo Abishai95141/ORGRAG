@@ -22,6 +22,15 @@ bullet lists or a small table when they make the answer easier to scan.
 - When sources from different organizations disagree, say which organization says what.
 - Write in plain, confident language. No preamble like "Based on the documents"."""
 
+WEB_ADDENDUM = """
+You can also search the public web with search_web. Prefer the organization's \
+knowledge base for anything about the organization; use the web for public, external \
+or current information, and say when a claim comes from the web."""
+
+ATTACHMENTS_NOTE = """
+The user may attach files to their message; they appear in <attachment ref="n"> blocks \
+and are cited like any other source."""
+
 DEEP_ADDENDUM = """
 This is a deep research request. Work through the research plan: cover each \
 sub-question with its own searches, read the most important documents in full, and \
@@ -42,8 +51,11 @@ def build_system(
     collections_note: str,
     agent_instructions: str | None,
     deep: bool,
+    web: bool = False,
 ) -> str:
-    parts = [BASE_SYSTEM]
+    parts = [BASE_SYSTEM, ATTACHMENTS_NOTE]
+    if web:
+        parts.append(WEB_ADDENDUM)
     if deep:
         parts.append(DEEP_ADDENDUM)
     parts.append(f"\nKnowledge in scope comes from: {', '.join(org_names)}.\n{collections_note}")

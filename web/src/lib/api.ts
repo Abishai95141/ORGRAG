@@ -1,23 +1,29 @@
 import type {
   Agent,
+  ApiKey,
+  Attachment,
   Collection,
   ConnectorSpec,
   Conversation,
   DocumentDetail,
   DocumentRow,
+  DocumentSort,
   Health,
   Insights,
   Invite,
   Member,
   Message,
+  ModelInfo,
   Mode,
   Org,
   OrgSettings,
   OrgSummary,
+  Page,
   Role,
   Source,
   SourceRef,
   User,
+  Vote,
 } from "./types";
 
 export class ApiError extends Error {
@@ -72,8 +78,15 @@ function safeJson(text: string): unknown {
 
 const o = (slug: string) => `/orgs/${encodeURIComponent(slug)}`;
 
+function query(params: Record<string, string | number | boolean | null | undefined>) {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
+  return qs.toString();
+}
+
 export const api = {
   health: () => request<Health>("/health"),
+  models: () => request<ModelInfo[]>("/models"),
 
   // auth
   me: () => request<{ user: User; orgs: OrgSummary[] }>("/auth/me"),
@@ -145,15 +158,45 @@ export const api = {
       body: form,
     });
   },
-  documents: (slug: string, sourceId: string, params: { limit?: number; offset?: number; q?: string } = {}) => {
-    const qs = new URLSearchParams();
-    if (params.limit) qs.set("limit", String(params.limit));
-    if (params.offset) qs.set("offset", String(params.offset));
-    if (params.q) qs.set("q", params.q);
-    return request<{ items: DocumentRow[]; total: number }>(`${o(slug)}/sources/${sourceId}/documents?${qs}`);
-  },
+  documents: (slug: string, sourceId: string, params: { limit?: number; offset?: number; q?: string } = {}) =>
+    request<Page<DocumentRow>>(`${o(slug)}/sources/${sourceId}/documents?${query(params)}`),
+  orgDocuments: (
+    slug: string,
+    params: {
+      q?: string;
+      collection_id?: string;
+      source_id?: string;
+      hidden?: boolean;
+      sort?: DocumentSort;
+      limit?: number;
+      offset?: number;
+    } = {},
+  ) => request<Page<DocumentRow>>(`${o(slug)}/documents?${query(params)}`),
   document: (slug: string, id: string) => request<DocumentDetail>(`${o(slug)}/documents/${id}`),
+  curateDocument: (slug: string, id: string, body: { boost?: number; hidden?: boolean }) =>
+    request<DocumentDetail>(`${o(slug)}/documents/${id}`, { method: "PATCH", json: body }),
+  voteDocument: (slug: string, id: string, vote: Vote | null, messageId?: string) =>
+    request<{ document_id: string; vote: Vote | null; feedback_up: number; feedback_down: number }>(
+      `${o(slug)}/documents/${id}/feedback`,
+      { method: "POST", json: { vote, message_id: messageId } },
+    ),
   deleteDocument: (slug: string, id: string) => request<void>(`${o(slug)}/documents/${id}`, { method: "DELETE" }),
+
+  // chat attachments
+  uploadAttachment: (slug: string, file: File, conversationId?: string) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (conversationId) form.append("conversation_id", conversationId);
+    return request<Attachment>(`${o(slug)}/attachments`, { method: "POST", body: form });
+  },
+  attachment: (slug: string, id: string) => request<Attachment & { content: string }>(`${o(slug)}/attachments/${id}`),
+  deleteAttachment: (slug: string, id: string) => request<void>(`${o(slug)}/attachments/${id}`, { method: "DELETE" }),
+
+  // api keys
+  apiKeys: (slug: string) => request<ApiKey[]>(`${o(slug)}/api-keys`),
+  createApiKey: (slug: string, body: { name: string; role: "admin" | "member" | "viewer"; expires_in_days?: number }) =>
+    request<ApiKey & { key: string }>(`${o(slug)}/api-keys`, { method: "POST", json: body }),
+  revokeApiKey: (slug: string, id: string) => request<void>(`${o(slug)}/api-keys/${id}`, { method: "DELETE" }),
 
   // search
   search: (slug: string, body: { query: string; org_slugs?: string[]; collection_ids?: string[]; limit?: number }) =>

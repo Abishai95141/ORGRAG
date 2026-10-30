@@ -7,6 +7,7 @@ from typing import Any
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     ARRAY,
+    Boolean,
     Computed,
     DateTime,
     ForeignKey,
@@ -137,6 +138,7 @@ class Source(Base):
     progress: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     sync_interval_minutes: Mapped[int | None] = mapped_column(Integer)
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_full_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = _created()
 
 
@@ -160,10 +162,44 @@ class Document(Base):
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     meta: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict, nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # When the document last changed in its source system (recency bias); falls back
+    # to updated_at when the connector doesn't know.
+    source_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Admin curation: boost -3..3 scales ranking; hidden documents never surface.
+    boost: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    hidden: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
+    # Denormalized vote totals from document_feedback, read on every search.
+    feedback_up: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    feedback_down: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
     created_at: Mapped[datetime] = _created()
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
+
+
+class DocumentFeedback(Base):
+    """One vote per person per document: was this source useful for the answer?"""
+
+    __tablename__ = "document_feedback"
+    __table_args__ = (UniqueConstraint("document_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    message_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("messages.id", ondelete="SET NULL")
+    )
+    vote: Mapped[str] = mapped_column(String(8), nullable=False)
+    created_at: Mapped[datetime] = _created()
 
 
 class Chunk(Base):
@@ -276,6 +312,9 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     content: Mapped[str] = mapped_column(Text, default="", nullable=False)
     sources: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, nullable=False)
+    attachments: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default="[]", nullable=False
+    )
     trace: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, nullable=False)
     feedback: Mapped[str | None] = mapped_column(String(8))
     status: Mapped[str] = mapped_column(String(16), default="complete", nullable=False)
@@ -315,4 +354,46 @@ class SearchEvent(Base):
     query: Mapped[str] = mapped_column(Text, nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     hits: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = _created()
+
+
+class ChatAttachment(Base):
+    """A file attached to a conversation. Parsed once to Markdown and read straight
+    into the model's context; it is never indexed into the org's knowledge base."""
+
+    __tablename__ = "chat_attachments"
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    mime: Mapped[str] = mapped_column(String(128), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    token_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = _created()
+
+
+class ApiKey(Base):
+    """Programmatic access to one org, acting as the key's creator with at most `role`.
+    Only a SHA-256 of the key is stored; the plaintext is shown once at creation."""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    prefix: Mapped[str] = mapped_column(String(24), nullable=False)
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = _created()

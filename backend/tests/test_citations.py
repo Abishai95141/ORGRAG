@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from app.agent.citations import CitationRegistry, cited_refs, strip_citations
 from app.retrieval.hybrid import Hit
+from app.schemas.common import SourceRef
 
 ORG = SimpleNamespace(id=uuid.uuid4(), slug="acme", name="Acme", hue=10)
 COL = SimpleNamespace(id=uuid.uuid4(), name="General")
@@ -40,22 +41,25 @@ def test_source_ref_shape_matches_contract():
     reg = CitationRegistry()
     entry, _ = reg.register(_hit(uuid.uuid4(), "Handbook"), ORG, COL)
     ref = entry.to_source_ref()
-    assert set(ref) == {
-        "ref",
-        "document_id",
-        "chunk_id",
-        "title",
-        "url",
-        "snippet",
-        "org_id",
-        "org_slug",
-        "org_name",
-        "org_hue",
-        "collection_name",
-        "source_kind",
-        "score",
-    }
+    assert set(ref) == set(SourceRef.model_fields)
+    SourceRef(**ref)
+    assert ref["origin"] == "knowledge"
     assert ref["org_slug"] == "acme" and ref["title"] == "Handbook"
+
+
+def test_web_and_attachment_sources_share_numbering():
+    reg = CitationRegistry()
+    doc, _ = reg.register(_hit(uuid.uuid4()), ORG, COL)
+    web, new = reg.register_web("https://example.com/a/", "Example", "Public page text")
+    again, new_again = reg.register_web("https://example.com/a", "Example", "dup")
+    attachment = SimpleNamespace(id=uuid.uuid4(), filename="brief.pdf", content="Brief text")
+    att, _ = reg.register_attachment(attachment)
+    assert (doc.ref, web.ref, att.ref) == (1, 2, 3)
+    assert new and not new_again and again is web
+    for entry in (web, att):
+        SourceRef(**entry.to_source_ref())
+    assert web.to_source_ref()["origin"] == "web" and web.to_source_ref()["org_id"] is None
+    assert att.to_source_ref()["attachment_id"] == str(attachment.id)
 
 
 def test_cited_refs_and_strip():

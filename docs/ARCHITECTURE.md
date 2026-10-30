@@ -8,9 +8,10 @@ retrieval, a tool-calling chat loop, streamed citations) and changing three thin
 1. **Organizations are first-class.** A user belongs to many orgs, each with its own
    sources, collections, agents and settings. A single question can be scoped to
    several orgs at once; every citation carries the org it came from.
-2. **The answer path is an agent, not a pipeline.** Claude plans, issues searches,
-   reads documents, decides whether it has enough evidence, and only then answers.
-   Every step is streamed to the UI as a visible trace.
+2. **The answer path is an agent, not a pipeline.** The model (Claude, or an open
+   model on NVIDIA's API) plans, issues searches, reads documents, decides whether it
+   has enough evidence, and only then answers. Every step is streamed to the UI as a
+   visible trace.
 3. **Lean infrastructure.** One Postgres (with `pgvector` + full-text search) replaces
    Vespa/OpenSearch + Redis + Celery. Jobs run from a Postgres queue
    (`FOR UPDATE SKIP LOCKED`). `docker compose up` is the whole deployment.
@@ -19,7 +20,12 @@ retrieval, a tool-calling chat loop, streamed citations) and changing three thin
 
 | Onyx concept | Onyx implementation | Strata |
 |---|---|---|
-| Connector framework | `backend/onyx/connectors/interfaces.py` — Load/Poll/Checkpointed connectors yielding `Document`s | `app/connectors/base.py` — `Connector.iter_documents()` async generator yielding `RawDocument`s; Upload, Web crawler, GitHub included |
+| Connector framework | `backend/onyx/connectors/interfaces.py` — Load/Poll/Checkpointed/Slim connectors yielding `Document`s | `app/connectors/base.py` — `iter_documents(progress, since)` covers load and poll; `list_ids()` is the slim listing used for pruning. Upload, Web crawler, GitHub, Google Drive, Slack, Notion |
+| Pruning | Celery prune task diffs indexed ids against the slim listing | Full syncs prune by the set of ids seen; incremental syncs prune against `list_ids()`; an empty listing never deletes; a full sync runs at least daily |
+| Rerank / recency / boost | Cross-encoder rerank × time decay × boost (v1–v3; current Onyx uses LLM section selection and a hard time filter instead) | `app/retrieval/hybrid.py` + `rerank.py` — top 40 candidates (≤3 per document) reranked by NVIDIA Nemotron or a local cross-encoder, × recency × admin boost × reader feedback; hidden documents filtered in SQL |
+| User files | Indexed `UserFile`s; inlined when they fit | `chat_attachments` — parsed once, inlined into the question (with a budget) and paged with `read_document`; never indexed |
+| Web search | `web_search` + `open_url` tools, several providers | `search_web` tool (Tavily/Brave) returning snippets; `read_document` fetches a page through an SSRF-guarded fetcher, opening on the snippet |
+| API keys | Service-account users with group permissions | Per-org keys acting as their creator with a capped role (`app/core/deps.py`) |
 | Indexing pipeline | Celery docfetching → docprocessing, chunk + embed into Vespa/OpenSearch | `app/ingestion/pipeline.py` — parse → heading-aware chunking → embed → upsert into `chunks` (pgvector + tsvector) |
 | Hybrid search | Vespa/OpenSearch hybrid with ACL filters (`context/search/pipeline.py`) | `app/retrieval/hybrid.py` — vector (HNSW cosine) + `websearch_to_tsquery` BM25-ish rank fused with Reciprocal Rank Fusion, neighbour-chunk expansion into sections |
 | Access control | `access/access.py` ACL lists on every chunk | Org scope + collection visibility (`org` / `restricted`) resolved into an allow-list of collection ids before every query |
@@ -68,8 +74,10 @@ api/                    Routers: auth, orgs, members, invites, collections, sour
 connectors/             base.py, upload.py, web.py, github.py, registry.py
 ingestion/              parsers.py, chunker.py, pipeline.py
 embeddings/             base.py, fastembed_provider.py, voyage_provider.py, factory
-retrieval/              hybrid.py (vector + keyword + RRF), access.py (scope resolution)
-llm/                    client.py (Anthropic async client, streaming, fallbacks)
+retrieval/              hybrid.py (vector + keyword + RRF + scoring), rerank.py, web.py (search + safe fetch),
+                        access.py (scope resolution)
+llm/                    client.py (Anthropic client, provider-neutral structured calls, error mapping),
+                        nvidia.py (OpenAI-compatible streaming + reranker), models.py (catalogue)
 agent/                  engine.py, tools.py, prompts.py, events.py, citations.py
 worker/                 __main__.py (job loop + scheduler), jobs.py
 alembic/                migrations
@@ -126,8 +134,11 @@ user question
                 cited answer streamed token-by-token, [n] → source cards
 ```
 
-* The engine is a manual Claude tool loop (`client.beta.messages.stream`) so every
-  model event can be translated into an SSE event as it happens.
+* The engine runs a manual tool loop per provider — Claude through
+  `client.beta.messages.stream`, NVIDIA models through streaming chat completions — so
+  every model event becomes an SSE event as it happens. Both share one tool runner.
+  An org's model picks the provider (`claude-*` → Anthropic, `vendor/model` → NVIDIA);
+  if that provider has no key, the run falls back to the configured one.
 * Tool results are rendered as `<source ref="n" org="…" title="…">…</source>` blocks;
   refs come from a per-answer citation registry so the same document always gets the
   same number across steps.

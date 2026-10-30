@@ -11,22 +11,26 @@ from app.models import Job, Source
 MAX_ATTEMPTS = 3
 
 
-async def enqueue_sync(db: AsyncSession, source: Source) -> None:
-    """Queue a sync unless one is already waiting. Caller commits."""
+async def enqueue_sync(db: AsyncSession, source: Source, *, full: bool = True) -> None:
+    """Queue a sync unless one is already waiting (a waiting incremental sync is upgraded
+    when a full one is requested). Caller commits."""
     pending = (
         await db.execute(
-            select(Job.id).where(
+            select(Job).where(
                 Job.kind == "sync_source",
                 Job.status == "queued",
                 Job.payload["source_id"].astext == str(source.id),
             )
         )
-    ).first()
+    ).scalar_one_or_none()
     source.status = "queued"
     source.error = None
     source.progress = None
+    payload = {"source_id": str(source.id), "full": full}
     if pending is None:
-        db.add(Job(org_id=source.org_id, kind="sync_source", payload={"source_id": str(source.id)}))
+        db.add(Job(org_id=source.org_id, kind="sync_source", payload=payload))
+    elif full and not pending.payload.get("full", True):
+        pending.payload = payload
 
 
 _CLAIM = text(

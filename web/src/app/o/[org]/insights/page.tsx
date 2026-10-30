@@ -7,6 +7,7 @@ import { IconThumbDown, IconThumbUp } from "@/components/icons";
 import { useCurrentOrg } from "@/components/layout/org-context";
 import { Card, PageHeader, Segmented, Skeleton, Stat } from "@/components/ui";
 import { api } from "@/lib/api";
+import type { Insights } from "@/lib/types";
 import { qk } from "@/lib/queries";
 import { formatNumber, relativeTime } from "@/lib/utils";
 
@@ -211,7 +212,7 @@ function QuestionsChart({ data }: { data: { date: string; count: number }[] }) {
   );
 }
 
-function TopSources({ items }: { items: { source_id: string; name: string; kind: "upload" | "web" | "github"; citations: number }[] }) {
+function TopSources({ items }: { items: Insights["top_sources"] }) {
   if (!items.length) return <p className="mt-4 text-[13px] text-ink-3">No citations yet.</p>;
   const max = Math.max(...items.map((i) => i.citations));
   return (

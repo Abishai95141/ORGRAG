@@ -1,7 +1,8 @@
 """Worker process: `python -m app.worker`.
 
 Runs N job loops plus a scheduler that re-queues sources whose
-sync_interval_minutes has elapsed."""
+sync_interval_minutes has elapsed. Scheduled syncs are incremental; a full sync
+(which also removes documents deleted upstream) runs at least once a day."""
 
 import asyncio
 import contextlib
@@ -19,6 +20,8 @@ from app.worker.queue import claim_next, enqueue_sync, finish, requeue_stale
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("strata.worker")
+
+FULL_SYNC_EVERY = timedelta(hours=24)
 
 
 async def job_loop(n: int, stop: asyncio.Event) -> None:
@@ -65,8 +68,14 @@ async def scheduler(stop: asyncio.Event) -> None:
             for source in due:
                 last = source.last_synced_at or source.created_at
                 if now - last >= timedelta(minutes=source.sync_interval_minutes):
-                    log.info("Scheduling sync for %s", source.name)
-                    await enqueue_sync(db, source)
+                    full = (
+                        source.last_full_synced_at is None
+                        or now - source.last_full_synced_at >= FULL_SYNC_EVERY
+                    )
+                    log.info(
+                        "Scheduling %s sync for %s", "full" if full else "incremental", source.name
+                    )
+                    await enqueue_sync(db, source, full=full)
             await db.commit()
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(stop.wait(), timeout=60)

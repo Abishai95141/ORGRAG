@@ -1,12 +1,17 @@
 "use client";
 
 import { useMemo } from "react";
+import { IconGlobe, IconPaperclip } from "@/components/icons";
 import { OrgMark } from "@/components/illustrations";
 import type { SourceRef } from "@/lib/types";
 import { hostname } from "@/lib/utils";
-import { SourceKindIcon } from "./source-kind";
+import { citationStyle, SourceRefIcon } from "./source-kind";
 
-/** Right rail: every source the focused answer surfaced, grouped by organization. */
+type Group = { key: string; name: string; hue: number | null; origin: SourceRef["origin"]; items: SourceRef[] };
+const ORIGIN_ORDER = { attachment: 0, knowledge: 1, web: 2 } as const;
+
+/** Right rail: every source the focused answer surfaced — attached files first, then
+ * each organization, then the web. */
 export function SourcesRail({
   sources,
   cited,
@@ -17,13 +22,15 @@ export function SourcesRail({
   onOpenSource: (s: SourceRef) => void;
 }) {
   const groups = useMemo(() => {
-    const m = new Map<string, { name: string; hue: number; items: SourceRef[] }>();
+    const m = new Map<string, Group>();
     for (const s of [...sources].sort((a, b) => a.ref - b.ref)) {
-      const g = m.get(s.org_id) ?? { name: s.org_name, hue: s.org_hue, items: [] };
+      const key = s.origin === "knowledge" ? (s.org_id ?? "org") : s.origin;
+      const name = s.origin === "web" ? "Web" : s.origin === "attachment" ? "Attached files" : (s.org_name ?? "");
+      const g = m.get(key) ?? { key, name, hue: s.org_hue, origin: s.origin, items: [] };
       g.items.push(s);
-      m.set(s.org_id, g);
+      m.set(key, g);
     }
-    return [...m.entries()];
+    return [...m.values()].sort((a, b) => ORIGIN_ORDER[a.origin] - ORIGIN_ORDER[b.origin]);
   }, [sources]);
 
   return (
@@ -40,10 +47,16 @@ export function SourcesRail({
             Sources appear here as the agent finds them. Click any citation to read the passage in context.
           </p>
         ) : (
-          groups.map(([id, g]) => (
-            <section key={id} className="mb-4">
+          groups.map((g) => (
+            <section key={g.key} className="mb-4">
               <h3 className="mb-1.5 flex items-center gap-2 px-1 text-[12px] font-medium text-ink-2">
-                <OrgMark name={g.name} hue={g.hue} size={16} />
+                {g.origin === "knowledge" && g.hue !== null ? (
+                  <OrgMark name={g.name} hue={g.hue} size={16} />
+                ) : (
+                  <span className="grid h-4 w-4 place-items-center rounded-[4px] bg-surface-3 text-ink-2">
+                    {g.origin === "web" ? <IconGlobe size={11} /> : <IconPaperclip size={11} />}
+                  </span>
+                )}
                 {g.name}
                 <span className="font-mono text-[10.5px] text-ink-3">{g.items.length}</span>
               </h3>
@@ -60,19 +73,17 @@ export function SourcesRail({
                       <div className="flex items-start gap-2">
                         <span
                           className="mt-px grid h-[18px] min-w-[18px] place-items-center rounded-[5px] px-1 font-mono text-[10px] font-medium"
-                          style={
-                            cited.has(s.ref)
-                              ? { background: `hsl(${s.org_hue} 40% var(--org-l) / .14)`, color: `hsl(${s.org_hue} 50% calc(var(--org-l) - 10%))` }
-                              : { background: "var(--surface-2)", color: "var(--ink-3)" }
-                          }
+                          style={citationStyle(s, cited.has(s.ref))}
                         >
                           {s.ref}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className={`truncate text-[12.5px] font-medium ${cited.has(s.ref) ? "text-ink" : "text-ink-2"}`}>{s.title}</div>
                           <div className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-3">
-                            <SourceKindIcon kind={s.source_kind} size={11} />
-                            <span className="truncate">{hostname(s.url) ?? s.collection_name}</span>
+                            <SourceRefIcon source={s} size={11} />
+                            <span className="truncate">
+                              {hostname(s.url) ?? s.collection_name ?? (s.origin === "attachment" ? "Attached to this conversation" : "")}
+                            </span>
                           </div>
                           {cited.has(s.ref) ? <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-relaxed text-ink-3">{s.snippet}</p> : null}
                         </div>

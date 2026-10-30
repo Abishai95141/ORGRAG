@@ -12,10 +12,19 @@ import { NoResultsArt, OrgMark } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
 import { Button, EmptyState, Skeleton, Tooltip } from "@/components/ui";
 import { api } from "@/lib/api";
-import { qk, useAgents } from "@/lib/queries";
+import { qk, useAgents, useHealth, useOrg } from "@/lib/queries";
 import { clearTurn, startTurn, stopTurn, useLiveTurn } from "@/lib/stream";
 import type { Message, SourceRef } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+/** The attachments to send with a message, in the shape a user message shows them. */
+function sendable(state: ComposerState) {
+  return (state.attachments ?? []).flatMap((a) =>
+    a.status === "ready" && a.attachment
+      ? [{ id: a.attachment.id, filename: a.attachment.filename, mime: a.attachment.mime, size_bytes: a.attachment.size_bytes, token_count: a.attachment.token_count }]
+      : [],
+  );
+}
 
 export default function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -23,6 +32,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const qc = useQueryClient();
   const convo = useQuery({ queryKey: qk.conversation(org.slug, id), queryFn: () => api.conversation(org.slug, id) });
   const agents = useAgents(org.slug);
+  const health = useHealth();
+  const fullOrg = useOrg(org.slug);
   const live = useLiveTurn(id);
 
   const [preview, setPreview] = useState<SourceRef | null>(null);
@@ -82,7 +93,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const send = useCallback(() => {
     const text = state.text.trim();
     if (!text) return;
-    setState((s) => ({ ...s, text: "" }));
+    const attachments = sendable(state);
+    setState((s) => ({ ...s, text: "", attachments: [] }));
     pinned.current = true;
     void startTurn({
       slug: org.slug,
@@ -90,6 +102,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       content: text,
       mode: state.mode,
       scopeOrgSlugs: state.scope,
+      attachments,
+      webSearch: state.web,
       onSettled: () => {
         qc.invalidateQueries({ queryKey: qk.conversation(org.slug, id) });
         qc.invalidateQueries({ queryKey: qk.conversations(org.slug) });
@@ -156,7 +170,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
             {rows.map((m) =>
               m.role === "user" ? (
-                <UserMessage key={m.id} content={m.content} />
+                <UserMessage key={m.id} content={m.content} attachments={m.attachments} />
               ) : (
                 <AssistantMessage
                   key={m.id}
@@ -178,7 +192,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
             {liveActive && live ? (
               <>
-                <UserMessage content={live.userMessage?.content ?? live.pendingText} />
+                <UserMessage
+                  content={live.userMessage?.content ?? live.pendingText}
+                  attachments={live.userMessage?.attachments ?? live.pendingAttachments}
+                />
                 <AssistantMessage
                   slug={org.slug}
                   id={live.final?.id ?? null}
@@ -210,6 +227,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               agents={agent ? [agent] : undefined}
               agentLocked
               placeholder="Ask a follow-up…"
+              slug={org.slug}
+              webAvailable={!!health.data?.web_search_provider}
+              webDefault={fullOrg.data?.settings.web_search ?? false}
             />
           </div>
         </div>

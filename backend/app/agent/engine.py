@@ -1,9 +1,11 @@
 """The agentic RAG engine.
 
-One run answers one user message. It plans (deep mode), drives a Claude tool loop
-over the scoped knowledge base, streams every step to the client as SSE events
-(see docs/API.md), and persists the final assistant message — even if the browser
-disconnects mid-answer, because the run executes in its own task and session.
+One run answers one user message. It plans (deep mode), drives a tool loop over the
+scoped knowledge base (plus attached files, and the web when enabled) on the org's
+model — Claude through the Anthropic API or an open model through NVIDIA's API —
+streams every step to the client as SSE events (see docs/API.md), and persists the
+final assistant message — even if the browser disconnects mid-answer, because the
+run executes in its own task and session.
 
 Event flow:  step(plan) → step(search/read/reflect)* + reasoning* + sources* → delta* → done
 """
@@ -13,7 +15,7 @@ import copy
 import logging
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
@@ -21,12 +23,21 @@ from sqlalchemy import select
 
 from app.agent.citations import CitationRegistry, cited_refs, strip_citations
 from app.agent.prompts import PLAN_SYSTEM, build_system
-from app.agent.tools import TOOL_DEFINITIONS, ToolBox, ToolInputError
+from app.agent.tools import (
+    READ_PAGE_CHARS,
+    ToolBox,
+    ToolInputError,
+    openai_tools,
+    tool_definitions,
+)
 from app.core.config import get_settings
 from app.core.db import SessionLocal
+from app.llm import nvidia
 from app.llm.client import describe_error, get_client, request_extras, structured_call
+from app.llm.models import resolve_model
 from app.models import (
     Agent,
+    ChatAttachment,
     Conversation,
     Message,
     MessageCitation,
@@ -34,7 +45,7 @@ from app.models import (
     SearchEvent,
 )
 from app.retrieval.access import RetrievalScope, resolve_scope
-from app.retrieval.hybrid import hybrid_search
+from app.retrieval.hybrid import RankingOptions, hybrid_search
 from app.schemas.common import MessageOut, OrgSettings
 
 log = logging.getLogger("strata.agent")
@@ -43,6 +54,8 @@ MAX_TURNS = {"quick": 4, "deep": 10}
 HISTORY_MESSAGES = 12
 PREAMBLE_CHARS = 160  # text shorter than this before a tool call is treated as reasoning
 MAX_REASONING_CHARS = 8000
+INLINE_ATTACHMENT_CHARS = 40_000  # across all files attached to one message
+NVIDIA_MAX_TOKENS = {"quick": 8192, "deep": 16384}
 
 EventQueue = asyncio.Queue[tuple[str, dict[str, Any]] | None]
 
@@ -65,6 +78,8 @@ class ChatRequest:
     mode: str
     scope_org_ids: list[uuid.UUID]
     collection_ids: list[uuid.UUID] | None
+    attachment_ids: list[uuid.UUID] = field(default_factory=list)
+    web_search: bool | None = None
 
 
 class Emitter:
@@ -179,7 +194,35 @@ class AgentRun:
                 },
             )
         self.scope = scope
-        self.tools = ToolBox(db, scope, self.registry, top_k=self.settings.retrieval_top_k)
+        attachments = (
+            (
+                await db.execute(
+                    select(ChatAttachment)
+                    .where(
+                        ChatAttachment.conversation_id == self.req.conversation_id,
+                        ChatAttachment.user_id == self.req.user_id,
+                    )
+                    .order_by(ChatAttachment.created_at)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        self.attachments = {a.id: a for a in attachments}
+        wanted_web = (
+            self.req.web_search if self.req.web_search is not None else self.settings.web_search
+        )
+        self.web_enabled = bool(wanted_web and get_settings().web_search_provider)
+        self.tools = ToolBox(
+            db,
+            scope,
+            self.registry,
+            top_k=self.settings.retrieval_top_k,
+            ranking=RankingOptions(
+                rerank=self.settings.rerank, recency_bias=self.settings.recency_bias
+            ),
+            attachments=self.attachments,
+        )
 
     async def _history(self, db) -> list[dict[str, Any]]:
         rows = (
@@ -229,15 +272,20 @@ class AgentRun:
         async with SessionLocal() as db:
             try:
                 await self._load(db)
-                if not self.scope.collections:
+                if not self.scope.collections and not self.attachments and not self.web_enabled:
                     await self.em.delta(
                         "There's no knowledge I can search in this scope yet. Add a source "
                         "under **Sources**, or ask an admin for access to a collection."
                     )
                 elif get_settings().llm_configured:
                     await self._run_llm(db)
-                else:
+                elif self.scope.collections:
                     await self._run_retrieval_only(db)
+                else:
+                    await self.em.delta(
+                        "**Answer generation is off** — set `NVIDIA_API_KEY` or "
+                        "`ANTHROPIC_API_KEY` so Strata can read attached files and the web."
+                    )
                 await self.em.finish_answer()
                 message = await self._persist(db, status="complete")
                 await self.em.queue.put(("done", {"message": message_payload(message)}))
@@ -281,8 +329,9 @@ class AgentRun:
             )
             return
         await self.em.delta(
-            "**Answer generation is off** — no `ANTHROPIC_API_KEY` is configured, so here are "
-            "the most relevant passages Strata found:\n\n"
+            "**Answer generation is off** — no LLM API key (`NVIDIA_API_KEY` or "
+            "`ANTHROPIC_API_KEY`) is configured, so here are the most relevant passages "
+            "Strata found:\n\n"
         )
         for ref in outcome.refs[:6]:
             entry = self.registry.get(ref)
@@ -336,25 +385,78 @@ class AgentRun:
         )
         return plan
 
-    # ── the Claude tool loop ──────────────────────────────────────────────
+    # ── the tool loop ─────────────────────────────────────────────────────
+    def _attachment_context(self) -> str:
+        """Registers every file in the conversation as a citable source. Files attached
+        to this message are inlined (up to a budget); earlier ones are listed so the
+        model can read them on demand."""
+        if not self.attachments:
+            return ""
+        budget = INLINE_ATTACHMENT_CHARS
+        blocks, earlier = [], []
+        new_ids = set(self.req.attachment_ids)
+        for attachment in self.attachments.values():
+            entry, _ = self.registry.register_attachment(attachment)
+            if attachment.id not in new_ids:
+                earlier.append(f"[{entry.ref}] {attachment.filename}")
+                continue
+            body = attachment.content
+            take = min(len(body), max(0, budget), READ_PAGE_CHARS)
+            budget -= take
+            more = (
+                f"\n… (truncated — use read_document with ref {entry.ref} and a page number "
+                "to read the rest)"
+                if take < len(body)
+                else ""
+            )
+            blocks.append(
+                f'<attachment ref="{entry.ref}" filename="{attachment.filename}">\n'
+                f"{body[:take]}{more}\n</attachment>"
+            )
+        parts = []
+        if blocks:
+            parts.append("Files attached to this message (cite them as [n]):\n" + "\n".join(blocks))
+        if earlier:
+            parts.append(
+                "Files attached earlier in this conversation (read with read_document): "
+                + ", ".join(earlier)
+            )
+        return "\n\n".join(parts)
+
     async def _run_llm(self, db) -> None:
         deep = self.req.mode == "deep"
-        client = get_client()
+        provider, model = resolve_model(self.settings.model)
         system = build_system(
             org_names=[o.name for o in self.scope.orgs.values()],
             collections_note=self._collections_note(),
             agent_instructions=self.agent.instructions if self.agent else None,
             deep=deep,
+            web=self.web_enabled,
         )
         user_content = self.req.question
+        attachment_context = self._attachment_context()
+        await self.em.sources([r.to_source_ref() for r in self.registry.all()])
         if deep:
             plan = await self._plan()
             bullets = "\n".join(f"{i}. {p['question']}" for i, p in enumerate(plan, 1))
             user_content = f"{self.req.question}\n\n<research_plan>\n{bullets}\n</research_plan>"
-        messages: list[dict[str, Any]] = [
-            *await self._history(db),
-            {"role": "user", "content": user_content},
-        ]
+        if attachment_context:
+            user_content = f"{attachment_context}\n\n{user_content}"
+        history = await self._history(db)
+        definitions = tool_definitions(web=self.web_enabled)
+        if provider == "nvidia":
+            await self._nvidia_loop(model, system, history, user_content, definitions, deep)
+        else:
+            await self._claude_loop(model, system, history, user_content, definitions, deep)
+        if not self.em.answer.strip():
+            await self.em.delta(
+                "I wasn't able to put together an answer from the knowledge base. "
+                "Try rephrasing the question or narrowing it to a collection."
+            )
+
+    async def _claude_loop(self, model, system, history, user_content, definitions, deep) -> None:
+        client = get_client()
+        messages: list[dict[str, Any]] = [*history, {"role": "user", "content": user_content}]
         effort = self.settings.deep_effort if deep else self.settings.quick_effort
         max_turns = MAX_TURNS["deep" if deep else "quick"]
         json_retries = 0
@@ -363,11 +465,11 @@ class AgentRun:
         while turn < max_turns:
             last_turn = turn == max_turns - 1
             kwargs: dict[str, Any] = {
-                "model": self.settings.model,
+                "model": model,
                 "max_tokens": 32000,
                 "system": system,
                 "messages": messages,
-                "tools": TOOL_DEFINITIONS,
+                "tools": definitions,
                 "thinking": {"type": "adaptive", "display": "summarized"},
                 "output_config": {"effort": effort},
                 **request_extras(),
@@ -417,14 +519,9 @@ class AgentRun:
             turn += 1
 
             tool_uses = [b for b in final.content if b.type == "tool_use"]
-            if pending_text:
-                if tool_uses and not streaming_answer:
-                    reflect_step = reflect_step or await self.em.step_start("reflect", "Thinking")
-                    await self.em.reasoning(reflect_step, pending_text)
-                else:
-                    await self.em.delta(pending_text)
-            if reflect_step:
-                await self.em.step_update(reflect_step, label="Reasoned", status="done")
+            await self._settle_turn_text(
+                pending_text, reflect_step, streaming_answer, has_tools=bool(tool_uses)
+            )
 
             messages.append({"role": "assistant", "content": final.content})
 
@@ -440,56 +537,160 @@ class AgentRun:
                 # A truncated tool input parses as a partial object; never run it.
                 break
 
-            results = [await self._run_tool(block) for block in tool_uses]
+            results = []
+            for block in tool_uses:
+                args = block.input if isinstance(block.input, dict) else {}
+                content, is_error = await self._run_tool(block.name, args)
+                result = {"type": "tool_result", "tool_use_id": block.id, "content": content}
+                if is_error:
+                    result["is_error"] = True
+                results.append(result)
             messages.append({"role": "user", "content": results})
 
-        if not self.em.answer.strip():
-            await self.em.delta(
-                "I wasn't able to put together an answer from the knowledge base. "
-                "Try rephrasing the question or narrowing it to a collection."
-            )
+    async def _nvidia_loop(self, model, system, history, user_content, definitions, deep) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system},
+            *history,
+            {"role": "user", "content": user_content},
+        ]
+        tools = openai_tools(definitions)
+        max_turns = MAX_TURNS["deep" if deep else "quick"]
 
-    async def _run_tool(self, block) -> dict[str, Any]:
-        args = block.input if isinstance(block.input, dict) else {}
+        for turn in range(max_turns):
+            last_turn = turn == max_turns - 1
+            reflect_step: str | None = None
+            pending_text = ""
+            streaming_answer = False
+            result = nvidia.ChatTurn()
+            async for kind, value in nvidia.stream_chat(
+                model=model,
+                messages=messages,
+                tools=tools,
+                # Research budget spent: the model must answer with what it has.
+                tool_choice="none" if last_turn else "auto",
+                max_tokens=NVIDIA_MAX_TOKENS["deep" if deep else "quick"],
+            ):
+                if kind == "reasoning":
+                    if reflect_step is None:
+                        reflect_step = await self.em.step_start("reflect", "Thinking")
+                    await self.em.reasoning(reflect_step, value)
+                elif kind == "text":
+                    if streaming_answer:
+                        await self.em.delta(value)
+                    else:
+                        pending_text += value
+                        if len(pending_text) > PREAMBLE_CHARS:
+                            streaming_answer = True
+                            await self.em.delta(pending_text)
+                            pending_text = ""
+                elif kind == "tool_start" and pending_text and not streaming_answer:
+                    reflect_step = reflect_step or await self.em.step_start("reflect", "Thinking")
+                    await self.em.reasoning(reflect_step, pending_text)
+                    pending_text = ""
+                elif kind == "done":
+                    result = value
+
+            calls = [] if last_turn else result.tool_calls
+            await self._settle_turn_text(
+                pending_text, reflect_step, streaming_answer, has_tools=bool(calls)
+            )
+            if not calls or result.finish_reason == "length":
+                # No tool calls means the answer is complete; a truncated turn may hold
+                # partial tool arguments, which must never run.
+                break
+
+            result.tool_calls = calls
+            messages.append(result.assistant_message())
+            for call in calls:
+                try:
+                    args = call.parsed()
+                except ValueError:
+                    content, is_error = (
+                        "The tool arguments were not valid JSON. Send a JSON object.",
+                        True,
+                    )
+                else:
+                    content, is_error = await self._run_tool(call.name, args)
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "content": f"Error: {content}" if is_error else content,
+                    }
+                )
+
+    async def _settle_turn_text(
+        self, pending_text: str, reflect_step: str | None, streaming_answer: bool, has_tools: bool
+    ) -> None:
+        """Short text held back at the end of a turn: narration if tools follow,
+        otherwise the (short) answer."""
+        if pending_text:
+            if has_tools and not streaming_answer:
+                reflect_step = reflect_step or await self.em.step_start("reflect", "Thinking")
+                await self.em.reasoning(reflect_step, pending_text)
+            else:
+                await self.em.delta(pending_text)
+        if reflect_step:
+            await self.em.step_update(reflect_step, label="Reasoned", status="done")
+
+    async def _run_tool(self, name: str, args: dict[str, Any]) -> tuple[str, bool]:
+        """Run one tool call. Returns (content, is_error); input problems are reported
+        back to the model so it can correct itself."""
         try:
-            if block.name == "search_knowledge":
+            if name == "search_knowledge":
                 step = await self.em.step_start(
                     "search", "Searching knowledge", {"queries": args.get("queries") or []}
                 )
                 try:
                     outcome = await self._search(step, args)
-                except ToolInputError as exc:
+                except ToolInputError:
                     await self.em.step_update(step, label="Search failed", status="error")
-                    raise exc
-                content = outcome.text
-            elif block.name == "read_document":
+                    raise
+                return outcome.text, False
+            if name == "search_web" and self.web_enabled:
+                step = await self.em.step_start(
+                    "web", "Searching the web", {"queries": args.get("queries") or []}
+                )
+                started = time.perf_counter()
+                try:
+                    outcome = await self.tools.search_web(args)
+                except ToolInputError:
+                    await self.em.step_update(step, label="Web search failed", status="error")
+                    raise
+                self.retrieval_ms += int((time.perf_counter() - started) * 1000)
+                await self.em.sources([s.to_source_ref() for s in outcome.new_sources])
+                n = len(outcome.refs)
+                await self.em.step_update(
+                    step,
+                    label=f"Found {n} web result{'s' if n != 1 else ''}" if n else "No web results",
+                    status="done",
+                    queries=outcome.queries,
+                    refs=outcome.refs,
+                )
+                return outcome.text, False
+            if name == "read_document":
                 step = await self.em.step_start("read", "Reading document")
                 try:
                     content, entry = await self.tools.read(args)
-                except ToolInputError as exc:
+                except ToolInputError:
                     await self.em.step_update(step, label="Couldn't read document", status="error")
-                    raise exc
+                    raise
                 await self.em.step_update(
                     step,
-                    label=f"Read “{entry.hit.title}”",
+                    label=f"Read “{entry.title}”",
                     status="done",
-                    document_title=entry.hit.title,
+                    document_title=entry.title,
                     refs=[entry.ref],
                 )
-            elif block.name == "list_collections":
+                return content, False
+            if name == "list_collections":
                 step = await self.em.step_start("search", "Listing collections")
                 content = await self.tools.list_collections()
                 await self.em.step_update(step, label="Listed collections", status="done")
-            else:
-                raise ToolInputError(f"Unknown tool {block.name}")
+                return content, False
+            raise ToolInputError(f"Unknown tool {name}")
         except ToolInputError as exc:
-            return {
-                "type": "tool_result",
-                "tool_use_id": block.id,
-                "is_error": True,
-                "content": str(exc),
-            }
-        return {"type": "tool_result", "tool_use_id": block.id, "content": content}
+            return str(exc), True
 
     # ── persistence ───────────────────────────────────────────────────────
     async def _persist(self, db, *, status: str, error: str | None = None) -> Message:
@@ -502,7 +703,11 @@ class AgentRun:
         message.trace = self.em.trace
         message.status = status
 
-        cited = [r for r in cited_refs(content) if self.registry.get(r)]
+        cited = [
+            r
+            for r in cited_refs(content)
+            if (e := self.registry.get(r)) is not None and e.origin == "knowledge"
+        ]
         for ref in cited:
             entry = self.registry.get(ref)
             db.add(
@@ -541,7 +746,15 @@ async def direct_search(db, *, user_id, org, org_slugs, collection_ids, query, l
     scope = await resolve_scope(
         db, user_id=user_id, primary_org=org, org_slugs=org_slugs, collection_ids=collection_ids
     )
-    hits = await hybrid_search(db, [query], scope.collection_ids, limit=limit, per_doc=1)
+    settings = OrgSettings(**(org.settings or {}))
+    hits = await hybrid_search(
+        db,
+        [query],
+        scope.collection_ids,
+        limit=limit,
+        per_doc=1,
+        ranking=RankingOptions(rerank=settings.rerank, recency_bias=settings.recency_bias),
+    )
     registry = CitationRegistry()
     for h in hits:  # one result per document, best chunk first
         registry.register(h, scope.orgs[h.org_id], scope.collections[h.collection_id])

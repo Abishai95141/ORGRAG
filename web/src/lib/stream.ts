@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import type { Message, Mode, SourceRef, TraceStep } from "./types";
+import type { Message, MessageAttachment, Mode, SourceRef, TraceStep } from "./types";
 
 /**
  * Live answer turns live outside React so a stream survives route changes
@@ -13,6 +13,7 @@ import type { Message, Mode, SourceRef, TraceStep } from "./types";
 export type LiveTurn = {
   conversationId: string;
   pendingText: string;
+  pendingAttachments: MessageAttachment[];
   userMessage: Message | null;
   assistantId: string | null;
   mode: Mode;
@@ -72,6 +73,9 @@ type StartArgs = {
   mode: Mode;
   scopeOrgSlugs?: string[];
   collectionIds?: string[];
+  attachments?: MessageAttachment[];
+  /** Per-message web search override; undefined follows the org setting. */
+  webSearch?: boolean | null;
   onSettled?: () => void;
 };
 
@@ -84,6 +88,7 @@ export async function startTurn(args: StartArgs) {
   turns.set(conversationId, {
     conversationId,
     pendingText: content,
+    pendingAttachments: args.attachments ?? [],
     userMessage: null,
     assistantId: null,
     mode,
@@ -106,6 +111,8 @@ export async function startTurn(args: StartArgs) {
         mode,
         scope_org_slugs: args.scopeOrgSlugs,
         collection_ids: args.collectionIds?.length ? args.collectionIds : undefined,
+        attachment_ids: args.attachments?.map((a) => a.id) ?? [],
+        web_search: args.webSearch ?? undefined,
       }),
       signal: controller.signal,
     });

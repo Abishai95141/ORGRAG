@@ -2,19 +2,33 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { IconCheck, IconCopy, IconDeep, IconQuick, IconThumbDown, IconThumbUp, IconWarning } from "@/components/icons";
+import { IconCheck, IconCopy, IconDeep, IconPaperclip, IconQuick, IconThumbDown, IconThumbUp, IconWarning } from "@/components/icons";
 import { OrgMark, StrataMark } from "@/components/illustrations";
 import { Tooltip } from "@/components/ui";
 import { api } from "@/lib/api";
-import type { Message, Mode, SourceRef, TraceStep } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import type { Message, MessageAttachment, Mode, SourceRef, TraceStep } from "@/lib/types";
+import { cn, formatBytes } from "@/lib/utils";
 import { Answer } from "./answer";
-import { SourceKindIcon } from "./source-kind";
+import { citationStyle, originLabel, SourceRefIcon } from "./source-kind";
 import { Trace } from "./trace";
 
-export function UserMessage({ content }: { content: string }) {
+export function UserMessage({ content, attachments }: { content: string; attachments?: MessageAttachment[] }) {
   return (
-    <div className="flex animate-rise justify-end">
+    <div className="flex animate-rise flex-col items-end gap-1.5">
+      {attachments?.length ? (
+        <div className="flex max-w-[85%] flex-wrap justify-end gap-1.5">
+          {attachments.map((a) => (
+            <span
+              key={a.id}
+              className="inline-flex max-w-[240px] items-center gap-1.5 rounded-[9px] border border-line bg-surface px-2 py-1 text-[12px] text-ink-2"
+            >
+              <IconPaperclip size={13} className="shrink-0 text-ink-3" />
+              <span className="truncate">{a.filename}</span>
+              <span className="shrink-0 font-mono text-[10.5px] text-ink-3">{formatBytes(a.size_bytes)}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
       <div className="max-w-[85%] rounded-[16px] rounded-br-[5px] bg-surface-2 px-4 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap text-ink">
         {content}
       </div>
@@ -107,16 +121,16 @@ function SourceStrip({ sources, onOpenSource }: { sources: SourceRef[]; onOpenSo
         >
           <span
             className="mt-px grid h-5 min-w-5 place-items-center rounded-[5px] px-1 font-mono text-[10.5px] font-medium"
-            style={{ background: `hsl(${s.org_hue} 40% var(--org-l) / .14)`, color: `hsl(${s.org_hue} 50% calc(var(--org-l) - 10%))` }}
+            style={citationStyle(s)}
           >
             {s.ref}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13px] font-medium text-ink">{s.title}</span>
             <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink-3">
-              <SourceKindIcon kind={s.source_kind} size={12} />
+              <SourceRefIcon source={s} size={12} />
               <span className="truncate">
-                {s.org_name} · {s.collection_name}
+                {s.origin === "knowledge" ? `${s.org_name} · ${s.collection_name}` : originLabel(s)}
               </span>
             </span>
           </span>
@@ -179,7 +193,10 @@ export function citedRefs(content: string) {
 
 export function uniqueOrgs(sources: SourceRef[]) {
   const seen = new Map<string, { id: string; name: string; hue: number; slug: string }>();
-  for (const s of sources) if (!seen.has(s.org_id)) seen.set(s.org_id, { id: s.org_id, name: s.org_name, hue: s.org_hue, slug: s.org_slug });
+  for (const s of sources) {
+    if (s.origin !== "knowledge" || !s.org_id || seen.has(s.org_id)) continue;
+    seen.set(s.org_id, { id: s.org_id, name: s.org_name ?? "", hue: s.org_hue ?? 0, slug: s.org_slug ?? "" });
+  }
   return [...seen.values()];
 }
 

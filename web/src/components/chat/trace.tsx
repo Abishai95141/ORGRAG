@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { IconAnswer, IconChevronDown, IconPlan, IconRead, IconReflect, IconSearch, IconWarning, Spinner } from "@/components/icons";
+import { IconAnswer, IconChevronDown, IconGlobe, IconPlan, IconRead, IconReflect, IconSearch, IconWarning, Spinner } from "@/components/icons";
 import type { SourceRef, StepKind, TraceStep } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const STEP_ICON: Record<StepKind, typeof IconPlan> = {
   plan: IconPlan,
   search: IconSearch,
+  web: IconGlobe,
   read: IconRead,
   reflect: IconReflect,
   answer: IconAnswer,
@@ -46,6 +47,7 @@ export function Trace({
   if (!steps.length) return null;
 
   const searches = steps.filter((s) => s.kind === "search").reduce((n, s) => n + (s.detail.queries?.length ?? 1), 0);
+  const webSearches = steps.filter((s) => s.kind === "web").reduce((n, s) => n + (s.detail.queries?.length ?? 1), 0);
   const reads = steps.filter((s) => s.kind === "read").length;
   const failed = steps.some((s) => s.status === "error");
   const running = steps.find((s) => s.status === "running");
@@ -68,6 +70,7 @@ export function Trace({
             <>
               <span className="font-medium text-ink-2">Researched</span>
               {searches ? ` · ${searches} ${searches === 1 ? "search" : "searches"}` : ""}
+              {webSearches ? ` · ${webSearches} web` : ""}
               {reads ? ` · ${reads} ${reads === 1 ? "read" : "reads"}` : ""}
               {sources.length ? ` · ${sources.length} sources` : ""}
               {duration(steps) ? ` · ${duration(steps)}` : ""}
@@ -146,7 +149,11 @@ function TraceRow({
         <div className="mt-2 flex flex-wrap gap-1.5">
           {step.detail.queries.map((q) => (
             <span key={q} className="inline-flex max-w-full items-center gap-1.5 rounded-[7px] border border-line bg-surface px-2 py-0.5 text-[12px] text-ink-2">
-              <IconSearch size={12} className="shrink-0 text-ink-3" />
+              {step.kind === "web" ? (
+                <IconGlobe size={12} className="shrink-0 text-ink-3" />
+              ) : (
+                <IconSearch size={12} className="shrink-0 text-ink-3" />
+              )}
               <span className="truncate">{q}</span>
             </span>
           ))}
@@ -169,7 +176,9 @@ function TraceRow({
             >
               <span
                 className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: `hsl(${s.org_hue} var(--org-s) var(--org-l))` }}
+                style={{
+                  background: s.origin === "knowledge" && s.org_hue !== null ? `hsl(${s.org_hue} var(--org-s) var(--org-l))` : "var(--ink-3)",
+                }}
               />
               <span className="font-mono text-[10.5px] text-ink-3">{s.ref}</span>
               <span className="truncate">{s.title}</span>

@@ -23,6 +23,7 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "lxml>=5.3",
     "numpy>=1.26",
+    "cryptography>=43",
 ]
 
 [project.optional-dependencies]

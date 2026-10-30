@@ -4,10 +4,23 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.core.config import get_settings
+
 Role = Literal["owner", "admin", "member", "viewer"]
 Mode = Literal["quick", "deep"]
-SourceKind = Literal["upload", "web", "github"]
+SourceKind = Literal["upload", "web", "github", "gdrive", "slack", "notion"]
 SourceStatus = Literal["idle", "queued", "syncing", "ready", "error"]
+RecencyBias = Literal["off", "low", "medium", "high"]
+SourceOrigin = Literal["knowledge", "web", "attachment"]
+
+
+class Page[T](BaseModel):
+    """Envelope for every paginated list: `limit`/`offset` echo the request."""
+
+    items: list[T]
+    total: int
+    limit: int
+    offset: int
 
 
 class Out(BaseModel):
@@ -40,21 +53,27 @@ class UserEnvelope(BaseModel):
 
 # ── organizations ────────────────────────────────────────────────────────────
 class OrgSettings(BaseModel):
-    model: str = "claude-opus-5-5"
+    model: str = Field(default_factory=lambda: get_settings().default_model)
     quick_effort: Literal["low", "medium", "high"] = "low"
     deep_effort: Literal["medium", "high", "xhigh"] = "high"
     default_mode: Mode = "quick"
     retrieval_top_k: int = Field(default=8, ge=1, le=30)
     allow_cross_org: bool = True
+    rerank: bool = True
+    recency_bias: RecencyBias = "low"
+    web_search: bool = False
 
 
 class OrgSettingsPatch(BaseModel):
-    model: str | None = None
+    model: str | None = Field(default=None, min_length=1, max_length=120)
     quick_effort: Literal["low", "medium", "high"] | None = None
     deep_effort: Literal["medium", "high", "xhigh"] | None = None
     default_mode: Mode | None = None
     retrieval_top_k: int | None = Field(default=None, ge=1, le=30)
     allow_cross_org: bool | None = None
+    rerank: bool | None = None
+    recency_bias: RecencyBias | None = None
+    web_search: bool | None = None
 
 
 class OrgSummary(BaseModel):
@@ -70,6 +89,9 @@ class OrgSummary(BaseModel):
 class OrgOut(OrgSummary):
     description: str | None
     settings: OrgSettings
+    # The model runs actually use: settings.model, or the configured provider's
+    # default when settings.model's provider has no API key. Null with no key at all.
+    effective_model: str | None
     created_at: datetime
 
 
@@ -213,16 +235,37 @@ class DocumentRow(BaseModel):
     mime: str
     chunk_count: int
     token_count: int
+    boost: int
+    hidden: bool
+    feedback_up: int
+    feedback_down: int
+    source_updated_at: datetime | None
     updated_at: datetime
 
 
 class DocumentDetail(DocumentRow):
     content: str
+    my_vote: Literal["up", "down"] | None = None
 
 
-class DocumentPage(BaseModel):
-    items: list[DocumentRow]
-    total: int
+DocumentPage = Page[DocumentRow]
+
+
+class DocumentPatch(BaseModel):
+    boost: int | None = Field(default=None, ge=-3, le=3)
+    hidden: bool | None = None
+
+
+class DocumentFeedbackIn(BaseModel):
+    vote: Literal["up", "down"] | None
+    message_id: uuid.UUID | None = None
+
+
+class DocumentFeedbackOut(BaseModel):
+    document_id: uuid.UUID
+    vote: Literal["up", "down"] | None
+    feedback_up: int
+    feedback_down: int
 
 
 class ConnectorInfo(BaseModel):
@@ -234,19 +277,26 @@ class ConnectorInfo(BaseModel):
 
 # ── search ───────────────────────────────────────────────────────────────────
 class SourceRef(BaseModel):
+    """A citation target. `origin` says where it came from: the org knowledge base
+    (all org/document fields set), the web (url + title only) or a file attached to
+    the conversation (`attachment_id`)."""
+
     ref: int
-    document_id: uuid.UUID
-    chunk_id: uuid.UUID
+    origin: SourceOrigin = "knowledge"
+    document_id: uuid.UUID | None
+    chunk_id: uuid.UUID | None
+    attachment_id: uuid.UUID | None = None
     title: str
     url: str | None
     snippet: str
-    org_id: uuid.UUID
-    org_slug: str
-    org_name: str
-    org_hue: int
-    collection_name: str
-    source_kind: SourceKind
+    org_id: uuid.UUID | None
+    org_slug: str | None
+    org_name: str | None
+    org_hue: int | None
+    collection_name: str | None
+    source_kind: SourceKind | None
     score: float
+    updated_at: datetime | None = None
 
 
 class SearchIn(BaseModel):
@@ -320,12 +370,27 @@ class ConversationPatch(BaseModel):
     scope_org_slugs: list[str] | None = None
 
 
+class AttachmentOut(Out):
+    id: uuid.UUID
+    conversation_id: uuid.UUID | None
+    filename: str
+    mime: str
+    size_bytes: int
+    token_count: int
+    created_at: datetime
+
+
+class AttachmentDetail(AttachmentOut):
+    content: str
+
+
 class MessageOut(Out):
     id: uuid.UUID
     conversation_id: uuid.UUID
     role: Literal["user", "assistant"]
     content: str
     sources: list[dict[str, Any]]
+    attachments: list[dict[str, Any]]
     trace: list[dict[str, Any]]
     feedback: Literal["up", "down"] | None
     status: Literal["complete", "streaming", "error"]
@@ -342,6 +407,8 @@ class MessageCreate(BaseModel):
     mode: Mode | None = None
     scope_org_slugs: list[str] | None = None
     collection_ids: list[uuid.UUID] | None = None
+    attachment_ids: list[uuid.UUID] = Field(default=[], max_length=10)
+    web_search: bool | None = None
 
 
 class FeedbackIn(BaseModel):
@@ -391,5 +458,40 @@ class InsightsOut(BaseModel):
 
 class HealthOut(BaseModel):
     status: str
+    version: str
     llm_configured: bool
+    llm_providers: list[str]
+    default_model: str
     embedding_provider: str
+    rerank_provider: str | None
+    web_search_provider: str | None
+
+
+class ModelOut(BaseModel):
+    id: str
+    label: str
+    provider: Literal["anthropic", "nvidia"]
+    hint: str
+    available: bool
+
+
+# ── api keys ─────────────────────────────────────────────────────────────────
+class ApiKeyOut(Out):
+    id: uuid.UUID
+    name: str
+    prefix: str
+    role: Role
+    user_id: uuid.UUID
+    last_used_at: datetime | None
+    expires_at: datetime | None
+    created_at: datetime
+
+
+class ApiKeyCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    role: Literal["admin", "member", "viewer"] = "member"
+    expires_in_days: int | None = Field(default=None, ge=1, le=730)
+
+
+class ApiKeyCreated(ApiKeyOut):
+    key: str = Field(description="The secret key. Shown only once.")

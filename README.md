@@ -21,7 +21,9 @@ what changed.
   agents and settings. Questions can be scoped to one org or several. Data from an
   org you don't belong to never enters retrieval, and orgs can opt out of
   cross-org questions.
-- **Agentic RAG with Claude.**
+- **Agentic RAG on Claude or NVIDIA-hosted open models.** Each org picks its model:
+  Claude (Opus, Sonnet, Haiku 5.5) or, through the NVIDIA API, Nemotron 3 Ultra and
+  other open models.
   - *Quick* mode: a short loop of searches, then an answer.
   - *Deep* mode: Claude writes a research plan, runs several searches, reads whole
     documents, reflects, and then writes a cited answer.
@@ -29,11 +31,26 @@ what changed.
 - **Hybrid retrieval in Postgres.** `pgvector` cosine search and full-text search are
   merged with Reciprocal Rank Fusion, then expanded with neighbouring chunks. An
   access allow-list (org × collection visibility) is applied in SQL on every query.
+- **Ranking you can tune.**
+  - A cross-encoder reranks the top candidates (NVIDIA Nemotron rerank, or a local model).
+  - Recency bias prefers recently changed documents (off / low / medium / high).
+  - Admins boost, lower or hide documents; readers vote sources up or down, and both feed
+    into ranking.
 - **Connectors.**
   - File upload: PDF, DOCX, Markdown, HTML, CSV, JSON, text.
   - Website crawler: same domain only, respects robots.txt.
   - GitHub repositories.
-  - All three sit behind a small connector interface, so more can be added.
+  - Google Drive (service account), Slack (bot token) and Notion (integration token),
+    with incremental syncs.
+  - Documents deleted upstream are removed from the index; an empty listing never wipes
+    a source.
+- **Files in chat.** Attach PDFs, Word files and more to a question; they're read into
+  the answer and cited, without joining the org's knowledge base.
+- **Web search** (optional, Tavily or Brave): the agent can search the public web when the
+  knowledge base can't answer, and cites web pages like any other source.
+- **A consistent, documented API.** Org API keys with capped roles, one error shape with
+  request IDs, paginated lists, OpenAPI docs at `/api/docs`, and a non-streaming answer
+  mode for scripts. See [`docs/API.md`](docs/API.md).
 - **Collections with access control.** A collection is either visible to the whole
   org or restricted to listed people. The agent can only search what the person
   asking can see.
@@ -51,8 +68,8 @@ what changed.
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind v4, TanStack Query, Radix primitives |
 | Backend | Python 3.12+, FastAPI, SQLAlchemy 2 (async), Alembic, Pydantic v2 |
 | Data | PostgreSQL 16 + pgvector (vectors, full-text search, and the job queue) |
-| AI | Anthropic Claude (`claude-opus-5-5` by default) with adaptive thinking, structured outputs and server-side refusal fallbacks |
-| Embeddings | `fastembed` (local, BAAI/bge-small-en-v1.5) by default; Voyage AI optional; deterministic `hash` provider for tests |
+| AI | NVIDIA API (Nemotron 3 Ultra and other open models, OpenAI-compatible) or Anthropic Claude (adaptive thinking, structured outputs, refusal fallbacks) |
+| Retrieval | `fastembed` embeddings (local, BAAI/bge-small-en-v1.5); NVIDIA `nemotron-3.5-rerank-8b` or local cross-encoder reranking; Tavily/Brave web search |
 
 ## Run on a new laptop
 
@@ -69,8 +86,13 @@ cp .env.example .env
 Edit `.env`:
 
 - `SECRET_KEY`: paste the output of `openssl rand -hex 32`
-- `ANTHROPIC_API_KEY`: your key from console.anthropic.com. Optional: without it
-  Strata runs in retrieval-only mode.
+- A model key — at least one of:
+  - `NVIDIA_API_KEY` from build.nvidia.com (runs Nemotron 3 Ultra, and enables the
+    Nemotron reranker), or
+  - `ANTHROPIC_API_KEY` from console.anthropic.com (runs Claude).
+
+  Without either, Strata runs in retrieval-only mode.
+- Optional: `TAVILY_API_KEY` or `BRAVE_API_KEY` to enable the web search tool.
 
 ```bash
 docker compose up -d --build                    # first build takes a few minutes
@@ -89,7 +111,7 @@ Prerequisites: **git**, **Docker Desktop** (for Postgres only), **uv**
 ```bash
 git clone https://github.com/Abishai95141/ORGRAG.git
 cd ORGRAG
-cp .env.example .env          # set SECRET_KEY; add ANTHROPIC_API_KEY to enable answers
+cp .env.example .env          # set SECRET_KEY; add NVIDIA_API_KEY or ANTHROPIC_API_KEY
 make setup                    # uv sync (with local embeddings) + pnpm install
 make dev-db                   # Postgres 16 + pgvector on :5432
 make migrate                  # create tables and indexes
@@ -126,8 +148,11 @@ sample documents, collections and an agent, plus two demo users:
 | `demo@strata.dev` | `strata-demo` | owner of both orgs |
 | `sam@strata.dev` | `strata-demo` | member of Northwind (cannot see the restricted Leadership collection), viewer of Halcyon |
 
-Without an API key, Strata still searches and shows sources, and the answer
+Without a model API key, Strata still searches and shows sources, and the answer
 explains how to enable the agent.
+
+If you already ran Strata before this version, run `make migrate` (or restart the
+`api` container, which migrates on start) to add the new tables.
 
 ### Troubleshooting
 
@@ -136,8 +161,11 @@ explains how to enable the agent.
   targets with `DEV_DB_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/strata`.
 - **`SECRET_KEY` error on `docker compose up`**: `.env` is missing or `SECRET_KEY`
   is empty.
-- **Answers say "Answer generation is off"**: set `ANTHROPIC_API_KEY` in `.env`,
-  then restart (`docker compose up -d`, or restart `make api`).
+- **Answers say "Answer generation is off"**: set `NVIDIA_API_KEY` or
+  `ANTHROPIC_API_KEY` in `.env`, then restart (`docker compose up -d`, or restart
+  `make api`). Settings → Agent shows which providers are connected.
+- **"The configured NVIDIA model isn't available for this key"**: some catalogue models
+  aren't enabled for every NVIDIA account. Pick another model in Settings → Agent.
 
 ## Repository layout
 

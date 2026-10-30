@@ -288,6 +288,8 @@ async def test_chat_streams_retrieval_only_answer_and_persists(app):
         json={"content": "Can I deploy on Friday?"},
     ) as resp:
         assert resp.headers["content-type"].startswith("text/event-stream")
+        # Proxies (the Next.js rewrite gzips) must not buffer the stream.
+        assert "no-transform" in resp.headers["cache-control"]
         body = "".join([chunk async for chunk in resp.aiter_text()])
     events = _parse_sse(body)
     names = [e for e, _ in events]

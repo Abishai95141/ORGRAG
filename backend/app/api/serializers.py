@@ -5,6 +5,8 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.connectors.registry import get_connector_class
+from app.llm.models import LLMUnavailable, resolve_model
 from app.models import (
     Chunk,
     Collection,
@@ -64,10 +66,16 @@ async def org_summaries(
 
 async def org_out(db: AsyncSession, org: Organization, user_id: uuid.UUID) -> OrgOut:
     summary = (await org_summaries(db, user_id, [org.id]))[0]
+    settings = OrgSettings(**(org.settings or {}))
+    try:
+        effective_model = resolve_model(settings.model)[1]
+    except LLMUnavailable:
+        effective_model = None
     return OrgOut(
         **summary.model_dump(),
         description=org.description,
-        settings=OrgSettings(**(org.settings or {})),
+        settings=settings,
+        effective_model=effective_model,
         created_at=org.created_at,
     )
 
@@ -121,9 +129,14 @@ async def collections_out(db: AsyncSession, collections: list[Collection]) -> li
 
 
 def _public_config(source: Source) -> dict:
+    """Config as clients see it: each secret field becomes `<name>_set: bool`."""
     config = dict(source.config or {})
-    if source.kind == "github":
-        config["token_set"] = bool((source.secrets or {}).get("token"))
+    try:
+        secret_fields = get_connector_class(source.kind).secret_fields()
+    except ValueError:
+        secret_fields = []
+    for name in secret_fields:
+        config[f"{name}_set"] = bool((source.secrets or {}).get(name))
     return config
 
 

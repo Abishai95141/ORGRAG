@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import AsyncIterator
+from datetime import datetime
 from typing import Any
 from urllib.parse import urldefrag, urljoin, urlparse
 from urllib.robotparser import RobotFileParser
@@ -65,7 +66,9 @@ class WebConnector(Connector):
             rp.parse([])
         return rp
 
-    async def iter_documents(self, progress: ProgressFn) -> AsyncIterator[RawDocument]:
+    async def iter_documents(
+        self, progress: ProgressFn, since: datetime | None = None
+    ) -> AsyncIterator[RawDocument]:
         cfg = self.validate_config(self.config)
         start = cfg["url"]
         host = urlparse(start).netloc

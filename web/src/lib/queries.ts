@@ -19,7 +19,10 @@ export const qk = {
   conversations: (slug: string) => ["org", slug, "conversations"] as const,
   conversation: (slug: string, id: string) => ["org", slug, "conversation", id] as const,
   insights: (slug: string, days: number) => ["org", slug, "insights", days] as const,
+  orgDocuments: (slug: string, params: Record<string, unknown>) => ["org", slug, "documents", params] as const,
+  apiKeys: (slug: string) => ["org", slug, "api-keys"] as const,
   connectors: ["connectors"] as const,
+  models: ["models"] as const,
 };
 
 export const useMe = () => useQuery({ queryKey: qk.me, queryFn: api.me, retry: false, staleTime: 60_000 });
@@ -33,6 +36,7 @@ export const useCollections = (slug: string) =>
 export const useAgents = (slug: string) => useQuery({ queryKey: qk.agents(slug), queryFn: () => api.agents(slug) });
 export const useConversations = (slug: string) =>
   useQuery({ queryKey: qk.conversations(slug), queryFn: () => api.conversations(slug) });
+export const useModels = () => useQuery({ queryKey: qk.models, queryFn: api.models, staleTime: 5 * 60_000 });
 export const useConnectors = () =>
   useQuery({ queryKey: qk.connectors, queryFn: api.connectors, staleTime: Infinity });
 

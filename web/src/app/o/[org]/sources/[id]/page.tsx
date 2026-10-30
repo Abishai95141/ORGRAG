@@ -7,16 +7,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { DocumentSheet } from "@/components/chat/document-sheet";
 import { SourceKindIcon, SOURCE_KIND_LABEL } from "@/components/chat/source-kind";
-import { IconArrowLeft, IconExternal, IconRefresh, IconSearch, IconTrash } from "@/components/icons";
+import { IconArrowLeft, IconBoost, IconExternal, IconEyeOff, IconRefresh, IconSearch, IconThumbDown, IconThumbUp, IconTrash } from "@/components/icons";
 import { NoResultsArt } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
 import { Dropzone, INTERVALS, StatusPill, SyncProgress } from "@/components/sources/shared";
-import { Button, Card, EmptyState, Input, Select, Skeleton, Stat } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Input, Select, Skeleton, Stat } from "@/components/ui";
 import { confirmAction } from "@/components/ui/confirm";
 import { api, ApiError } from "@/lib/api";
 import { qk, useSource } from "@/lib/queries";
 import type { DocumentRow, SourceRef } from "@/lib/types";
-import { atLeast, formatNumber, hostname, relativeTime } from "@/lib/utils";
+import { atLeast, cn, formatNumber, hostname, relativeTime } from "@/lib/utils";
 
 const PAGE = 25;
 
@@ -78,8 +78,10 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
     const s = source.data!;
     setPreview({
       ref: 0,
+      origin: "knowledge",
       document_id: d.id,
       chunk_id: "",
+      attachment_id: null,
       title: d.title,
       url: d.url,
       snippet: "",
@@ -236,12 +238,15 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
                     {docs.data.items.map((d) => (
                       <tr key={d.id} className="group cursor-pointer transition-colors hover:bg-surface-2/50" onClick={() => openDoc(d)}>
                         <td className="max-w-0 px-4 py-2.5">
-                          <div className="truncate font-medium">{d.title}</div>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className={cn("truncate font-medium", d.hidden && "text-ink-3 line-through decoration-line-strong")}>{d.title}</span>
+                            <DocBadges doc={d} />
+                          </div>
                           {d.url ? <div className="truncate font-mono text-[11px] text-ink-3">{d.url.replace(/^https?:\/\//, "")}</div> : null}
                         </td>
                         <td className="hidden px-4 py-2.5 text-right text-ink-2 tabular-nums sm:table-cell">{d.chunk_count}</td>
                         <td className="hidden px-4 py-2.5 text-right text-ink-2 tabular-nums md:table-cell">{formatNumber(d.token_count)}</td>
-                        <td className="px-4 py-2.5 text-right whitespace-nowrap text-ink-3">{relativeTime(d.updated_at)}</td>
+                        <td className="px-4 py-2.5 text-right whitespace-nowrap text-ink-3">{relativeTime(d.source_updated_at ?? d.updated_at)}</td>
                         {isAdmin ? (
                           <td className="px-2">
                             <button
@@ -282,5 +287,31 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
       </div>
       <DocumentSheet source={preview} onClose={() => setPreview(null)} />
     </div>
+  );
+}
+
+/** Curation and reader-feedback markers for a document row. */
+function DocBadges({ doc }: { doc: DocumentRow }) {
+  const net = doc.feedback_up - doc.feedback_down;
+  return (
+    <span className="flex shrink-0 items-center gap-1">
+      {doc.hidden ? (
+        <Badge tone="warn">
+          <IconEyeOff size={11} /> Hidden
+        </Badge>
+      ) : null}
+      {doc.boost ? (
+        <Badge tone={doc.boost > 0 ? "accent" : "neutral"}>
+          <IconBoost size={11} className={doc.boost < 0 ? "rotate-180" : undefined} />
+          {doc.boost > 0 ? "Boosted" : "Lowered"}
+        </Badge>
+      ) : null}
+      {doc.feedback_up || doc.feedback_down ? (
+        <span className={cn("inline-flex items-center gap-0.5 font-mono text-[11px]", net > 0 ? "text-ok" : net < 0 ? "text-err" : "text-ink-3")}>
+          {net >= 0 ? <IconThumbUp size={11} /> : <IconThumbDown size={11} />}
+          {net > 0 ? `+${net}` : net}
+        </span>
+      ) : null}
+    </span>
   );
 }

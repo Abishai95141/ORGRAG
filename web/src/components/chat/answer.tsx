@@ -8,7 +8,7 @@ import { IconExternal, IconEye } from "@/components/icons";
 import { OrgMark } from "@/components/illustrations";
 import type { SourceRef } from "@/lib/types";
 import { cn, hostname, orgColor } from "@/lib/utils";
-import { SourceKindIcon } from "./source-kind";
+import { citationStyle, originLabel, SourceRefIcon } from "./source-kind";
 
 /**
  * Turn bare citation markers like [3] or [2, 5] into links the renderer can
@@ -82,11 +82,7 @@ export function CitationChip({ source, onOpen }: { source: SourceRef; onOpen: (s
           onMouseLeave={() => setOpen(false)}
           onClick={() => onOpen(source)}
           className="mx-[1px] inline-flex h-[18px] min-w-[18px] -translate-y-[1px] items-center justify-center rounded-[5px] px-1 align-middle font-mono text-[10.5px] font-medium tabular-nums transition-colors"
-          style={{
-            background: `hsl(${source.org_hue} 40% var(--org-l) / .14)`,
-            color: `hsl(${source.org_hue} 50% calc(var(--org-l) - 10%))`,
-            boxShadow: `inset 0 0 0 1px hsl(${source.org_hue} 40% var(--org-l) / .25)`,
-          }}
+          style={citationStyle(source)}
           aria-label={`Source ${source.ref}: ${source.title}`}
         >
           {source.ref}
@@ -113,15 +109,24 @@ function SourcePreview({ source, onOpen }: { source: SourceRef; onOpen: (s: Sour
   return (
     <div>
       <div className="flex items-center gap-2 text-[11.5px] text-ink-3">
-        <OrgMark name={source.org_name} hue={source.org_hue} size={16} />
-        <span className="font-medium" style={{ color: orgColor(source.org_hue) }}>
-          {source.org_name}
-        </span>
-        <span>·</span>
-        <span className="truncate">{source.collection_name}</span>
+        {source.origin === "knowledge" && source.org_name && source.org_hue !== null ? (
+          <>
+            <OrgMark name={source.org_name} hue={source.org_hue} size={16} />
+            <span className="font-medium" style={{ color: orgColor(source.org_hue) }}>
+              {source.org_name}
+            </span>
+            <span>·</span>
+            <span className="truncate">{source.collection_name}</span>
+          </>
+        ) : (
+          <span className="font-mono text-[10.5px] tracking-wider uppercase">
+            {originLabel(source)}
+            {source.origin === "web" && host ? ` · ${host}` : ""}
+          </span>
+        )}
       </div>
       <div className="mt-2 flex items-start gap-2">
-        <SourceKindIcon kind={source.source_kind} className="mt-0.5 text-ink-3" />
+        <SourceRefIcon source={source} className="mt-0.5 text-ink-3" />
         <div className="text-[13.5px] leading-snug font-semibold">{source.title}</div>
       </div>
       <p className="mt-2 line-clamp-4 text-[12.5px] leading-relaxed text-ink-2">{source.snippet}</p>

@@ -1,7 +1,12 @@
-"""Request dependencies: the current user and the org context (membership + role)."""
+"""Request dependencies: the current user and the org context (membership + role).
+
+Two credentials are accepted: the session JWT (cookie, or `Authorization: Bearer`)
+and org API keys (`Authorization: Bearer strata_sk_…`). An API key acts as the
+user who created it, only inside its own org, with at most the key's role."""
 
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, Request
 from sqlalchemy import select
@@ -10,8 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.errors import ApiError, forbidden, not_found
-from app.core.security import decode_session_token
-from app.models import Membership, Organization, User
+from app.core.security import API_KEY_PREFIX, decode_session_token, hash_api_key
+from app.models import ApiKey, Membership, Organization, User
 
 ROLE_RANK = {"viewer": 0, "member": 1, "admin": 2, "owner": 3}
 
@@ -20,22 +25,62 @@ def role_at_least(role: str, minimum: str) -> bool:
     return ROLE_RANK.get(role, -1) >= ROLE_RANK[minimum]
 
 
-def _token_from(request: Request) -> str | None:
-    token = request.cookies.get(get_settings().session_cookie)
-    if token:
-        return token
+# Non-org routes an API key may call; everything else must be under its org.
+API_KEY_GLOBAL_ROUTES = {
+    ("GET", "/api/auth/me"),
+    ("GET", "/api/connectors"),
+    ("GET", "/api/models"),
+}
+LAST_USED_RESOLUTION = timedelta(minutes=5)
+
+
+def _bearer(request: Request) -> str | None:
     auth = request.headers.get("authorization", "")
     if auth.lower().startswith("bearer "):
         return auth[7:].strip()
     return None
 
 
+async def _api_key_user(request: Request, db: AsyncSession, raw: str) -> User:
+    key = (
+        await db.execute(select(ApiKey).where(ApiKey.key_hash == hash_api_key(raw)))
+    ).scalar_one_or_none()
+    now = datetime.now(UTC)
+    if key is None or (key.expires_at and key.expires_at <= now):
+        raise ApiError(401, "The API key is invalid or has expired", "invalid_api_key")
+    path, method = request.url.path, request.method
+    if not path.startswith("/api/orgs/") and (method, path) not in API_KEY_GLOBAL_ROUTES:
+        raise forbidden("API keys can only call their organization's routes")
+    if key.last_used_at is None or now - key.last_used_at > LAST_USED_RESOLUTION:
+        key.last_used_at = now
+        await db.commit()
+    request.state.api_key = key
+    user = await db.get(User, key.user_id)
+    if user is None:
+        raise ApiError(401, "The API key is invalid or has expired", "invalid_api_key")
+    return user
+
+
 async def current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
-    token = _token_from(request)
+    bearer = _bearer(request)
+    if bearer and bearer.startswith(API_KEY_PREFIX):
+        return await _api_key_user(request, db, bearer)
+    token = request.cookies.get(get_settings().session_cookie) or bearer
     user_id = decode_session_token(token) if token else None
     user = await db.get(User, user_id) if user_id else None
     if user is None:
         raise ApiError(401, "Sign in to continue", "unauthenticated")
+    return user
+
+
+def api_key_of(request: Request) -> ApiKey | None:
+    return getattr(request.state, "api_key", None)
+
+
+async def session_user(request: Request, user: User = Depends(current_user)) -> User:
+    """For routes that must not be reachable with an API key (e.g. managing keys)."""
+    if api_key_of(request) is not None:
+        raise forbidden("Sign in with a session to do this; API keys can't")
     return user
 
 
@@ -61,6 +106,7 @@ class OrgContext:
 
 async def org_context(
     slug: str,
+    request: Request,
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ) -> OrgContext:
@@ -71,10 +117,14 @@ async def org_context(
             .where(Organization.slug == slug, Membership.user_id == user.id)
         )
     ).first()
-    # Non-members get the same 404 as a missing org so slugs can't be probed.
-    if row is None:
+    key = api_key_of(request)
+    # Non-members (and keys for another org) get the same 404 as a missing org so
+    # slugs can't be probed.
+    if row is None or (key is not None and key.org_id != row[0].id):
         raise not_found("Organization")
     org, role = row
+    if key is not None and ROLE_RANK[key.role] < ROLE_RANK[role]:
+        role = key.role
     return OrgContext(org=org, user=user, role=role, db=db)
 
 

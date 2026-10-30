@@ -19,7 +19,10 @@ TEST_DB = os.environ.get(
 )
 os.environ["DATABASE_URL"] = TEST_DB
 os.environ["EMBEDDING_PROVIDER"] = "hash"
-os.environ["ANTHROPIC_API_KEY"] = ""
+# Tests never call real providers, whatever the developer's .env holds.
+for _key in ("ANTHROPIC_API_KEY", "NVIDIA_API_KEY", "TAVILY_API_KEY", "BRAVE_API_KEY", "LLM_MODEL"):
+    os.environ[_key] = ""
+os.environ["RERANK_PROVIDER"] = "none"
 os.environ["FILE_STORAGE_DIR"] = tempfile.mkdtemp(prefix="strata-files-")
 
 BACKEND = Path(__file__).resolve().parent.parent

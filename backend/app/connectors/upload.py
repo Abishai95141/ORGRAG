@@ -2,6 +2,7 @@
 and re-read here on every sync."""
 
 from collections.abc import AsyncIterator
+from datetime import datetime
 from pathlib import Path
 
 from app.connectors.base import Connector, ProgressFn, RawDocument
@@ -21,7 +22,9 @@ class UploadConnector(Connector):
     description = "Drop in PDFs, Word documents, Markdown, HTML, CSV and text files."
     config_schema = {"type": "object", "properties": {}, "additionalProperties": False}
 
-    async def iter_documents(self, progress: ProgressFn) -> AsyncIterator[RawDocument]:
+    async def iter_documents(
+        self, progress: ProgressFn, since: datetime | None = None
+    ) -> AsyncIterator[RawDocument]:
         folder = storage_dir(self.config["_source_id"])
         files = sorted(p for p in folder.iterdir() if p.is_file())
         for i, path in enumerate(files):

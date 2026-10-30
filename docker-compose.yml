@@ -3,13 +3,17 @@ name: strata
 x-backend-env: &backend-env
   DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/strata
   SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+  NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-  LLM_MODEL: ${LLM_MODEL:-claude-opus-5-5}
+  LLM_MODEL: ${LLM_MODEL:-}
   LLM_FALLBACKS: ${LLM_FALLBACKS:-default}
   EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-fastembed}
   EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-small-en-v1.5}
   EMBEDDING_DIM: ${EMBEDDING_DIM:-384}
   VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
+  RERANK_PROVIDER: ${RERANK_PROVIDER:-auto}
+  TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+  BRAVE_API_KEY: ${BRAVE_API_KEY:-}
   FILE_STORAGE_DIR: /data/files
   COOKIE_SECURE: ${COOKIE_SECURE:-false}
   CORS_ORIGINS: '["http://localhost:3000"]'

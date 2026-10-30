@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -34,3 +36,15 @@ def decode_session_token(token: str) -> uuid.UUID | None:
         return uuid.UUID(payload["sub"])
     except (jwt.PyJWTError, KeyError, ValueError):
         return None
+
+
+API_KEY_PREFIX = "strata_sk_"
+
+
+def new_api_key() -> str:
+    return API_KEY_PREFIX + secrets.token_urlsafe(32)
+
+
+def hash_api_key(raw: str) -> str:
+    """Keys are high-entropy random strings, so a plain SHA-256 is the right lookup hash."""
+    return hashlib.sha256(raw.encode()).hexdigest()

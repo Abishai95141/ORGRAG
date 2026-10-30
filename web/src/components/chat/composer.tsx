@@ -1,18 +1,51 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { IconAgent, IconCheck, IconDeep, IconQuick, IconScope, IconSend, IconStop } from "@/components/icons";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  IconAgent,
+  IconCheck,
+  IconDeep,
+  IconGlobe,
+  IconPaperclip,
+  IconQuick,
+  IconScope,
+  IconSend,
+  IconStop,
+  IconWarning,
+  IconX,
+  Spinner,
+} from "@/components/icons";
 import { Glyph, OrgMark } from "@/components/illustrations";
 import { Kbd, Menu, MenuCheckItem, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Tooltip } from "@/components/ui";
-import type { Agent, Mode, OrgSummary } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { api, ApiError } from "@/lib/api";
+import type { Agent, Attachment, Mode, OrgSummary } from "@/lib/types";
+import { cn, formatBytes } from "@/lib/utils";
+
+export type PendingAttachment = {
+  key: string;
+  name: string;
+  size: number;
+  status: "uploading" | "ready" | "error";
+  attachment?: Attachment;
+  error?: string;
+};
 
 export type ComposerState = {
   text: string;
   mode: Mode;
   scope: string[]; // org slugs
   agentId: string | null;
+  attachments?: PendingAttachment[];
+  /** null follows the org's default. */
+  web?: boolean | null;
 };
+
+const ACCEPT = ".pdf,.docx,.md,.markdown,.txt,.html,.htm,.csv,.json";
+const MAX_FILES = 10;
+
+/** Ids of the attachments ready to send with the message. */
+export const readyAttachmentIds = (s: ComposerState) =>
+  (s.attachments ?? []).flatMap((a) => (a.status === "ready" && a.attachment ? [a.attachment.id] : []));
 
 export function Composer({
   value,
@@ -27,6 +60,9 @@ export function Composer({
   placeholder = "Ask anything across your organizations…",
   autoFocus,
   size = "md",
+  slug,
+  webAvailable = false,
+  webDefault = false,
 }: {
   value: ComposerState;
   onChange: (v: ComposerState) => void;
@@ -40,8 +76,54 @@ export function Composer({
   placeholder?: string;
   autoFocus?: boolean;
   size?: "md" | "lg";
+  /** Org to upload attachments into; attachments are off without it. */
+  slug?: string;
+  /** A web search provider is configured on the server. */
+  webAvailable?: boolean;
+  webDefault?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  // Uploads finish after the render that started them; read the latest state through a ref.
+  const latest = useRef(value);
+  latest.current = value;
+  const attachments = value.attachments ?? [];
+  const webOn = value.web ?? webDefault;
+
+  function updateAttachment(key: string, patch: Partial<PendingAttachment> | null) {
+    const cur = latest.current;
+    const list = (cur.attachments ?? []).flatMap((a) => (a.key !== key ? [a] : patch ? [{ ...a, ...patch }] : []));
+    onChange({ ...cur, attachments: list });
+  }
+
+  function addFiles(files: FileList | File[]) {
+    if (!slug) return;
+    const room = MAX_FILES - attachments.length;
+    const picked = [...files].slice(0, Math.max(0, room));
+    if (!picked.length) return;
+    const added: PendingAttachment[] = picked.map((f) => ({
+      key: `${f.name}-${f.size}-${Math.random().toString(36).slice(2, 8)}`,
+      name: f.name,
+      size: f.size,
+      status: "uploading",
+    }));
+    const cur = latest.current;
+    onChange({ ...cur, attachments: [...(cur.attachments ?? []), ...added] });
+    picked.forEach((file, i) => {
+      api
+        .uploadAttachment(slug, file)
+        .then((attachment) => updateAttachment(added[i].key, { status: "ready", attachment }))
+        .catch((e) =>
+          updateAttachment(added[i].key, { status: "error", error: e instanceof ApiError ? e.message : "Upload failed" }),
+        );
+    });
+  }
+
+  function removeAttachment(a: PendingAttachment) {
+    updateAttachment(a.key, null);
+    if (slug && a.attachment) void api.deleteAttachment(slug, a.attachment.id).catch(() => {});
+  }
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -54,7 +136,8 @@ export function Composer({
     if (autoFocus) ref.current?.focus();
   }, [autoFocus]);
 
-  const canSend = value.text.trim().length > 0 && !streaming;
+  const uploading = attachments.some((a) => a.status === "uploading");
+  const canSend = value.text.trim().length > 0 && !streaming && !uploading;
 
   return (
     <form
@@ -62,15 +145,50 @@ export function Composer({
         e.preventDefault();
         if (canSend) onSubmit();
       }}
+      onDragOver={(e) => {
+        if (!slug || !e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false);
+      }}
+      onDrop={(e) => {
+        if (!slug || !e.dataTransfer.files.length) return;
+        e.preventDefault();
+        setDragging(false);
+        addFiles(e.dataTransfer.files);
+      }}
       className={cn(
-        "rounded-[18px] border border-line bg-surface shadow-[0_1px_0_rgba(0,0,0,.03),0_10px_30px_-18px_rgba(0,0,0,.25)] transition-[border-color,box-shadow] focus-within:border-line-strong",
+        "relative rounded-[18px] border border-line bg-surface shadow-[0_1px_0_rgba(0,0,0,.03),0_10px_30px_-18px_rgba(0,0,0,.25)] transition-[border-color,box-shadow] focus-within:border-line-strong",
+        dragging && "border-accent shadow-[0_0_0_3px_var(--accent-soft)]",
       )}
     >
+      {dragging ? (
+        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center rounded-[18px] bg-surface/85 text-[13px] font-medium text-accent">
+          <span className="inline-flex items-center gap-2">
+            <IconPaperclip size={16} /> Drop to attach
+          </span>
+        </div>
+      ) : null}
+      {attachments.length ? (
+        <div className="flex flex-wrap gap-1.5 px-3 pt-3">
+          {attachments.map((a) => (
+            <AttachmentChip key={a.key} item={a} onRemove={() => removeAttachment(a)} />
+          ))}
+        </div>
+      ) : null}
       <textarea
         ref={ref}
         rows={1}
         value={value.text}
         onChange={(e) => onChange({ ...value, text: e.target.value })}
+        onPaste={(e) => {
+          if (slug && e.clipboardData.files.length) {
+            e.preventDefault();
+            addFiles(e.clipboardData.files);
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
             e.preventDefault();
@@ -84,7 +202,33 @@ export function Composer({
           size === "lg" ? "pt-4 pb-2 text-[16px] leading-relaxed" : "pt-3.5 pb-1.5 text-[15px] leading-relaxed",
         )}
       />
-      <div className="flex items-center gap-1.5 px-2.5 pt-1 pb-2.5">
+      <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-1 pb-2.5">
+        {slug ? (
+          <>
+            <input
+              ref={fileInput}
+              type="file"
+              multiple
+              accept={ACCEPT}
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) addFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <Tooltip label="Attach files (PDF, Word, Markdown, text, CSV)">
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                disabled={attachments.length >= MAX_FILES}
+                aria-label="Attach files"
+                className="grid h-8 w-8 place-items-center rounded-[9px] text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-40"
+              >
+                <IconPaperclip size={16} />
+              </button>
+            </Tooltip>
+          </>
+        ) : null}
         <ModeToggle mode={value.mode} onChange={(mode) => onChange({ ...value, mode })} />
         <ScopePicker orgs={orgs} currentSlug={currentSlug} scope={value.scope} onChange={(scope) => onChange({ ...value, scope })} />
         {agents?.length ? (
@@ -97,6 +241,22 @@ export function Composer({
               onChange({ ...value, agentId, mode: agent?.mode ?? value.mode });
             }}
           />
+        ) : null}
+        {webAvailable ? (
+          <Tooltip label={webOn ? "Web search on — the agent may search the public web" : "Let the agent search the public web"}>
+            <button
+              type="button"
+              aria-pressed={webOn}
+              onClick={() => onChange({ ...value, web: !webOn })}
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-[9px] px-2 text-[12.5px] font-medium transition-colors",
+                webOn ? "bg-surface-2 text-ink shadow-[inset_0_0_0_1px_var(--line)]" : "text-ink-3 hover:bg-surface-2 hover:text-ink-2",
+              )}
+            >
+              <IconGlobe size={15} />
+              Web
+            </button>
+          </Tooltip>
         ) : null}
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden items-center gap-1 text-[11.5px] text-ink-3 sm:flex">
@@ -277,5 +437,38 @@ function AgentPicker({
         ))}
       </MenuContent>
     </Menu>
+  );
+}
+
+function AttachmentChip({ item, onRemove }: { item: PendingAttachment; onRemove: () => void }) {
+  const failed = item.status === "error";
+  return (
+    <span
+      title={failed ? item.error : item.name}
+      className={cn(
+        "group/chip inline-flex h-8 max-w-[260px] animate-fade items-center gap-2 rounded-[10px] border pr-1 pl-2 text-[12.5px]",
+        failed ? "border-err/30 bg-err-soft text-err" : "border-line bg-surface-2/60 text-ink-2",
+      )}
+    >
+      {item.status === "uploading" ? (
+        <Spinner size={13} className="shrink-0 text-ink-3" />
+      ) : failed ? (
+        <IconWarning size={14} className="shrink-0" />
+      ) : (
+        <IconPaperclip size={14} className="shrink-0 text-ink-3" />
+      )}
+      <span className="min-w-0 truncate font-medium">{item.name}</span>
+      <span className="shrink-0 font-mono text-[10.5px] opacity-70">
+        {failed ? "failed" : item.attachment ? `${item.attachment.token_count.toLocaleString()} tok` : formatBytes(item.size)}
+      </span>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${item.name}`}
+        className="grid h-6 w-6 shrink-0 place-items-center rounded-[7px] opacity-60 transition-opacity hover:bg-surface-3 hover:opacity-100"
+      >
+        <IconX size={12} />
+      </button>
+    </span>
   );
 }

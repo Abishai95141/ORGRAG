@@ -1,12 +1,17 @@
-"""Source sync: connector → parse → hash check → chunk → embed → replace chunks.
+"""Source sync: connector → parse → hash check → chunk → embed → replace chunks,
+then prune documents that no longer exist upstream.
 
 Each document is committed on its own so a long sync shows live progress and a
-failure halfway through keeps everything indexed so far."""
+failure halfway through keeps everything indexed so far.
+
+Full syncs see every document, so anything they don't yield was deleted upstream.
+Incremental syncs (connectors with `supports_incremental`) only fetch changes, so
+they prune against the connector's cheap `list_ids()` listing when it has one."""
 
 import hashlib
 import logging
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +38,8 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
         )
     ).scalar_one_or_none()
     if existing and existing.content_hash == content_hash:
+        if raw.updated_at and existing.source_updated_at != raw.updated_at:
+            existing.source_updated_at = raw.updated_at
         return "unchanged"
 
     markdown, detected_title = parse(raw.data, raw.mime)
@@ -73,6 +80,7 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
     doc.content = markdown
     doc.content_hash = content_hash
     doc.meta = raw.metadata
+    doc.source_updated_at = raw.updated_at
     doc.token_count = estimate_tokens(markdown)
     doc.updated_at = datetime.now(UTC)
     await db.flush()
@@ -93,11 +101,18 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
     return outcome
 
 
-async def sync_source(db: AsyncSession, source: Source) -> dict[str, int]:
-    """Run a full sync for a source. Caller owns the status transitions' commit."""
+INCREMENTAL_OVERLAP = timedelta(minutes=30)
+
+
+async def sync_source(db: AsyncSession, source: Source, *, full: bool = True) -> dict[str, int]:
+    """Run a sync for a source. Caller owns the status transitions' commit."""
     connector_cls = get_connector_class(source.kind)
     config = {**source.config, "_source_id": str(source.id)}
     connector = connector_cls(config, source.secrets or {})
+    since = None
+    if not full and connector_cls.supports_incremental and source.last_synced_at:
+        # Overlap absorbs clock skew and edits made while the last sync ran.
+        since = source.last_synced_at - INCREMENTAL_OVERLAP
 
     stats = {"created": 0, "updated": 0, "unchanged": 0, "empty": 0, "removed": 0}
     seen: set[str] = set()
@@ -110,7 +125,7 @@ async def sync_source(db: AsyncSession, source: Source) -> dict[str, int]:
             last_flush = time.monotonic()
             await db.commit()
 
-    async for raw in connector.iter_documents(progress):
+    async for raw in connector.iter_documents(progress, since=since):
         seen.add(raw.external_id)
         try:
             async with db.begin_nested():
@@ -121,19 +136,33 @@ async def sync_source(db: AsyncSession, source: Source) -> dict[str, int]:
         stats[outcome] += 1
         await db.commit()
 
-    # Anything the connector no longer yields was deleted upstream.
-    stale = (
-        (
-            await db.execute(
-                select(Document.id).where(
-                    Document.source_id == source.id, Document.external_id.not_in(seen or {""})
-                )
-            )
+    if since is None:
+        alive: set[str] | None = seen
+    else:
+        source.progress = {"done": 0, "total": None, "message": "Checking for deleted items"}
+        await db.commit()
+        alive = await connector.list_ids()
+    if alive is not None:
+        stats["removed"] = await prune_documents(db, source, alive)
+    return stats
+
+
+async def prune_documents(db: AsyncSession, source: Source, alive: set[str]) -> int:
+    """Delete this source's documents whose external id isn't in `alive`."""
+    existing = (
+        await db.execute(
+            select(Document.id, Document.external_id).where(Document.source_id == source.id)
         )
-        .scalars()
-        .all()
-    )
+    ).all()
+    stale = [doc_id for doc_id, external_id in existing if external_id not in alive]
+    if stale and not alive:
+        # An empty listing from a remote source is far more likely an access problem
+        # (revoked share, expired token) than everything being deleted. Keep the index.
+        log.warning(
+            "Source %s listed no documents; skipping removal of %d documents", source.id, len(stale)
+        )
+        return 0
     if stale:
         await db.execute(delete(Document).where(Document.id.in_(stale)))
-        stats["removed"] = len(stale)
-    return stats
+        await db.commit()
+    return len(stale)

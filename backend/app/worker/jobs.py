@@ -19,8 +19,9 @@ async def handle_sync_source(db, job: Job) -> None:
     source.error = None
     source.progress = {"done": 0, "total": None, "message": "Starting"}
     await db.commit()
+    full = bool(job.payload.get("full", True))
     try:
-        stats = await sync_source(db, source)
+        stats = await sync_source(db, source, full=full)
     except ConnectorError as exc:
         source.status = "error"
         source.error = str(exc)
@@ -35,6 +36,8 @@ async def handle_sync_source(db, job: Job) -> None:
         raise
     source.status = "ready"
     source.last_synced_at = datetime.now(UTC)
+    if full:
+        source.last_full_synced_at = source.last_synced_at
     source.progress = None
     await db.commit()
     log.info("Synced source %s (%s): %s", source.name, source.id, stats)

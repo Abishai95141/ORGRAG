@@ -382,6 +382,60 @@ export const IconCommand = make(
 
 export const IconHash = make("Hash", <path d="M7.5 3.5 6 16.5M14 3.5l-1.5 13M3.75 7.5h13M3.25 12.5h13" />);
 
+/** Paperclip — attach a file to a question. */
+export const IconPaperclip = make(
+  "Paperclip",
+  <path d="m15.25 9.5-5.6 5.6a3.35 3.35 0 0 1-4.75-4.75l6.1-6.1a2.25 2.25 0 0 1 3.18 3.18l-6.06 6.06a1.1 1.1 0 0 1-1.56-1.56l5.44-5.44" />,
+);
+
+export const IconEyeOff = make(
+  "EyeOff",
+  <>
+    <path d="M8.1 5.05A6.9 6.9 0 0 1 10 4.75c4.5 0 7.25 5.25 7.25 5.25a13 13 0 0 1-1.9 2.55M12.1 14.8a6.4 6.4 0 0 1-2.1.45C5.5 15.25 2.75 10 2.75 10A12.6 12.6 0 0 1 5.6 6.6" />
+    <path d="M8.4 8.4a2.25 2.25 0 0 0 3.2 3.2M3.75 3.75l12.5 12.5" />
+  </>,
+);
+
+/** Boost — a chevron rising out of a baseline: ranks a document higher. */
+export const IconBoost = make(
+  "Boost",
+  <>
+    <path d="m6 9.25 4-4 4 4M6 13.5l4-4 4 4" />
+    <path d="M4.75 16.5h10.5" opacity=".55" />
+  </>,
+);
+
+/** Drive-style shared folder: a folder whose tab is a small triangle of three points. */
+export const IconDrive = make(
+  "Drive",
+  <>
+    <path d="M3 6.25c0-.83.67-1.5 1.5-1.5h3.4l1.6 1.75h6c.83 0 1.5.67 1.5 1.5v6.75c0 .83-.67 1.5-1.5 1.5h-11c-.83 0-1.5-.67-1.5-1.5v-8.5Z" />
+    <circle cx="8" cy="12.75" r=".9" />
+    <circle cx="12" cy="12.75" r=".9" />
+    <circle cx="10" cy="9.6" r=".9" />
+  </>,
+);
+
+/** A channel: speech bubble carrying a hash — chat workspaces like Slack. */
+export const IconChannel = make(
+  "Channel",
+  <>
+    <path d="M4 3.75h12c.69 0 1.25.56 1.25 1.25v8c0 .69-.56 1.25-1.25 1.25H9L5.5 17v-2.75H4c-.69 0-1.25-.56-1.25-1.25V5c0-.69.56-1.25 1.25-1.25Z" />
+    <path d="M8.6 6.25 8 11.75M12 6.25l-.6 5.5M6.5 7.9h7M6.25 10.1h7" />
+  </>,
+);
+
+/** A block-built page: a wiki like Notion, where pages are stacks of blocks. */
+export const IconWiki = make(
+  "Wiki",
+  <>
+    <rect x="3.75" y="2.75" width="12.5" height="14.5" rx="1.75" />
+    <path d="M6.75 6.25h4.5" />
+    <rect x="6.75" y="8.75" width="6.5" height="2.5" rx=".6" />
+    <path d="M6.75 14h6.5" opacity=".55" />
+  </>,
+);
+
 export function Spinner({ size = 16, className }: { size?: number; className?: string }) {
   return (
     <svg viewBox="0 0 20 20" width={size} height={size} className={className} aria-hidden="true">

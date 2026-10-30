@@ -9,7 +9,7 @@ import { IconArrowRight, IconInfo } from "@/components/icons";
 import { ExcavationArt, GlyphTile } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
 import { api, ApiError } from "@/lib/api";
-import { qk, useAgents, useHealth } from "@/lib/queries";
+import { qk, useAgents, useHealth, useOrg } from "@/lib/queries";
 import { startTurn } from "@/lib/stream";
 import { cn } from "@/lib/utils";
 
@@ -19,12 +19,22 @@ function greeting(name: string) {
   return h < 5 ? `Up late, ${first}?` : h < 12 ? `Morning, ${first}.` : h < 18 ? `Afternoon, ${first}.` : `Evening, ${first}.`;
 }
 
+/** The attachments to send with a message, in the shape a user message shows them. */
+function sendable(state: ComposerState) {
+  return (state.attachments ?? []).flatMap((a) =>
+    a.status === "ready" && a.attachment
+      ? [{ id: a.attachment.id, filename: a.attachment.filename, mime: a.attachment.mime, size_bytes: a.attachment.size_bytes, token_count: a.attachment.token_count }]
+      : [],
+  );
+}
+
 function NewChat() {
   const { org, orgs, user } = useCurrentOrg();
   const router = useRouter();
   const qc = useQueryClient();
   const agents = useAgents(org.slug);
   const health = useHealth();
+  const fullOrg = useOrg(org.slug);
   const [state, setState] = useState<ComposerState>({ text: "", mode: "quick", scope: [org.slug], agentId: null });
   const [sending, setSending] = useState(false);
   const params = useSearchParams();
@@ -54,6 +64,8 @@ function NewChat() {
         content: text.trim(),
         mode,
         scopeOrgSlugs: state.scope,
+        attachments: sendable(state),
+        webSearch: state.web,
         onSettled: () => {
           qc.invalidateQueries({ queryKey: qk.conversation(org.slug, convo.id) });
           qc.invalidateQueries({ queryKey: qk.conversations(org.slug) });
@@ -101,12 +113,15 @@ function NewChat() {
             autoFocus
             size="lg"
             placeholder={agent ? `Ask ${agent.name}…` : undefined}
+            slug={org.slug}
+            webAvailable={!!health.data?.web_search_provider}
+            webDefault={fullOrg.data?.settings.web_search ?? false}
           />
           {health.data && !health.data.llm_configured ? (
             <p className="mt-3 flex items-start gap-2 text-[12.5px] leading-relaxed text-ink-3">
               <IconInfo size={15} className="mt-px shrink-0 text-warn" />
-              No Anthropic API key is configured, so Strata will search and show sources without writing an answer. Set
-              ANTHROPIC_API_KEY on the server to enable the agent.
+              No model API key is configured, so Strata will search and show sources without writing an answer. Set
+              NVIDIA_API_KEY or ANTHROPIC_API_KEY on the server to enable the agent.
             </p>
           ) : null}
         </div>

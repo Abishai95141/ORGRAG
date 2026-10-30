@@ -4,8 +4,9 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
-from sqlalchemy import func, or_, select
+from sqlalchemy import select
 
+from app.api.documents import document_page
 from app.api.serializers import sources_out
 from app.connectors.registry import CONNECTORS, get_connector_class
 from app.connectors.upload import storage_dir
@@ -13,13 +14,11 @@ from app.core.config import get_settings
 from app.core.deps import OrgContext, admin_ctx, member_ctx, org_context
 from app.core.errors import ApiError, bad_request, not_found
 from app.ingestion.parsers import UnsupportedFileType, mime_for
-from app.models import Chunk, Collection, Document, Source
+from app.models import Collection, Document, Source
 from app.retrieval.access import visible_collections
 from app.schemas.common import (
     ConnectorInfo,
-    DocumentDetail,
     DocumentPage,
-    DocumentRow,
     SourceCreate,
     SourceOut,
     SourcePatch,
@@ -63,13 +62,21 @@ async def _one(ctx: OrgContext, source: Source) -> SourceOut:
 
 
 def _validated_config(kind: str, config: dict) -> tuple[dict, dict]:
+    """Split secret fields (per the connector's schema) out of the config, then
+    validate the rest. Secrets are stored apart and never returned."""
+    try:
+        connector = get_connector_class(kind)
+    except ValueError as exc:
+        raise bad_request(str(exc), "unknown_connector") from exc
     secrets = {}
     config = dict(config)
-    if token := config.pop("token", None):
-        secrets["token"] = str(token)
-    config.pop("token_set", None)
+    for name in connector.secret_fields():
+        value = config.pop(name, None)
+        config.pop(f"{name}_set", None)
+        if value not in (None, ""):
+            secrets[name] = value if isinstance(value, str) else str(value)
     try:
-        return get_connector_class(kind).validate_config(config), secrets
+        return connector.validate_config(config), secrets
     except (ValueError, TypeError) as exc:
         raise bad_request(str(exc), "invalid_config") from exc
 
@@ -187,20 +194,6 @@ async def upload_files(
 
 
 # ── documents ────────────────────────────────────────────────────────────────
-def _row(doc: Document, chunks: int) -> DocumentRow:
-    return DocumentRow(
-        id=doc.id,
-        source_id=doc.source_id,
-        collection_id=doc.collection_id,
-        title=doc.title,
-        url=doc.url,
-        mime=doc.mime,
-        chunk_count=chunks,
-        token_count=doc.token_count,
-        updated_at=doc.updated_at,
-    )
-
-
 @router.get("/orgs/{slug}/sources/{source_id}/documents", response_model=DocumentPage)
 async def list_documents(
     source_id: uuid.UUID,
@@ -210,53 +203,6 @@ async def list_documents(
     q: str | None = Query(None, max_length=200),
 ):
     source = await _get_source(ctx, source_id)
-    where = [Document.source_id == source.id]
-    if q:
-        like = f"%{q}%"
-        where.append(or_(Document.title.ilike(like), Document.url.ilike(like)))
-    total = (await ctx.db.execute(select(func.count()).where(*where))).scalar_one()
-    chunk_counts = (
-        select(Chunk.document_id, func.count().label("n")).group_by(Chunk.document_id).subquery()
+    return await document_page(
+        ctx.db, [Document.source_id == source.id], q=q, limit=limit, offset=offset
     )
-    rows = await ctx.db.execute(
-        select(Document, func.coalesce(chunk_counts.c.n, 0))
-        .outerjoin(chunk_counts, chunk_counts.c.document_id == Document.id)
-        .where(*where)
-        .order_by(Document.title)
-        .limit(limit)
-        .offset(offset)
-    )
-    return DocumentPage(items=[_row(d, n) for d, n in rows.all()], total=total)
-
-
-async def _get_document(ctx: OrgContext, document_id: uuid.UUID) -> Document:
-    doc = await ctx.db.get(Document, document_id)
-    if (
-        doc is None
-        or doc.org_id != ctx.org_id
-        or doc.collection_id not in await _visible_collection_ids(ctx)
-    ):
-        raise not_found("Document")
-    return doc
-
-
-@router.get("/orgs/{slug}/documents/{document_id}", response_model=DocumentDetail)
-async def get_document(document_id: uuid.UUID, ctx: OrgContext = Depends(org_context)):
-    doc = await _get_document(ctx, document_id)
-    chunks = (
-        await ctx.db.execute(select(func.count()).where(Chunk.document_id == doc.id))
-    ).scalar_one()
-    return DocumentDetail(**_row(doc, chunks).model_dump(), content=doc.content)
-
-
-@router.delete("/orgs/{slug}/documents/{document_id}", status_code=204)
-async def delete_document(document_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)):
-    doc = await _get_document(ctx, document_id)
-    source = await ctx.db.get(Source, doc.source_id)
-    if source and source.kind == "upload":
-        (Path(get_settings().file_storage_dir) / str(source.id) / doc.external_id).unlink(
-            missing_ok=True
-        )
-    await ctx.db.delete(doc)
-    await ctx.db.commit()
-    return Response(status_code=204)

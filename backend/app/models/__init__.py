@@ -1,10 +1,13 @@
 from app.models.entities import (
     Agent,
+    ApiKey,
+    ChatAttachment,
     Chunk,
     Collection,
     CollectionAccess,
     Conversation,
     Document,
+    DocumentFeedback,
     Invitation,
     Job,
     Membership,
@@ -18,11 +21,14 @@ from app.models.entities import (
 
 __all__ = [
     "Agent",
+    "ApiKey",
+    "ChatAttachment",
     "Chunk",
     "Collection",
     "CollectionAccess",
     "Conversation",
     "Document",
+    "DocumentFeedback",
     "Invitation",
     "Job",
     "Membership",
