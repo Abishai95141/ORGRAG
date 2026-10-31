@@ -2,7 +2,8 @@
 
 A complete answer is a gap when it is
 - *unanswered*: the agent searched or read the knowledge base but cites none of it (it
-  abstained, said the information isn't there, or answered from the web alone);
+  abstained or answered from the web alone), or its opening sentence says the knowledge
+  base doesn't have it (the prompt asks it to cite what it did find, so these cite);
 - *incomplete*: the sufficient-context check (app.agent.engine `_coverage_note`) still
   reported facts missing at the end of the run;
 - *downvoted*: the asker gave it a thumbs-down.
@@ -86,6 +87,48 @@ def _origin(source: dict[str, Any]) -> str:
     return source.get("origin") or "knowledge"
 
 
+# The answer's opening sentence says the knowledge base doesn't have what was asked
+# ("The knowledge base doesn't contain a drone policy"). The prompt asks for exactly that,
+# plus what was found, so such answers often cite nearby material and aren't caught by
+# the citation rule. English phrasing; measured against the judge's abstention labels
+# (docs/LOG.md D51).
+_NOT_FOUND = re.compile(
+    r"\b(?:knowledge base|documents?|sources?|records?|collections?|searches|I|we)\b[^.]{0,80}?"
+    r"\b(?:do(?:es)?n[’']t|do(?:es)? not|did(?:n[’']t| not)|could(?:n[’']t| not)|can[’']?t|"
+    r"cannot|ha(?:s|ve) no)\b[^.]{0,40}?\b(?:contain|have|include|find|found|cover|mention|"
+    r"say|state|describe|list|address|specify|give|show|name|identify|record|document)"
+    r"|\b(?:knowledge base|documents?|sources?|records?)\b (?:has|have|holds?|contains?|gives?|"
+    r"sets?|lists?|names?|shows?|includes?) no\b"
+    r"|\bhas no (?:documented|recorded|stated|published|confirmed)\b"
+    r"|\b(?:there (?:is|are|was|were) no|there[’']s no|I found no|no (?:policy|document|"
+    r"information|record|mention|guidance|data|details?)s?\b[^.]{0,60}?\b(?:found|exists?|"
+    r"in the|covers?|says?|states?))"
+    r"|\b(?:isn[’']t|is not|wasn[’']t|was not|aren[’']t|are not) (?:in|covered (?:in|by)|"
+    r"mentioned (?:in|anywhere)|documented (?:in|anywhere)|stated (?:in|anywhere)|recorded "
+    r"(?:in|anywhere)) (?:the|our|any)\b",
+    re.IGNORECASE,
+)
+# A cheap SQL pre-filter for the same thing: some negation near the start (Postgres
+# regex; \m and \M are word boundaries there).
+NEGATION_SQL = r"(n't|n’t|\mnot\M|\mno\M|\mnothing\M|\mcannot\M)"
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s|\n")
+
+
+def lead_sentence(answer: str) -> str:
+    """The answer's first sentence of prose (headings and blank lines skipped)."""
+    for line in (answer or "").splitlines():
+        if line.lstrip().startswith("#"):  # a heading ("## Short answer") isn't the answer
+            continue
+        line = _MARKUP.sub(" ", line).strip()
+        if line:
+            return _SENTENCE_END.split(line, maxsplit=1)[0]
+    return ""
+
+
+def says_not_found(answer: str) -> bool:
+    return bool(_NOT_FOUND.search(lead_sentence(answer)))
+
+
 def gap_reasons(
     *,
     content: str,
@@ -100,7 +143,7 @@ def gap_reasons(
     if "attachment" in origins:
         return set(), []
     reasons: set[str] = set()
-    if researched and "knowledge" not in origins:
+    if researched and ("knowledge" not in origins or says_not_found(content)):
         reasons.add("unanswered")
     missing = coverage_missing(checks)
     if missing:
@@ -203,6 +246,8 @@ async def answer_signals(
             or_(
                 Message.feedback == "down",
                 and_(uncited, researched),
+                # Cited answers whose opening may say it isn't there; says_not_found decides.
+                and_(researched, func.left(Message.content, 400).op("~*")(NEGATION_SQL)),
                 func.jsonb_path_exists(Message.trace, _path(REPORTED_MISSING)),
             ),
         )

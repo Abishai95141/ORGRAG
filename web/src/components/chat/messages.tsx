@@ -68,7 +68,7 @@ export function AssistantMessage(props: AssistantProps) {
   const cited = citedRefs(content);
   const shownSources = sources.filter((s) => cited.has(s.ref));
   const orgs = uniqueOrgs(shownSources.length ? shownSources : sources);
-  const shortfall = answerShortfall(steps, shownSources);
+  const shortfall = answerShortfall(steps, shownSources, content);
 
   return (
     <article
@@ -327,11 +327,33 @@ function MessageToolbar({
  * knowledge base but cites none of it, or the coverage check's last verdict still
  * names missing facts. An answer citing an attached file was about that file.
  */
-function answerShortfall(steps: TraceStep[], cited: SourceRef[]): "short" | "fine" | "about-attachment" {
+// The opening sentence says the knowledge base doesn't have it: the same rule as the gaps
+// report (says_not_found in backend/app/gaps/signals.py; keep the two in step).
+const NOT_FOUND = new RegExp(
+  [
+    String.raw`\b(?:knowledge base|documents?|sources?|records?|collections?|searches|I|we)\b[^.]{0,80}?\b(?:do(?:es)?n[’']t|do(?:es)? not|did(?:n[’']t| not)|could(?:n[’']t| not)|can[’']?t|cannot|ha(?:s|ve) no)\b[^.]{0,40}?\b(?:contain|have|include|find|found|cover|mention|say|state|describe|list|address|specify|give|show|name|identify|record|document)`,
+    String.raw`\b(?:knowledge base|documents?|sources?|records?)\b (?:has|have|holds?|contains?|gives?|sets?|lists?|names?|shows?|includes?) no\b`,
+    String.raw`\bhas no (?:documented|recorded|stated|published|confirmed)\b`,
+    String.raw`\b(?:there (?:is|are|was|were) no|there[’']s no|I found no|no (?:policy|document|information|record|mention|guidance|data|details?)s?\b[^.]{0,60}?\b(?:found|exists?|in the|covers?|says?|states?))`,
+    String.raw`\b(?:isn[’']t|is not|wasn[’']t|was not|aren[’']t|are not) (?:in|covered (?:in|by)|mentioned (?:in|anywhere)|documented (?:in|anywhere)|stated (?:in|anywhere)|recorded (?:in|anywhere)) (?:the|our|any)\b`,
+  ].join("|"),
+  "i",
+);
+
+function leadSentence(content: string) {
+  for (const raw of content.split("\n")) {
+    if (raw.trimStart().startsWith("#")) continue;
+    const line = raw.replace(/\*{1,3}|`+|\||:?-{3,}:?|^\s*(?:>|[-+]|\d+\.)\s+/g, " ").trim();
+    if (line) return line.split(/(?<=[.!?])\s/)[0];
+  }
+  return "";
+}
+
+function answerShortfall(steps: TraceStep[], cited: SourceRef[], content = ""): "short" | "fine" | "about-attachment" {
   if (cited.some((s) => s.origin === "attachment")) return "about-attachment";
   // The same rule as the gaps report (app/gaps/signals.py): listing collections or graph entities isn't research.
   const researched = steps.some((s) => (s.kind === "search" && !s.detail.listing) || s.kind === "read" || s.kind === "records");
-  if (researched && !cited.some((s) => s.origin === "knowledge")) return "short";
+  if (researched && (!cited.some((s) => s.origin === "knowledge") || NOT_FOUND.test(leadSentence(content)))) return "short";
   let missing = false;
   for (const s of steps) {
     if (s.kind !== "reflect") continue;

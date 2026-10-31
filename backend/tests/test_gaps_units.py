@@ -3,6 +3,7 @@
 import random
 
 import numpy as np
+import pytest
 
 from app.embeddings.hash_provider import HashEmbedder
 from app.gaps import cluster
@@ -170,3 +171,26 @@ def test_the_threshold_follows_the_embedder(monkeypatch):
     assert cluster.similarity_threshold() == 0.7
     monkeypatch.setattr(settings, "gap_similarity", 0.62)
     assert cluster.similarity_threshold() == 0.62
+
+
+@pytest.mark.parametrize(
+    ("answer", "missing"),
+    [
+        ("The knowledge base doesn't contain a drone delivery policy. Closest: [1].", True),
+        ("## Short answer\n\n**The knowledge base has no Q4 2026 ARR figure.** It has Q3.", True),
+        ("I couldn't find a travel policy for contractors in the documents [2].", True),
+        ("There is no documented root cause for INC-2351 yet.", True),
+        ("INC-2351 has no documented root cause yet [1].", True),
+        ("Parental leave is 16 weeks [1]. The policy doesn't cover contractors.", False),
+        ("Staff get 16 weeks of leave, and it can't be split [1].", False),
+    ],
+)
+def test_an_opening_that_says_the_answer_is_not_there(answer, missing):
+    from app.gaps.signals import gap_reasons, says_not_found
+
+    assert says_not_found(answer) is missing and not says_not_found("")
+    cited = [{"ref": 1, "origin": "knowledge"}, {"ref": 2, "origin": "knowledge"}]
+    reasons, _ = gap_reasons(
+        content=answer, sources=cited, researched=True, checks=None, feedback=None
+    )
+    assert ("unanswered" in reasons) is missing
