@@ -180,7 +180,7 @@ type Message = {
   attachments: {id, filename, mime, size_bytes, token_count}[];  // user only
   trace: TraceStep[];            // assistant only
   feedback: "up" | "down" | null;
-  status: "complete" | "streaming" | "error";
+  status: "complete" | "streaming" | "error" | "stopped";
   created_at: string;
 };
 ```
@@ -346,6 +346,7 @@ A key's role can't exceed its creator's. Only a SHA-256 of the key is stored.
 | DELETE | `/orgs/{slug}/conversations/{id}` | – | `204` |
 | POST | `/orgs/{slug}/conversations/{id}/messages` | `{content, mode?, scope_org_slugs?, collection_ids?, attachment_ids?, web_search?}` | **SSE stream** (below), or with `?stream=false` the final `{message: Message}` as JSON |
 | POST | `/orgs/{slug}/messages/{id}/feedback` | `{feedback: "up" \| "down" \| null}` | `204` |
+| POST | `/orgs/{slug}/messages/{id}/cancel` | – | `Message`: stops an answer still being written in one of the caller's conversations; what was written so far is kept with `status: "stopped"`. Idempotent (a finished answer is returned unchanged). `409 run_not_local` if another API process is running it |
 
 The first user message sets the conversation title (truncated to 60 chars, then
 refined by a short model call in the background when a key is configured).
@@ -353,7 +354,11 @@ refined by a short model call in the background when a key is configured).
 `web_search` overrides the org's `settings.web_search` for one message; it only takes
 effect when the server has a search API key (`TAVILY_API_KEY` or `BRAVE_API_KEY`).
 With `stream=false`, a model failure returns the matching error status and code
-(e.g. 502 `llm_model`, 429 `llm_rate_limited`, 503 `llm_not_configured`).
+(e.g. 502 `llm_model`, 429 `llm_rate_limited`, 503 `llm_not_configured`, 504
+`run_timeout` after `CHAT_RUN_TIMEOUT_SECONDS`). Closing the stream does **not** stop
+the answer (it finishes and is saved); use `…/cancel` to stop it. An answer whose server
+process died is marked `error` within about two minutes. Answers never contain images:
+Markdown and HTML images are replaced by their alt text before the answer is saved.
 
 ### SSE stream
 
@@ -370,6 +375,7 @@ comment is sent every 15 s.
 | `delta` | `{text}` | answer token(s) |
 | `done` | `{message: Message}` | final persisted assistant message |
 | `error` | `{detail, code}` | fatal error; the assistant message is persisted with `status: "error"` |
+| `stopped` | `{message: Message}` | the answer was cancelled; the message is persisted with `status: "stopped"` |
 
 Clients render: steps as a timeline, `sources` as cards, `delta` appended to the answer,
 and `[n]` markers resolved against `sources`.

@@ -58,6 +58,9 @@ def describe_error(exc: Exception) -> tuple[str, str]:
         if exc.status in (400, 422):
             return f"The model rejected the request: {exc.message}", "llm_bad_request"
         return f"Model provider error ({exc.status}). Try again shortly.", "llm_error"
+    if type(exc) is TimeoutError:  # the whole run hit chat_run_timeout_seconds
+        minutes = get_settings().chat_run_timeout_seconds // 60
+        return f"The answer took longer than {minutes} minutes and was stopped.", "run_timeout"
     if isinstance(exc, httpx.TimeoutException):
         return "The model provider took too long to respond. Try again.", "llm_timeout"
     if isinstance(exc, httpx.TransportError):

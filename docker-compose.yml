@@ -20,6 +20,7 @@ x-backend-env: &backend-env
   NVIDIA_MAX_CONCURRENCY: ${NVIDIA_MAX_CONCURRENCY:-4}
   FILE_STORAGE_DIR: /data/files
   COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  CHAT_RUN_TIMEOUT_SECONDS: ${CHAT_RUN_TIMEOUT_SECONDS:-900}
   CORS_ORIGINS: '["http://localhost:3000"]'
 
 services:
@@ -35,8 +36,9 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+    # Loopback only: reachable for host development (`make dev-db`), not from the network.
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
 
   api:
     build: ./backend
@@ -52,7 +54,7 @@ services:
       timeout: 3s
       retries: 30
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"  # the web app proxies /api; expose it deliberately if needed
 
   worker:
     build: ./backend

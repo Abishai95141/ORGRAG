@@ -9,7 +9,7 @@ A read-only audit of everything outside the HTTP API layer. The API layer was au
 
 Line numbers refer to the code as of 2026-10-31.
 
-**Status:** all findings are **open** unless marked otherwise.
+**Status:** 11 findings are fixed (see [Fixed since the audit](#fixed-since-the-audit)); the rest are open.
 
 ## Summary
 
@@ -22,6 +22,22 @@ Line numbers refer to the code as of 2026-10-31.
 | Operations | 0 | 4 | 1 |
 | Frontend UX and accessibility | 0 | 2 | 2 |
 | **Total (35)** | **8** | **18** | **9** |
+
+## Fixed since the audit
+
+Each fix has a regression test; the full backend suite (175 tests) passes. The rows below keep the original evidence for reference.
+
+| ID | What changed | Test |
+|---|---|---|
+| **S1**, S2 | One guarded fetcher for user- and model-chosen URLs (`app/core/safe_http.py`), used by the website crawler and the agent's page reader. Every hop, including robots.txt and each redirect, must resolve only to public addresses, and the request connects to the checked IP (Host header and TLS SNI keep the name, so certificates are still verified), which closes the DNS-rebinding window. Bodies are capped. The crawler's config form also rejects obvious internal hosts. | `tests/test_safe_http.py` |
+| **S3** | Attachments are XML-escaped like other tool results, so a file can't close its block. The system prompt treats retrieved content as data. Images are removed from stored answers (`app/agent/sanitize.py`), never fetched by the web client (answers and document previews), and blocked by a CSP with `img-src 'self'` plus `X-Frame-Options`, `nosniff` and a referrer policy. | `tests/test_agent_nvidia.py`, `tests/test_sanitize.py` |
+| **S5** | Every graph query skips mentions from hidden documents, for every viewer. | `tests/test_graph.py` |
+| **C1** | Each search hit is shown complete, with the end of the previous passage and the start of the next as budget allows, and without repeating the chunker's overlap (`hit_window` in `app/retrieval/hybrid.py`). | `tests/test_hit_window.py` |
+| **C2** | Passages are capped at 2,600 characters: oversized text splits by sentence, then line, then word, then characters, losing nothing. `make rechunk` (add `APPLY=1`) rebuilds documents indexed before the cap from their stored Markdown. | `tests/test_chunker.py`, `tests/test_rechunk.py` |
+| **I1** | Connectors report items they couldn't fetch (`skip`) and listings that were cut short (`complete = False`). Skipped items are kept, partial listings prune nothing, and a sync where over 10% of items failed prunes nothing. GitHub reports truncated trees and its 1,000-file cap; Drive and the crawler report rate limits and server errors. | `tests/test_api_platform.py` |
+| **O3**, **F1** | Stop calls `POST /orgs/{slug}/messages/{id}/cancel`, which cancels the run: generation and spend stop, and the partial answer is saved as `stopped`. Runs send a heartbeat (`messages.updated_at`, migration 0004); the worker marks answers whose heartbeat is over 90 s old as interrupted. Runs are capped at `CHAT_RUN_TIMEOUT_SECONDS` (default 900). | `tests/test_agent_nvidia.py` |
+| O5 | With `COOKIE_SECURE=true` the API refuses the built-in or a short `SECRET_KEY`. Compose binds Postgres and the API to 127.0.0.1. `web/.dockerignore` excludes `.env*`. | `tests/test_ranking_units.py` |
+| F2 | A polite live region announces each answer's progress (researching, writing, ready, stopped), and an alert region announces failures. | checked in the browser |
 
 ### Fix first
 1. **S1:** SSRF in the website crawler. Anyone can sign up, create an org and crawl internal URLs.

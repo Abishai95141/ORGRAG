@@ -208,7 +208,7 @@ export type Message = {
   attachments: MessageAttachment[];
   trace: TraceStep[];
   feedback: "up" | "down" | null;
-  status: "complete" | "streaming" | "error";
+  status: "complete" | "streaming" | "error" | "stopped";
   created_at: string;
 };
 

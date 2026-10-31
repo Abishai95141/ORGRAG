@@ -154,3 +154,13 @@ def test_list_arguments_accept_a_bare_string():
         ToolBox._str_list(42, "queries", required=True)
     with pytest.raises(ToolInputError):
         ToolBox._str_list("   ", "queries", required=True)
+
+
+def test_weak_secret_key_is_refused_over_https():
+    from app.core.config import DEV_SECRET_KEY, Settings
+
+    for weak in (DEV_SECRET_KEY, "short-key"):
+        with pytest.raises(ValueError, match="SECRET_KEY"):
+            Settings(secret_key=weak, cookie_secure=True)
+    assert Settings(secret_key=DEV_SECRET_KEY, cookie_secure=False).secret_key == DEV_SECRET_KEY
+    assert Settings(secret_key="k" * 40, cookie_secure=True).cookie_secure

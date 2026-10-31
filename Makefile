@@ -1,4 +1,4 @@
-.PHONY: setup up down logs dev-db test-db migrate seed test lint api worker web
+.PHONY: setup up down logs dev-db test-db migrate seed rechunk test lint api worker web
 
 DEV_DB_URL ?= postgresql+asyncpg://postgres:postgres@localhost:5432/strata
 BACKEND := cd backend &&
@@ -34,6 +34,9 @@ seed:          ## Load demo orgs, documents and users
 	else \
 		$(BACKEND) DATABASE_URL=$(DEV_DB_URL) $(UV_RUN) python -m app.seed; \
 	fi
+
+rechunk:       ## Report (or with APPLY=1, rebuild) documents with over-long chunks
+	$(BACKEND) DATABASE_URL=$(DEV_DB_URL) $(UV_RUN) python -m app.ingestion.rechunk $(if $(APPLY),--apply,)
 
 test:          ## Run the backend test suite (integration tests need TEST_DATABASE_URL)
 	$(BACKEND) uv run pytest -q

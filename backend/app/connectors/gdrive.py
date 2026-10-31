@@ -9,7 +9,7 @@ import time
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import PurePosixPath
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 import jwt
@@ -265,6 +265,9 @@ class GoogleDriveConnector(Connector):
                 fetched = await self._content(client, item)
                 if fetched is None:
                     continue
+                if fetched == "retry":
+                    self.skip(item["id"])
+                    continue
                 data, mime = fetched
                 metadata: dict[str, Any] = {"mimeType": item.get("mimeType")}
                 if path:
@@ -286,8 +289,9 @@ class GoogleDriveConnector(Connector):
 
     async def _content(
         self, client: httpx.AsyncClient, item: dict[str, Any]
-    ) -> tuple[bytes, str] | None:
-        """Download or export one file; None when Drive refuses (too large, no access)."""
+    ) -> tuple[bytes, str] | Literal["retry"] | None:
+        """Download or export one file; None when Drive refuses (too large, no access),
+        "retry" when it kept failing for transient reasons (rate limits, 5xx)."""
         plan = _plan(item)
         if plan is None:
             return None
@@ -304,6 +308,8 @@ class GoogleDriveConnector(Connector):
                     break
         if resp.status_code == 401:
             raise ConnectorError("Google rejected the access token")
+        if resp.status_code == 429 or resp.status_code >= 500 or _rate_limited(resp):
+            return "retry"
         if resp.status_code != 200 or len(resp.content) > _MAX_BYTES:
             return None
         return resp.content, mime

@@ -436,7 +436,7 @@ class MessageOut(Out):
     attachments: list[dict[str, Any]]
     trace: list[dict[str, Any]]
     feedback: Literal["up", "down"] | None
-    status: Literal["complete", "streaming", "error"]
+    status: Literal["complete", "streaming", "error", "stopped"]
     created_at: datetime
 
 

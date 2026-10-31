@@ -18,11 +18,14 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
+from xml.sax.saxutils import escape, quoteattr
 
 from sqlalchemy import select
 
+from app.agent import runs
 from app.agent.citations import CitationRegistry, cited_refs, strip_citations
 from app.agent.prompts import PLAN_SYSTEM, build_system
+from app.agent.sanitize import strip_images
 from app.agent.tools import (
     READ_PAGE_CHARS,
     ToolBox,
@@ -287,6 +290,40 @@ class AgentRun:
 
     # ── main entry ────────────────────────────────────────────────────────
     async def execute(self) -> None:
+        beat = asyncio.create_task(runs.heartbeat(self.req.assistant_message_id))
+        try:
+            async with asyncio.timeout(get_settings().chat_run_timeout_seconds):
+                await self._execute()
+        except asyncio.CancelledError:
+            # Stopped by the user (runs.cancel): keep what was written so far.
+            await self.em.fail_running()
+            payload: dict[str, Any] = {}
+            try:
+                async with SessionLocal() as clean_db:
+                    message = await self._persist(clean_db, status="stopped")
+                    payload = {"message": message_payload(message)}
+            except Exception:
+                log.exception("Could not persist stopped message")
+            await self.em.queue.put(("stopped", payload))
+            await self.em.queue.put(None)
+            raise
+        except TimeoutError:
+            await self._fail(TimeoutError())
+            await self.em.queue.put(None)
+        finally:
+            beat.cancel()
+
+    async def _fail(self, exc: BaseException) -> None:
+        detail, code = describe_error(exc)
+        await self.em.fail_running()
+        try:
+            async with SessionLocal() as clean_db:
+                await self._persist(clean_db, status="error", error=detail)
+        except Exception:
+            log.exception("Could not persist failed message")
+        await self.em.queue.put(("error", {"detail": detail, "code": code}))
+
+    async def _execute(self) -> None:
         async with SessionLocal() as db:
             try:
                 await self._load(db)
@@ -309,16 +346,8 @@ class AgentRun:
                 await self.em.queue.put(("done", {"message": message_payload(message)}))
             except Exception as exc:
                 log.exception("Agent run failed")
-                detail, code = describe_error(exc)
-                await self.em.fail_running()
-                try:
-                    async with SessionLocal() as clean_db:
-                        await self._persist(clean_db, status="error", error=detail)
-                except Exception:
-                    log.exception("Could not persist failed message")
-                await self.em.queue.put(("error", {"detail": detail, "code": code}))
-            finally:
-                await self.em.queue.put(None)
+                await self._fail(exc)
+        await self.em.queue.put(None)
 
     # ── retrieval helpers ────────────────────────────────────────────────
     async def _search(self, step_id: str, args: dict[str, Any]):
@@ -427,9 +456,11 @@ class AgentRun:
                 if take < len(body)
                 else ""
             )
+            # Escaped like tool results, so a file can't close the block and speak as
+            # the user (audit S3).
             blocks.append(
-                f'<attachment ref="{entry.ref}" filename="{attachment.filename}">\n'
-                f"{body[:take]}{more}\n</attachment>"
+                f'<attachment ref="{entry.ref}" filename={quoteattr(attachment.filename)}>\n'
+                f"{escape(body[:take])}{more}\n</attachment>"
             )
         parts = []
         if blocks:
@@ -766,7 +797,7 @@ class AgentRun:
     # ── persistence ───────────────────────────────────────────────────────
     async def _persist(self, db, *, status: str, error: str | None = None) -> Message:
         message = await db.get(Message, self.req.assistant_message_id)
-        content = self.em.answer
+        content = strip_images(self.em.answer)
         if error and not content.strip():
             content = error
         message.content = content

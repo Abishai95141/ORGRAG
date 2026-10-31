@@ -6,7 +6,12 @@ failure halfway through keeps everything indexed so far.
 
 Full syncs see every document, so anything they don't yield was deleted upstream.
 Incremental syncs (connectors with `supports_incremental`) only fetch changes, so
-they prune against the connector's cheap `list_ids()` listing when it has one."""
+they prune against the connector's cheap `list_ids()` listing when it has one.
+
+Pruning deletes a document's votes, boost, hidden flag and graph facts, so it errs on
+the side of keeping: items a connector reports as skipped (transient errors) count as
+present, a listing the connector marks incomplete prunes nothing, and neither does a
+sync where more than `MAX_PRUNE_ERROR_RATIO` of the items failed."""
 
 import hashlib
 import logging
@@ -51,17 +56,6 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
         return "empty"
     title = (detected_title or raw.title or raw.external_id).strip()[:500]
 
-    settings = get_settings()
-    drafts = chunk_markdown(
-        markdown,
-        title=title,
-        target_words=settings.chunk_words,
-        overlap_words=settings.chunk_overlap_words,
-    )
-    vectors = await get_embedder().embed_documents(
-        [embedding_text(title, d.heading, d.content) for d in drafts]
-    )
-
     if existing is None:
         doc = Document(
             org_id=source.org_id,
@@ -75,7 +69,6 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
         outcome = "created"
     else:
         doc = existing
-        await db.execute(delete(Chunk).where(Chunk.document_id == doc.id))
         outcome = "updated"
     doc.title = title
     doc.url = raw.url
@@ -89,12 +82,29 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
     doc.token_count = estimate_tokens(markdown)
     doc.updated_at = datetime.now(UTC)
     await db.flush()
+    await write_chunks(db, doc)
+    return outcome
 
+
+async def write_chunks(db: AsyncSession, doc: Document) -> int:
+    """(Re)build a document's chunks and embeddings from its stored Markdown. Graph
+    mentions go with the old chunks (cascade); `graph_hash` is left to the caller."""
+    settings = get_settings()
+    drafts = chunk_markdown(
+        doc.content,
+        title=doc.title,
+        target_words=settings.chunk_words,
+        overlap_words=settings.chunk_overlap_words,
+    )
+    vectors = await get_embedder().embed_documents(
+        [embedding_text(doc.title, d.heading, d.content) for d in drafts]
+    )
+    await db.execute(delete(Chunk).where(Chunk.document_id == doc.id))
     db.add_all(
         Chunk(
-            org_id=source.org_id,
+            org_id=doc.org_id,
             document_id=doc.id,
-            collection_id=source.collection_id,
+            collection_id=doc.collection_id,
             ordinal=d.ordinal,
             heading=d.heading,
             content=d.content,
@@ -103,10 +113,11 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
         )
         for d, vec in zip(drafts, vectors, strict=True)
     )
-    return outcome
+    return len(drafts)
 
 
 INCREMENTAL_OVERLAP = timedelta(minutes=30)
+MAX_PRUNE_ERROR_RATIO = 0.1
 
 
 async def sync_source(db: AsyncSession, source: Source, *, full: bool = True) -> dict[str, int]:
@@ -119,7 +130,10 @@ async def sync_source(db: AsyncSession, source: Source, *, full: bool = True) ->
         # Overlap absorbs clock skew and edits made while the last sync ran.
         since = source.last_synced_at - INCREMENTAL_OVERLAP
 
-    stats = {"created": 0, "updated": 0, "unchanged": 0, "empty": 0, "removed": 0}
+    stats = {
+        "created": 0, "updated": 0, "unchanged": 0, "empty": 0,
+        "failed": 0, "skipped": 0, "removed": 0,
+    }  # fmt: skip
     seen: set[str] = set()
     last_flush = 0.0
 
@@ -137,9 +151,22 @@ async def sync_source(db: AsyncSession, source: Source, *, full: bool = True) ->
                 outcome = await index_document(db, source, raw)
         except Exception as exc:  # one bad file must not fail the whole sync
             log.warning("Failed to index %s: %s", raw.external_id, exc)
+            stats["failed"] += 1
             continue
         stats[outcome] += 1
         await db.commit()
+
+    stats["skipped"] = len(connector.skipped - seen)
+    errors = stats["failed"] + stats["skipped"]
+    attempted = len(seen) + stats["skipped"]
+    if not connector.complete:
+        log.warning("Source %s listing was incomplete; not removing anything", source.id)
+        return stats
+    if attempted and errors / attempted > MAX_PRUNE_ERROR_RATIO:
+        log.warning(
+            "Source %s: %d of %d items failed; not removing anything", source.id, errors, attempted
+        )
+        return stats
 
     if since is None:
         alive: set[str] | None = seen
@@ -148,7 +175,7 @@ async def sync_source(db: AsyncSession, source: Source, *, full: bool = True) ->
         await db.commit()
         alive = await connector.list_ids()
     if alive is not None:
-        stats["removed"] = await prune_documents(db, source, alive)
+        stats["removed"] = await prune_documents(db, source, alive | connector.skipped)
     return stats
 
 

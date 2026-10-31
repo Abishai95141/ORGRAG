@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
@@ -305,7 +306,10 @@ class Conversation(Base):
 
 class Message(Base):
     __tablename__ = "messages"
-    __table_args__ = (Index("ix_messages_conversation", "conversation_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_messages_conversation", "conversation_id", "created_at"),
+        Index("ix_messages_streaming", "updated_at", postgresql_where=text("status = 'streaming'")),
+    )
 
     id: Mapped[uuid.UUID] = _pk()
     conversation_id: Mapped[uuid.UUID] = mapped_column(
@@ -319,8 +323,13 @@ class Message(Base):
     )
     trace: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, nullable=False)
     feedback: Mapped[str | None] = mapped_column(String(8))
+    # complete | streaming | error | stopped
     status: Mapped[str] = mapped_column(String(16), default="complete", nullable=False)
     created_at: Mapped[datetime] = _created()
+    # Heartbeat while streaming (app.agent.runs); a stale one means the run died.
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
 
 
 class MessageCitation(Base):

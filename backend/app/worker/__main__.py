@@ -1,8 +1,9 @@
 """Worker process: `python -m app.worker`.
 
 Runs N job loops plus a scheduler that re-queues sources whose
-sync_interval_minutes has elapsed. Scheduled syncs are incremental; a full sync
-(which also removes documents deleted upstream) runs at least once a day."""
+sync_interval_minutes has elapsed and closes out chat answers whose run died.
+Scheduled syncs are incremental; a full sync (which also removes documents
+deleted upstream) runs at least once a day."""
 
 import asyncio
 import contextlib
@@ -12,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
+from app.agent.runs import reap_stale
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.models import Source
@@ -52,6 +54,7 @@ async def scheduler(stop: asyncio.Event) -> None:
     while not stop.is_set():
         async with SessionLocal() as db:
             await requeue_stale(db)
+            await reap_stale(db)  # answers whose API process died mid-run
             now = datetime.now(UTC)
             due = (
                 (

@@ -15,7 +15,7 @@ from app.graph import query as graph
 from app.graph.extract import ENTITY_TYPES
 from app.models import ChatAttachment, Document
 from app.retrieval.access import RetrievalScope
-from app.retrieval.hybrid import Hit, RankingOptions, hits_for_chunks, hybrid_search, neighbour_text
+from app.retrieval.hybrid import Hit, RankingOptions, hit_window, hits_for_chunks, hybrid_search
 from app.retrieval.web import WebSearchError, fetch_page, search_web
 
 READ_PAGE_CHARS = 14_000
@@ -284,14 +284,14 @@ class ToolBox:
                 new.append(entry)
             if entry.ref not in refs:
                 refs.append(entry.ref)
-            section = await neighbour_text(self.db, hit)
+            section = await hit_window(self.db, hit)
             heading = f" section={quoteattr(hit.heading)}" if hit.heading else ""
             updated = f' updated="{hit.updated_at.date().isoformat()}"' if hit.updated_at else ""
             blocks.append(
                 f'<source ref="{entry.ref}" org={quoteattr(entry.org.name)} '
                 f"collection={quoteattr(entry.collection.name)} "
                 f"title={quoteattr(hit.title)}{heading}{updated}>\n"
-                f"{escape(section[:2400])}\n</source>"
+                f"{escape(section)}\n</source>"
             )
         return SearchOutcome(
             text="\n\n".join(blocks) + self._capped_note(len(hits)),

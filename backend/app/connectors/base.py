@@ -43,6 +43,17 @@ class Connector(ABC):
     def __init__(self, config: dict[str, Any], secrets: dict[str, Any]):
         self.config = config
         self.secrets = secrets
+        # Filled in during `iter_documents`, read by the pipeline before pruning:
+        # ids that exist upstream but couldn't be fetched this run (kept, not deleted)...
+        self.skipped: set[str] = set()
+        # ...and False when the listing was cut short (size caps, truncated trees),
+        # in which case nothing is pruned.
+        self.complete = True
+
+    def skip(self, external_id: str) -> None:
+        """Record an item that exists upstream but couldn't be fetched (rate limit,
+        timeout, server error). Its indexed copy is kept rather than pruned."""
+        self.skipped.add(external_id)
 
     @classmethod
     def secret_fields(cls) -> list[str]:

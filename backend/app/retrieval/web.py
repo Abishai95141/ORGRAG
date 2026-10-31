@@ -2,19 +2,16 @@
 (Tavily or Brave — whichever key is configured), plus a guarded page fetcher for
 reading a result in full.
 
-The fetcher only follows public http(s) addresses: every hop's host is resolved and
-private, loopback, link-local and reserved ranges are refused, so a model-chosen
-URL can't reach internal services."""
+The fetcher only follows public http(s) addresses (see `app.core.safe_http`), so a
+model-chosen URL can't reach internal services."""
 
 import asyncio
-import ipaddress
-import socket
 from dataclasses import dataclass
-from urllib.parse import urljoin, urlparse
 
 import httpx
 
 from app.core.config import get_settings
+from app.core.safe_http import UnsafeURL, check_url, fetch, public_address
 from app.ingestion.parsers import parse
 
 USER_AGENT = "StrataBot/0.1 (+https://github.com/Abishai95141/ORGRAG)"
@@ -65,18 +62,6 @@ async def search_web(query: str, max_results: int = 5) -> list[WebResult]:
     raise WebSearchError("Web search isn't configured: set TAVILY_API_KEY or BRAVE_API_KEY")
 
 
-def _is_public_host(host: str) -> bool:
-    try:
-        infos = socket.getaddrinfo(host, None)
-    except socket.gaierror:
-        return False
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if not ip.is_global or ip.is_multicast:
-            return False
-    return True
-
-
 async def _tavily_extract(url: str, key: str) -> str | None:
     """Page text through Tavily's extract API: sites that block plain fetchers (403s are
     common) still come back, and Tavily does the fetching. None when it can't."""
@@ -99,11 +84,11 @@ async def _tavily_extract(url: str, key: str) -> str | None:
 async def fetch_page(url: str) -> tuple[str | None, str]:
     """(detected title, Markdown) for a public web page. Uses Tavily's extractor when a
     Tavily key is set (after the same public-address check), else fetches directly."""
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https") or not parsed.hostname:
-        raise WebSearchError("Only public http(s) pages can be read")
-    if not await asyncio.to_thread(_is_public_host, parsed.hostname):
-        raise WebSearchError("That address isn't a public web page")
+    try:
+        _, host, _ = check_url(url)
+        await public_address(host)
+    except UnsafeURL as e:
+        raise WebSearchError(str(e)) from e
     key = get_settings().tavily_api_key
     if key and (content := await _tavily_extract(url, key)):
         return None, content
@@ -111,30 +96,19 @@ async def fetch_page(url: str) -> tuple[str | None, str]:
 
 
 async def _fetch_direct(url: str) -> tuple[str | None, str]:
-    async with httpx.AsyncClient(
-        timeout=20, follow_redirects=False, headers={"User-Agent": USER_AGENT}
-    ) as client:
-        for _ in range(MAX_REDIRECTS + 1):
-            parsed = urlparse(url)
-            if parsed.scheme not in ("http", "https") or not parsed.hostname:
-                raise WebSearchError("Only public http(s) pages can be read")
-            if not await asyncio.to_thread(_is_public_host, parsed.hostname):
-                raise WebSearchError("That address isn't a public web page")
-            async with client.stream("GET", url) as r:
-                if r.is_redirect and r.headers.get("location"):
-                    url = urljoin(url, r.headers["location"])
-                    continue
-                if r.status_code != 200:
-                    raise WebSearchError(f"The page returned HTTP {r.status_code}")
-                kind = r.headers.get("content-type", "").split(";")[0].strip().lower()
-                if kind not in ("text/html", "application/xhtml+xml", "text/plain"):
-                    raise WebSearchError(f"Can't read {kind or 'this'} content")
-                data = bytearray()
-                async for chunk in r.aiter_bytes():
-                    data.extend(chunk)
-                    if len(data) > MAX_PAGE_BYTES:
-                        break
-            mime = "text/plain" if kind == "text/plain" else "text/html"
-            markdown, title = await asyncio.to_thread(parse, bytes(data), mime)
-            return title, markdown
-    raise WebSearchError("Too many redirects")
+    try:
+        async with httpx.AsyncClient(
+            timeout=20, follow_redirects=False, headers={"User-Agent": USER_AGENT}
+        ) as client:
+            page = await fetch(client, url, max_bytes=MAX_PAGE_BYTES, max_redirects=MAX_REDIRECTS)
+    except UnsafeURL as e:
+        raise WebSearchError(str(e)) from e
+    except httpx.HTTPError as e:
+        raise WebSearchError(f"Couldn't fetch the page ({type(e).__name__})") from e
+    if page.status != 200:
+        raise WebSearchError(f"The page returned HTTP {page.status}")
+    if page.content_type not in ("text/html", "application/xhtml+xml", "text/plain"):
+        raise WebSearchError(f"Can't read {page.content_type or 'this'} content")
+    mime = "text/plain" if page.content_type == "text/plain" else "text/html"
+    markdown, title = await asyncio.to_thread(parse, page.text.encode("utf-8"), mime)
+    return title, markdown

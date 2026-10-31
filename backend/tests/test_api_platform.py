@@ -192,6 +192,64 @@ async def test_incremental_sync_prunes_with_the_id_listing(app, monkeypatch):
         assert (await sync_source(db, src, full=False))["removed"] == 0
 
 
+async def test_full_sync_keeps_documents_it_could_not_fetch(app, monkeypatch):
+    """Audit I1: transient failures and partial listings must not delete documents."""
+    from sqlalchemy import select
+
+    from app.connectors import registry
+    from app.connectors.base import Connector, RawDocument
+    from app.core.db import SessionLocal
+    from app.ingestion.pipeline import sync_source
+    from app.models import Document, Source
+
+    upstream = {f"doc{i}": f"# Doc {i}\n\nText {i}." for i in range(20)}
+    behaviour = {"skip": set(), "complete": True}
+
+    class FlakyConnector(Connector):
+        kind = "upload"
+        display_name = description = "Flaky"
+        config_schema = {"type": "object", "properties": {}}
+
+        async def iter_documents(self, progress, since=None):
+            self.complete = behaviour["complete"]
+            for key in sorted(upstream):
+                if key in behaviour["skip"]:
+                    self.skip(key)
+                    continue
+                yield RawDocument(key, key, upstream[key].encode(), "text/markdown")
+
+    admin, org, slug, source = await _docs_org(app, {"seed.md": "# Seed\n\nSeed."})
+    monkeypatch.setitem(registry.CONNECTORS, "upload", FlakyConnector)
+
+    async with SessionLocal() as db:
+        src = await db.get(Source, uuid.UUID(source["id"]))
+
+        async def ids() -> set[str]:
+            q = select(Document.external_id).where(Document.source_id == src.id)
+            return set((await db.execute(q)).scalars())
+
+        assert (await sync_source(db, src))["created"] == 20
+        await db.commit()
+        assert len(await ids()) == 20
+
+        behaviour["skip"] = {"doc3"}  # rate-limited this run; still exists upstream
+        stats = await sync_source(db, src)
+        assert stats["skipped"] == 1 and stats["removed"] == 0 and "doc3" in await ids()
+
+        behaviour["skip"] = set()
+        behaviour["complete"] = False  # e.g. GitHub truncated tree / crawler page cap
+        del upstream["doc5"]
+        assert (await sync_source(db, src))["removed"] == 0 and "doc5" in await ids()
+
+        behaviour["complete"] = True
+        behaviour["skip"] = {f"doc{i}" for i in range(6, 9)}  # 3 of 19 failing: too many
+        assert (await sync_source(db, src))["removed"] == 0 and "doc5" in await ids()
+
+        behaviour["skip"] = set()
+        stats = await sync_source(db, src)  # a clean run prunes the real deletion
+        assert stats["removed"] == 1 and "doc5" not in await ids()
+
+
 # ── attachments ──────────────────────────────────────────────────────────────
 async def test_attachments_validate_and_bind_to_one_conversation(app):
     admin = await _signup(app, "admin")

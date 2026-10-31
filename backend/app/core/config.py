@@ -1,10 +1,16 @@
+import logging
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_CLAUDE_MODEL = "claude-opus-5-5"
 DEFAULT_NVIDIA_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
+
+
+DEV_SECRET_KEY = "dev-only-change-me-strata-secret-key-0123456789"
+log = logging.getLogger("strata.config")
 
 
 class Settings(BaseSettings):
@@ -12,7 +18,7 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/strata"
 
-    secret_key: str = "dev-only-change-me-strata-secret-key-0123456789"
+    secret_key: str = DEV_SECRET_KEY
     session_cookie: str = "strata_session"
     session_days: int = 14
     cookie_secure: bool = False
@@ -64,11 +70,28 @@ class Settings(BaseSettings):
     max_json_kb: int = 1024
     max_attachment_chars: int = 400_000
 
+    # Longest a chat answer may run before it's stopped (and its spend with it).
+    chat_run_timeout_seconds: int = 900
+
     worker_poll_seconds: float = 2.0
     worker_concurrency: int = 2
 
     chunk_words: int = 350
     chunk_overlap_words: int = 50
+
+    @model_validator(mode="after")
+    def _check_secret_key(self) -> "Settings":
+        """Sessions and stored secrets are signed with SECRET_KEY: a deployment served over
+        HTTPS (COOKIE_SECURE=true) must not run with the public default or a short key."""
+        weak = self.secret_key == DEV_SECRET_KEY or len(self.secret_key) < 32
+        if weak and self.cookie_secure:
+            raise ValueError(
+                "SECRET_KEY must be set to a random value of at least 32 characters "
+                "(e.g. `openssl rand -hex 32`) when COOKIE_SECURE=true"
+            )
+        if weak:
+            log.warning("Using a development SECRET_KEY; set SECRET_KEY before deploying")
+        return self
 
     @property
     def llm_providers(self) -> list[str]:

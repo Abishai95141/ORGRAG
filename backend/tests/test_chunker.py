@@ -1,4 +1,13 @@
-from app.ingestion.chunker import chunk_markdown, embedding_text, estimate_tokens
+import json
+
+import pytest
+
+from app.ingestion.chunker import (
+    MAX_CHUNK_CHARS,
+    chunk_markdown,
+    embedding_text,
+    estimate_tokens,
+)
 
 DOC = """# Handbook
 
@@ -62,3 +71,43 @@ def test_embedding_text_and_tokens():
     assert embedding_text("T", "A › B", "body").startswith("T — A › B")
     assert embedding_text("T", "", "body").startswith("T\n\n")
     assert estimate_tokens("one two three") >= 3
+
+
+# ── hard size cap (audit C2) ─────────────────────────────────────────────────
+OVERSIZED = {
+    "unpunctuated": " ".join(f"word{i}" for i in range(30_000)),
+    "minified_json": json.dumps(
+        [{"id": i, "name": f"item {i}", "tags": ["a", "b"]} for i in range(4000)]
+    ),
+    "one_token": "x" * 50_000,
+    "code_block": "```python\n"
+    + "\n".join(f"value_{i} = compute({i}, 'abc')" for i in range(3000))
+    + "\n```",
+    "csv_like": "\n".join(
+        f"{i},Vendor {i},owner{i}@example.com,High,2026-01-{i % 28 + 1:02d}" for i in range(2000)
+    ),
+}
+
+
+@pytest.mark.parametrize("name", OVERSIZED)
+def test_no_chunk_exceeds_the_cap_and_nothing_is_lost(name):
+    text = OVERSIZED[name]
+    chunks = chunk_markdown(f"# Doc\n\n{text}", title="Doc", overlap_words=0)
+    assert len(chunks) > 1
+    assert max(len(c.content) for c in chunks) <= MAX_CHUNK_CHARS
+    joined = "".join("".join(c.content.split()) for c in chunks)
+    assert joined == "".join(text.split())  # every character survives, in order
+
+
+def test_overlap_never_pushes_a_chunk_over_the_cap():
+    text = "\n\n".join(" ".join(["lorem"] * 120) + "." for _ in range(60))
+    chunks = chunk_markdown(text, target_words=350, overlap_words=50)
+    assert max(len(c.content) for c in chunks) <= MAX_CHUNK_CHARS
+
+
+def test_normal_prose_chunks_are_unchanged_by_the_cap():
+    para = "The access review runs every quarter and covers all production systems. " * 6
+    md = "## Reviews\n\n" + "\n\n".join([para] * 10)
+    capped = chunk_markdown(md)
+    uncapped = chunk_markdown(md, max_chars=10**9)
+    assert [c.content for c in capped] == [c.content for c in uncapped]

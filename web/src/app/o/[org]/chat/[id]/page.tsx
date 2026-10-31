@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Composer, type ComposerState } from "@/components/chat/composer";
 import { DocumentSheet } from "@/components/chat/document-sheet";
-import { AssistantMessage, citedRefs, messageStatus, UserMessage } from "@/components/chat/messages";
+import { AssistantMessage, citedRefs, messageStatus, TurnAnnouncer, UserMessage } from "@/components/chat/messages";
 import { SourcesRail } from "@/components/chat/sources-rail";
 import { IconSidebar } from "@/components/icons";
 import { NoResultsArt, OrgMark } from "@/components/illustrations";
@@ -190,6 +190,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               ),
             )}
 
+            <TurnAnnouncer status={live?.status ?? null} sources={live?.final?.sources.length ?? live?.sources.length ?? 0} error={live?.error ?? null} />
             {liveActive && live ? (
               <>
                 <UserMessage

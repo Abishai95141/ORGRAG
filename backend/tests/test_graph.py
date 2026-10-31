@@ -173,6 +173,33 @@ async def test_graph_respects_collection_access(app, monkeypatch):
 
 
 @pytest.mark.integration
+async def test_hidden_documents_drop_out_of_the_graph(app, monkeypatch):
+    """Audit S5: hiding a document must remove what it contributed, even for admins."""
+    admin, _, slug = await _setup(app, monkeypatch)
+    docs = (await admin.get(f"/api/orgs/{slug}/documents")).json()["items"]
+    nightjar_doc = next(d for d in docs if d["title"] == "Nightjar")
+
+    async def names(query: str = "") -> set[str]:
+        page = (await admin.get(f"/api/orgs/{slug}/graph/entities{query}")).json()
+        return {e["name"] for e in page["items"]}
+
+    assert "Project Nightjar" in await names()
+    r = await admin.patch(f"/api/orgs/{slug}/documents/{nightjar_doc['id']}", json={"hidden": True})
+    assert r.status_code == 200 and r.json()["hidden"] is True
+
+    assert "Project Nightjar" not in await names()
+    assert await names("?q=confidential") == set()
+    page = (await admin.get(f"/api/orgs/{slug}/graph/entities?q=Priya")).json()["items"]
+    priya = next(e for e in page if e["name"] == "Priya Nair")
+    detail = (await admin.get(f"/api/orgs/{slug}/graph/entities/{priya['id']}")).json()
+    assert "Nightjar" not in detail["description"]
+    assert [link["entity"]["name"] for link in detail["relations"]] == ["Basalt Analytics"]
+
+    await admin.patch(f"/api/orgs/{slug}/documents/{nightjar_doc['id']}", json={"hidden": False})
+    assert "Project Nightjar" in await names()
+
+
+@pytest.mark.integration
 async def test_reindexing_replaces_a_documents_graph(app, monkeypatch):
     from sqlalchemy import func, select
 

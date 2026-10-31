@@ -1,6 +1,10 @@
-"""Same-domain breadth-first crawler that honours robots.txt."""
+"""Same-domain breadth-first crawler that honours robots.txt.
+
+Every request (robots.txt, pages, redirects) goes through `app.core.safe_http`, so a
+start URL or a redirect can't point the crawler at internal addresses."""
 
 import asyncio
+import ipaddress
 from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Any
@@ -11,8 +15,10 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.connectors.base import Connector, ConnectorError, ProgressFn, RawDocument
+from app.core.safe_http import UnsafeURL, fetch
 
 USER_AGENT = "StrataBot/0.1 (+https://github.com/strata-rag)"
+MAX_PAGE_BYTES = 5_000_000
 _SKIP_EXT = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".zip", ".gz", ".mp4", ".css", ".js", ".ico")
 
 
@@ -41,6 +47,8 @@ class WebConnector(Connector):
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https") or not parsed.netloc:
             raise ValueError("Start URL must be an http(s) URL")
+        if not _looks_public(parsed.hostname or ""):
+            raise ValueError("Start URL must be a public web address")
         include = [p for p in (config.get("include_paths") or []) if isinstance(p, str) and p]
         return {
             "url": url,
@@ -60,9 +68,10 @@ class WebConnector(Connector):
     async def _robots(self, client: httpx.AsyncClient, root: str) -> RobotFileParser:
         rp = RobotFileParser()
         try:
-            resp = await client.get(urljoin(root, "/robots.txt"))
-            rp.parse(resp.text.splitlines() if resp.status_code == 200 else [])
-        except httpx.HTTPError:
+            page = await fetch(client, urljoin(root, "/robots.txt"), max_bytes=500_000)
+            ok = page.status == 200
+            rp.parse(page.body.decode("utf-8", "replace").splitlines() if ok else [])
+        except (httpx.HTTPError, UnsafeURL):
             rp.parse([])
         return rp
 
@@ -76,7 +85,7 @@ class WebConnector(Connector):
         queue: list[tuple[str, int]] = [(start, 0)]
         fetched = 0
         async with httpx.AsyncClient(
-            headers={"User-Agent": USER_AGENT}, timeout=20, follow_redirects=True
+            headers={"User-Agent": USER_AGENT}, timeout=20, follow_redirects=False
         ) as client:
             robots = await self._robots(client, start)
             while queue and fetched < cfg["max_pages"]:
@@ -84,32 +93,58 @@ class WebConnector(Connector):
                 if not robots.can_fetch(USER_AGENT, url):
                     continue
                 try:
-                    resp = await client.get(url)
-                except httpx.HTTPError:
+                    page = await fetch(client, url, max_bytes=MAX_PAGE_BYTES)
+                except UnsafeURL as e:
+                    if url == start:
+                        raise ConnectorError(f"Can't crawl {start}: {e}") from e
                     continue
-                if resp.status_code != 200 or "text/html" not in resp.headers.get(
-                    "content-type", ""
+                except httpx.HTTPError:
+                    self.skip(url)  # timeout or connection error: keep what we had
+                    continue
+                if page.status in (429,) or page.status >= 500:
+                    self.skip(url)
+                    continue
+                if page.status != 200 or page.content_type not in (
+                    "text/html",
+                    "application/xhtml+xml",
                 ):
                     if fetched == 0 and url == start:
-                        raise ConnectorError(f"Could not fetch {start} (HTTP {resp.status_code})")
+                        raise ConnectorError(f"Could not fetch {start} (HTTP {page.status})")
                     continue
+                if url == start:
+                    # A start URL that redirects (http → https, apex → www) defines the site.
+                    host = urlparse(page.url).netloc
                 fetched += 1
-                await progress(fetched, cfg["max_pages"], url)
-                html = resp.text
+                await progress(fetched, cfg["max_pages"], page.url)
+                html = page.text
+                soup = BeautifulSoup(html, "lxml")
                 if depth < cfg["max_depth"]:
-                    soup = BeautifulSoup(html, "lxml")
                     for a in soup.find_all("a", href=True):
-                        link = urldefrag(urljoin(str(resp.url), a["href"]))[0]
+                        link = urldefrag(urljoin(page.url, a["href"]))[0]
                         if link not in seen and self._allowed(link, host, cfg["include_paths"]):
                             seen.add(link)
                             queue.append((link, depth + 1))
-                title_tag = BeautifulSoup(html[:20000], "lxml").title
+                title_tag = soup.title
                 yield RawDocument(
-                    external_id=str(resp.url),
-                    title=(title_tag.get_text(strip=True) if title_tag else "") or str(resp.url),
+                    external_id=page.url,
+                    title=(title_tag.get_text(strip=True) if title_tag else "") or page.url,
                     data=html.encode("utf-8"),
                     mime="text/html",
-                    url=str(resp.url),
+                    url=page.url,
                 )
                 delay = robots.crawl_delay(USER_AGENT)
                 await asyncio.sleep(min(float(delay), 5.0) if delay else 0.2)
+            if queue:
+                self.complete = False  # stopped at max_pages: unvisited pages aren't gone
+
+
+def _looks_public(host: str) -> bool:
+    """Cheap syntactic check for the config form (DNS is checked again on every fetch)."""
+    host = host.strip("[]").lower()
+    if host in ("localhost", "") or host.endswith((".localhost", ".local", ".internal")):
+        return False
+    try:
+        addr = ipaddress.ip_address(host)
+    except ValueError:
+        return "." in host
+    return addr.is_global and not addr.is_multicast

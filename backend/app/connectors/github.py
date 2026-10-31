@@ -14,6 +14,7 @@ from app.ingestion.parsers import SUPPORTED_EXTENSIONS
 _REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _TEXT_EXT = {".md", ".markdown", ".txt", ".rst", ".mdx"}
 _API = "https://api.github.com"
+MAX_FILES = 1000
 
 
 class GitHubConnector(Connector):
@@ -68,18 +69,25 @@ class GitHubConnector(Connector):
             tree = await gh.get(f"/repos/{repo}/git/trees/{branch}", params={"recursive": "1"})
             if tree.status_code >= 400:
                 raise ConnectorError(f"Could not read branch {branch}: HTTP {tree.status_code}")
+            listing = tree.json()
+            if listing.get("truncated"):
+                self.complete = False  # GitHub caps recursive trees; don't prune on a partial one
             files = [
                 item
-                for item in tree.json().get("tree", [])
+                for item in listing.get("tree", [])
                 if item["type"] == "blob"
                 and item.get("size", 0) < 1_000_000
                 and _ext(item["path"]) in _TEXT_EXT | set(SUPPORTED_EXTENSIONS)
                 and (not cfg["paths"] or any(item["path"].startswith(p) for p in cfg["paths"]))
-            ][:1000]
+            ]
+            if len(files) > MAX_FILES:
+                files, self.complete = files[:MAX_FILES], False
             for i, item in enumerate(files):
                 await progress(i, len(files), item["path"])
                 blob = await gh.get(f"/repos/{repo}/git/blobs/{item['sha']}")
                 if blob.status_code != 200:
+                    # Listed in the tree, so it exists: a 403/429 here is rate limiting.
+                    self.skip(item["path"])
                     continue
                 data = base64.b64decode(blob.json()["content"])
                 ext = _ext(item["path"])

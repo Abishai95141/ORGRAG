@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { api } from "./api";
 import type { Message, MessageAttachment, Mode, SourceRef, TraceStep } from "./types";
 
 /**
@@ -29,6 +30,9 @@ type Listener = () => void;
 
 const turns = new Map<string, LiveTurn>();
 const controllers = new Map<string, AbortController>();
+const slugs = new Map<string, string>();
+// Stop pressed before the server sent the answer's id: cancel as soon as it arrives.
+const stopRequested = new Set<string>();
 const listeners = new Set<Listener>();
 
 function emit() {
@@ -62,8 +66,34 @@ export function clearTurn(conversationId: string) {
   if (turns.delete(conversationId)) emit();
 }
 
+/**
+ * Stop the answer server-side (closing the stream alone would leave the run
+ * generating and billing). The server saves the partial answer as `stopped`;
+ * the stream is closed once it has.
+ */
 export function stopTurn(conversationId: string) {
-  controllers.get(conversationId)?.abort();
+  const turn = turns.get(conversationId);
+  const slug = slugs.get(conversationId);
+  if (!turn || !slug) {
+    controllers.get(conversationId)?.abort();
+    return;
+  }
+  if (!turn.assistantId) {
+    stopRequested.add(conversationId);
+    return;
+  }
+  void cancelRun(slug, conversationId, turn.assistantId);
+}
+
+async function cancelRun(slug: string, conversationId: string, messageId: string) {
+  try {
+    const message = await api.cancelMessage(slug, messageId);
+    patch(conversationId, (t) => ({ ...t, status: "stopped", final: message, content: message.content }));
+  } catch {
+    // Couldn't reach the server: at least stop listening.
+  } finally {
+    controllers.get(conversationId)?.abort();
+  }
 }
 
 type StartArgs = {
@@ -84,6 +114,8 @@ export async function startTurn(args: StartArgs) {
   controllers.get(conversationId)?.abort();
   const controller = new AbortController();
   controllers.set(conversationId, controller);
+  slugs.set(conversationId, slug);
+  stopRequested.delete(conversationId);
 
   turns.set(conversationId, {
     conversationId,
@@ -146,6 +178,8 @@ function handleEvent(id: string, event: string, data: unknown) {
     case "start": {
       const d = data as { user_message: Message; assistant_message_id: string; mode: Mode };
       patch(id, (t) => ({ ...t, status: "streaming", userMessage: d.user_message, assistantId: d.assistant_message_id, mode: d.mode }));
+      const slug = slugs.get(id);
+      if (stopRequested.delete(id) && slug) void cancelRun(slug, id, d.assistant_message_id);
       break;
     }
     case "step": {
@@ -192,6 +226,12 @@ function handleEvent(id: string, event: string, data: unknown) {
     case "done": {
       const d = data as { message: Message };
       patch(id, (t) => ({ ...t, status: "done", final: d.message, content: d.message.content, sources: d.message.sources, steps: d.message.trace }));
+      break;
+    }
+    case "stopped": {
+      const d = data as { message?: Message };
+      const m = d.message;
+      patch(id, (t) => (m ? { ...t, status: "stopped", final: m, content: m.content, sources: m.sources, steps: m.trace } : { ...t, status: "stopped" }));
       break;
     }
     case "error": {

@@ -11,6 +11,7 @@ import { cn, formatBytes } from "@/lib/utils";
 import { Answer } from "./answer";
 import { citationStyle, originLabel, SourceRefIcon } from "./source-kind";
 import { Trace } from "./trace";
+import type { LiveTurn } from "@/lib/stream";
 
 export function UserMessage({ content, attachments }: { content: string; attachments?: MessageAttachment[] }) {
   return (
@@ -201,5 +202,32 @@ export function uniqueOrgs(sources: SourceRef[]) {
 }
 
 export function messageStatus(m: Message): AssistantProps["status"] {
-  return m.status === "streaming" ? "streaming" : m.status === "error" ? "error" : "complete";
+  return m.status === "streaming" || m.status === "error" || m.status === "stopped" ? m.status : "complete";
+}
+
+/**
+ * One polite live region per chat view: announces the live turn's progress to screen
+ * readers (not every token, which would be unusable) and errors immediately.
+ */
+export function TurnAnnouncer({ status, sources, error }: { status: LiveTurn["status"] | null; sources: number; error: string | null }) {
+  const message =
+    status === "connecting"
+      ? "Researching your question."
+      : status === "streaming"
+        ? "Writing the answer."
+        : status === "done"
+          ? `Answer ready${sources ? `, with ${sources} source${sources === 1 ? "" : "s"}` : ""}.`
+          : status === "stopped"
+            ? "Answer stopped."
+            : "";
+  return (
+    <>
+      <div role="status" aria-live="polite" className="sr-only">
+        {message}
+      </div>
+      <div role="alert" className="sr-only">
+        {status === "error" ? `The answer failed: ${error ?? "unknown error"}` : ""}
+      </div>
+    </>
+  );
 }

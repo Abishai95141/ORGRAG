@@ -7,6 +7,7 @@ Hidden documents are filtered in SQL, so they never take a candidate slot."""
 import asyncio
 import logging
 import math
+import re
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass
@@ -303,22 +304,84 @@ async def hits_for_chunks(db: AsyncSession, chunk_ids: list[uuid.UUID]) -> list[
     ]
 
 
-async def neighbour_text(db: AsyncSession, hit: Hit, radius: int = 1) -> str:
-    """The hit chunk joined with its neighbours — a readable 'section'."""
-    rows = (
+WINDOW_CHARS = 3000  # per search hit shown to the model; a capped chunk is ≤ 2600
+_WORD = re.compile(r"\S+")
+
+
+def _overlap_words(left: str, right: str, limit: int = 120) -> int:
+    """How many words at the end of `left` repeat at the start of `right` (the chunker
+    carries ~50 words of overlap into each next chunk)."""
+    a, b = left.split()[-limit:], right.split()[:limit]
+    for k in range(min(len(a), len(b)), 0, -1):
+        if a[-k:] == b[:k]:
+            return k
+    return 0
+
+
+def _drop_leading_words(text: str, k: int) -> str:
+    if k <= 0:
+        return text
+    for i, m in enumerate(_WORD.finditer(text), 1):
+        if i == k:
+            return text[m.end() :].lstrip()
+    return ""
+
+
+def _drop_trailing_words(text: str, k: int) -> str:
+    if k <= 0:
+        return text
+    starts = [m.start() for m in _WORD.finditer(text)]
+    return text[: starts[-k]].rstrip() if k <= len(starts) else ""
+
+
+def _head(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    cut = text[:max_chars].rsplit(None, 1)[0] if max_chars > 0 else ""
+    return f"{cut}…" if cut else ""
+
+
+def _tail(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    cut = text[-max_chars:].split(None, 1)[-1] if max_chars > 0 else ""
+    return f"…{cut}" if cut else ""
+
+
+def assemble_window(
+    before: str | None, hit: str, after: str | None, max_chars: int = WINDOW_CHARS
+) -> str:
+    """The text shown for a search hit: the hit chunk complete, then the start of the
+    next chunk and the end of the previous one as budget allows, without repeating the
+    chunker's overlap (audit C1: the old window led with the previous chunk and was cut
+    before the hit)."""
+    hit = hit.strip()
+    if len(hit) >= max_chars:
+        return _head(hit, max_chars)
+    budget = max_chars - len(hit)
+    pre = _drop_trailing_words(before, _overlap_words(before, hit)) if before else ""
+    post = _drop_leading_words(after, _overlap_words(hit, after)) if after else ""
+    pre_budget = min(len(pre), budget // 3)
+    post_part = _head(post, budget - pre_budget - 4)
+    pre_part = _tail(pre, budget - len(post_part) - 4)
+    return "\n\n".join(p for p in (pre_part, hit, post_part) if p)
+
+
+async def hit_window(db: AsyncSession, hit: Hit, max_chars: int = WINDOW_CHARS) -> str:
+    rows = dict(
         (
             await db.execute(
                 text(
-                    "SELECT content FROM chunks WHERE document_id = :doc "
-                    "AND ordinal BETWEEN :lo AND :hi ORDER BY ordinal"
+                    "SELECT ordinal, content FROM chunks WHERE document_id = :doc "
+                    "AND ordinal IN (:lo, :hi)"
                 ),
-                {"doc": hit.document_id, "lo": hit.ordinal - radius, "hi": hit.ordinal + radius},
+                {"doc": hit.document_id, "lo": hit.ordinal - 1, "hi": hit.ordinal + 1},
             )
-        )
-        .scalars()
-        .all()
+        ).all()
     )
-    return "\n\n".join(rows) if rows else hit.content
+    return assemble_window(
+        rows.get(hit.ordinal - 1), hit.content, rows.get(hit.ordinal + 1), max_chars
+    )
 
 
 def snippet(content: str, max_chars: int = 280) -> str:

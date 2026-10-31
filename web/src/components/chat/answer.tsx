@@ -8,6 +8,7 @@ import { IconExternal, IconEye } from "@/components/icons";
 import { OrgMark } from "@/components/illustrations";
 import type { SourceRef } from "@/lib/types";
 import { cn, hostname, orgColor } from "@/lib/utils";
+import { BlockedImage, ExternalLink } from "./markdown";
 import { citationStyle, originLabel, SourceRefIcon } from "./source-kind";
 
 /**
@@ -52,12 +53,9 @@ export const Answer = memo(function Answer({
           // Unknown refs render as nothing rather than a dangling number.
           return source ? <CitationChip source={source} onOpen={onOpenSource} /> : null;
         }
-        return (
-          <a href={href} target="_blank" rel="noreferrer">
-            {children}
-          </a>
-        );
+        return <ExternalLink href={href}>{children}</ExternalLink>;
       },
+      img: ({ src, alt }) => <BlockedImage src={src} alt={alt} />,
     }),
     [byRef, onOpenSource],
   );

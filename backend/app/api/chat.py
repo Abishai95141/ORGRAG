@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import func, select
 
+from app.agent import runs
 from app.agent.engine import ChatRequest, message_payload, run_chat
 from app.agent.prompts import TITLE_SYSTEM
 from app.api.scope import key_collection_ids
@@ -39,6 +40,7 @@ ERROR_STATUS = {
     "llm_rate_limited": 429,
     "llm_bad_request": 502,
     "llm_timeout": 504,
+    "run_timeout": 504,
     "llm_unreachable": 502,
     "llm_error": 502,
 }
@@ -170,6 +172,27 @@ async def message_feedback(
     message.feedback = body.feedback
     await ctx.db.commit()
     return Response(status_code=204)
+
+
+@router.post("/messages/{message_id}/cancel", response_model=MessageOut)
+async def cancel_message(message_id: uuid.UUID, ctx: OrgContext = Depends(org_context)):
+    """Stop an answer that is still being written in one of your conversations. The run
+    stops generating (and spending) at once; what it wrote so far is kept with status
+    `stopped`. Idempotent: an answer that already finished is returned unchanged."""
+    message = await ctx.db.get(Message, message_id)
+    if message is None or message.role != "assistant":
+        raise not_found("Message")
+    await _conversation(ctx, message.conversation_id)
+    if message.status == "streaming":
+        if runs.cancel(message.id):
+            await runs.wait(message.id, seconds=10)
+        elif datetime.now(UTC) - message.updated_at < runs.STALE_AFTER:
+            raise ApiError(409, "This answer is running on another server process", "run_not_local")
+        else:  # nobody is writing it any more (the process died): close it out
+            message.status = "stopped"
+            await ctx.db.commit()
+        await ctx.db.refresh(message)
+    return message_payload(message)
 
 
 def _sse(event: str, data: dict) -> str:
@@ -318,7 +341,7 @@ async def send_message(
     )
     # The run owns its own task and DB session: it finishes and persists even if
     # the client disconnects mid-stream.
-    _spawn(run_chat(req, queue))
+    runs.register(assistant.id, _spawn(run_chat(req, queue)))
     start = {
         "user_message": message_payload(user_message),
         "assistant_message_id": str(assistant.id),
@@ -328,7 +351,7 @@ async def send_message(
     if not stream:
         while (item := await queue.get()) is not None:
             event, data = item
-            if event == "done":
+            if event in ("done", "stopped") and data.get("message"):
                 return JSONResponse(data)
             if event == "error":
                 raise ApiError(ERROR_STATUS.get(data["code"], 500), data["detail"], data["code"])

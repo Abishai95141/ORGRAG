@@ -254,6 +254,9 @@ export const api = {
     request<Conversation>(`${o(slug)}/conversations/${id}`, { method: "PATCH", json: body }),
   deleteConversation: (slug: string, id: string) =>
     request<void>(`${o(slug)}/conversations/${id}`, { method: "DELETE" }),
+  /** Stop an answer that is still being written; returns it with what was written so far. */
+  cancelMessage: (slug: string, messageId: string) =>
+    request<Message>(`${o(slug)}/messages/${messageId}/cancel`, { method: "POST" }),
   feedback: (slug: string, messageId: string, feedback: "up" | "down" | null) =>
     request<void>(`${o(slug)}/messages/${messageId}/feedback`, { method: "POST", json: { feedback } }),
 

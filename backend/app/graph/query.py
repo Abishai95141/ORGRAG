@@ -1,8 +1,9 @@
 """Read the knowledge graph within a retrieval scope.
 
 Everything is filtered through mentions whose chunk sits in a collection the asker
-can see: an entity known only from a restricted document doesn't exist for someone
-without access, and descriptions are assembled only from visible chunks."""
+can see and whose document isn't hidden: an entity known only from a restricted or
+hidden document doesn't exist for that asker, and descriptions are assembled only
+from visible chunks."""
 
 import re
 import uuid
@@ -36,6 +37,17 @@ class RelationRow:
     chunk_ids: list[uuid.UUID] = field(default_factory=list)
 
 
+def _visible(alias: str) -> str:
+    """SQL condition: mention `alias` is in scope (`:cids`) and its document isn't hidden."""
+    return (
+        f"{alias}.collection_id IN :cids AND NOT EXISTS "
+        f"(SELECT 1 FROM documents hd WHERE hd.id = {alias}.document_id AND hd.hidden)"
+    )
+
+
+_M = _visible("m")
+
+
 def _like(term: str) -> str:
     escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     return f"%{escaped}%"
@@ -46,7 +58,7 @@ _LIST_SQL = """
            string_agg(DISTINCT m.description, ' | ') AS description,
            array_agg(DISTINCT m.chunk_id) AS chunk_ids
     FROM kg_entities e
-    JOIN kg_mentions m ON m.entity_id = e.id AND m.collection_id IN :cids
+    JOIN kg_mentions m ON m.entity_id = e.id AND {visible}
     WHERE {where}
     GROUP BY e.id
     {having}
@@ -78,12 +90,12 @@ async def list_entities(
             "HAVING e.name ILIKE :q ESCAPE '\\' "
             "OR bool_or(m.description ILIKE :q ESCAPE '\\') "
             "OR EXISTS (SELECT 1 FROM kg_relations r "
-            "JOIN kg_mentions rm ON rm.relation_id = r.id AND rm.collection_id IN :cids "
+            f"JOIN kg_mentions rm ON rm.relation_id = r.id AND {_visible('rm')} "
             "WHERE (r.source_id = e.id OR r.target_id = e.id) "
             "AND (rm.description ILIKE :q ESCAPE '\\' OR rm.keywords ILIKE :q ESCAPE '\\'))"
         )
         params["q"] = _like(contains)
-    sql = _LIST_SQL.format(where=" AND ".join(where), having=having)
+    sql = _LIST_SQL.format(visible=_M, where=" AND ".join(where), having=having)
     stmt = text(sql).bindparams(bindparam("cids", expanding=True))
     rows = (await db.execute(stmt, params)).all()
     count_sql = text(f"SELECT count(*) FROM ({sql.replace('LIMIT :lim', '')}) t").bindparams(
@@ -121,7 +133,7 @@ async def find_entity(
                string_agg(DISTINCT m.description, ' | ') AS description,
                array_agg(DISTINCT m.chunk_id) AS chunk_ids
         FROM kg_entities e
-        JOIN kg_mentions m ON m.entity_id = e.id AND m.collection_id IN :cids
+        JOIN kg_mentions m ON m.entity_id = e.id AND {_M}
         WHERE {conditions}
         GROUP BY e.id
         ORDER BY length(e.name)
@@ -145,14 +157,14 @@ async def relations_of(
     on the other end."""
     ids = [entity_ids] if isinstance(entity_ids, uuid.UUID) else list(entity_ids)
     stmt = text(
-        """
+        f"""
         SELECT o.id AS other_id, o.name AS other_name, o.type AS other_type,
                string_agg(DISTINCT m.keywords, ', ') AS keywords,
                string_agg(DISTINCT m.description, ' | ') AS description,
                array_agg(DISTINCT m.chunk_id) AS chunk_ids,
                count(*) OVER () AS total
         FROM kg_relations r
-        JOIN kg_mentions m ON m.relation_id = r.id AND m.collection_id IN :cids
+        JOIN kg_mentions m ON m.relation_id = r.id AND {_M}
         JOIN kg_entities o ON o.id = CASE WHEN r.source_id IN :eids THEN r.target_id
                                           ELSE r.source_id END
         WHERE (r.source_id IN :eids OR r.target_id IN :eids) AND o.id NOT IN :eids
@@ -182,7 +194,7 @@ async def linked_names(
     if not entity_ids:
         return {}
     stmt = text(
-        """
+        f"""
         SELECT e_id, other FROM (
           SELECT x.e_id, o.name AS other,
                  row_number() OVER (PARTITION BY x.e_id ORDER BY o.name) AS n
@@ -191,7 +203,7 @@ async def linked_names(
                    CASE WHEN r.source_id IN :eids THEN r.source_id ELSE r.target_id END AS e_id,
                    CASE WHEN r.source_id IN :eids THEN r.target_id ELSE r.source_id END AS o_id
             FROM kg_relations r
-            JOIN kg_mentions m ON m.relation_id = r.id AND m.collection_id IN :cids
+            JOIN kg_mentions m ON m.relation_id = r.id AND {_M}
             WHERE r.source_id IN :eids OR r.target_id IN :eids
           ) x JOIN kg_entities o ON o.id = x.o_id
         ) t WHERE n <= :per

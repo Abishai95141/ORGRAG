@@ -13,6 +13,7 @@ import { api, ApiError } from "@/lib/api";
 import { qk, useMe } from "@/lib/queries";
 import type { DocumentDetail, SourceRef, Vote } from "@/lib/types";
 import { atLeast, cn, formatBytes, hostname, relativeTime } from "@/lib/utils";
+import { safeComponents } from "./markdown";
 
 /**
  * Preview for any citation. Knowledge documents open in full with the cited
@@ -108,7 +109,9 @@ export function DocumentSheet({ source, onClose }: { source: SourceRef | null; o
           <p className="text-[13px] text-ink-3">This {isFile ? "file" : "document"} is no longer available.</p>
         ) : body ? (
           <div className="prose-answer text-[14px]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={safeComponents}>
+              {body}
+            </ReactMarkdown>
           </div>
         ) : null}
       </div>
