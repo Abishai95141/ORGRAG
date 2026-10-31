@@ -6,14 +6,16 @@ proposed features earned their place. Everything here is reproducible with
 
 ## The dataset
 
-- **Corpus:** 48 documents across two orgs. That's the 17 seed documents plus 31 written for evaluation: policies, runbooks, meeting notes, a Slack thread export, an RFC, vendor records, a changelog, and table-heavy inventories. It deliberately includes real-world messiness:
+- **Corpus:** 73 documents across two orgs. That's the 17 seed documents plus 56 written for evaluation: policies, runbooks, meeting notes, a Slack thread export, an RFC, vendor records, a changelog, and table-heavy inventories. It deliberately includes real-world messiness:
   - the two orgs use different vocabulary for the same things;
   - codenames and people's initials;
   - facts that only connect across 3–5 documents;
   - lists spread over many records;
   - superseded policy versions;
   - near-miss distractors.
-- **45 questions** in seven categories: single fact (12), cross-org vocabulary (8), multi-hop (7), list/aggregate (6), superseded (4), alias (4), unanswerable (4). Each question records its gold documents and the facts a correct answer must contain. `eval/check_dataset.py` verifies that every gold title exists and that every required fact appears in its gold documents.
+- **150 questions** in nine categories: single fact (30), multi-hop (25), list/aggregate (18), cross-org vocabulary (15), table (15), unanswerable (15), superseded (12), alias (12), and cross-org (8: answers that need facts from both orgs, such as comparisons). Each question records its gold documents and the facts a correct answer must contain. `eval/check_dataset.py` verifies that every gold title exists and that every required fact appears in its gold documents.
+- **Smoke set:** 15 questions (marked `smoke`), at least one per category, run on every change (`--set smoke`); the full set runs before anything ships.
+- **How the 105 new questions were written (2026-10-31):** three authors in parallel (Northwind, Halcyon, cross-org), each reading the whole existing world first so new documents extend it rather than contradict it; then an independent review of all 150 questions against the full corpus. The review found no conflict that changed an expected answer; it fixed four contradictions inside new documents and widened the accepted phrasings of 21 facts. Notes on each changed question start with "Reviewed:".
 - **Scale test:** a 60-record vendor register for a third org, generated deterministically by `eval/scale/generate.py`, with 4 list/count questions whose answers span 8–27 records.
 
 Three labels were corrected after review, each noted in the question's `notes`. q16 and q18 asked for facts the question didn't ask about. q36 said "now" about rates that only start on November 3.
@@ -22,16 +24,46 @@ Three labels were corrected after review, each noted in the question's `notes`. 
 
 - **Retrieval** (deterministic, no LLM): recall@5 and recall@10 of the gold documents, and MRR.
 - **Answers:**
-  - an LLM judge (Nemotron 3 Ultra, temperature 0) decides whether each required fact is stated and whether the answer contradicts any fact;
+  - an LLM judge (temperature 0) decides whether each required fact is stated and whether the answer contradicts any fact;
   - a substring check runs alongside as a cross-check;
   - unanswerable questions pass only if the answer says the information isn't there.
-  - A question passes when every fact is present and nothing is contradicted. Answers run in quick mode on Nemotron 3 Ultra.
+  - A question passes when every fact is present and nothing is contradicted.
+- **Grounding** (`eval/grounding.py`): the answer is split into statements (sentences, list items, table rows) with the `[n]` citations each carries, and one judge call labels every statement against the documents the model saw:
+  - **faithfulness**: claims supported by the retrieved documents ÷ claims;
+  - **citation recall**: claims fully supported by their own citations ÷ claims (an uncited claim counts as unsupported);
+  - **citation precision**: citations that support their statement ÷ citations (a `[n]` that isn't a source counts against it).
+  A ref stands for a whole document (the agent may have read several parts of it), so the judge sees each cited document in full, up to 12,000 characters.
+- **The judge.** It comes from a different model family than the one answering, because a model grading its own family is biased. Every result records the judge model and a hash of each judge prompt, and `compare` warns when two runs were judged differently (`rejudge` re-scores a saved run with the current judge). Replies are cached by model and prompt in `eval/.data`, so re-scoring is free.
+- **Judge reliability.** `label` walks a person through 50 judge verdicts without showing them (about 30 fact verdicts and 20 claim verdicts, balanced between the judge's yes and no), and `kappa` reports Cohen's κ against the human. The target is κ ≥ 0.7; until it's measured, read judge-based numbers as approximate.
+- **Comparing runs.** `compare a.json b.json` adds a paired bootstrap (10,000 resamples of questions) per category: the difference in pass rate with a 95% interval, and "better", "worse" or "no clear change". Summaries also show p95 latency.
 
-Each run is a single sample and the models aren't deterministic, so a difference of one question between runs is within noise.
+Each run is a single sample and the models aren't deterministic. With 150 questions, one question is 0.7 points; the bootstrap says whether a difference is bigger than resampling noise.
 
 ## Results
 
-### Retrieval
+### Retrieval, 150 questions (2026-10-31)
+
+Default configuration (hybrid fusion, NVIDIA reranker, low recency bias), 135 answerable questions:
+
+| Category | n | recall@5 | recall@10 | MRR |
+|---|---|---|---|---|
+| Single fact | 30 | 1.000 | 1.000 | 1.000 |
+| Table | 15 | 1.000 | 1.000 | 0.967 |
+| Superseded | 12 | 1.000 | 1.000 | **0.792** |
+| Alias | 12 | 0.972 | 1.000 | 0.917 |
+| List/aggregate | 18 | 0.963 | 1.000 | 1.000 |
+| Cross-org | 8 | 0.875 | 0.875 | 0.812 |
+| Multi-hop | 25 | **0.844** | 0.933 | 0.980 |
+| Cross-org vocabulary | 15 | **0.828** | 0.883 | 0.880 |
+| **All** | 135 | **0.937** | **0.967** | **0.942** |
+
+The weak spots are the ones the new questions were written to probe:
+- cross-org vocabulary and multi-hop, where the right document doesn't share the question's words;
+- superseded policies, where both versions are found but the old one often ranks first.
+
+These are the targets for Contextual Retrieval, BM25 and the embedding swap (roadmap §3). Search takes 652 ms on average, most of it reranking.
+
+### Retrieval, original 45 questions
 
 | Configuration | recall@5 | recall@10 | MRR | ms/search |
 |---|---|---|---|---|
@@ -137,7 +169,13 @@ None of the evaluation questions need corpus-wide theme summaries, and Onyx's ow
 cd backend
 .venv/bin/python eval/check_dataset.py                        # dataset integrity
 .venv/bin/python -m eval.harness retrieval --variant default  # no LLM
-.venv/bin/python -m eval.harness answers --variant default --concurrency 1
+.venv/bin/python -m eval.harness answers --set smoke --chat-model explabs:claude-haiku-5.5   # every change
+.venv/bin/python -m eval.harness answers --variant default --concurrency 1                   # full set
+EVAL_JUDGE_MODEL=mistralai/mistral-large-4-1t-a52b \
+  .venv/bin/python -m eval.harness answers --chat-model nvidia/nemotron-3-ultra-550b-a55b   # free, judge of another family
+.venv/bin/python -m eval.harness rejudge eval/results/answers-x.json   # re-score with the current judge
+.venv/bin/python -m eval.harness label eval/results/answers-x.json --n 50   # hand-label judge verdicts
+.venv/bin/python -m eval.harness kappa eval/labels/answers-x.jsonl
 .venv/bin/python eval/scale/generate.py                       # scale corpus
 .venv/bin/python -m eval.harness build-graph --model nvidia/nemotron-3.5-lightning-30b-a3b
 .venv/bin/python -m eval.harness answers --variant graph --questions eval/scale/questions_scale.jsonl

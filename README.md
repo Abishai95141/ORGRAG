@@ -51,6 +51,13 @@ what changed.
 - **An MCP server** at `/api/mcp`, so Claude, Cursor and other AI assistants can
   search, read and ask with an org API key, seeing exactly what the key's role sees.
   Setup snippets are under *Settings → API keys*.
+- **Verified answers.** Admins promote a good answer, with an owner and an expiry; it's
+  found and cited ahead of documents until it expires, and verifying can't widen who
+  sees restricted sources.
+- **Answer links.** Share an answer by link; each person who opens it sees it only if
+  they can read every source it cites, and can request access otherwise.
+- **Tracing.** OpenTelemetry traces for every answer (model turns, tokens, tools,
+  retrieval) to Langfuse or any OTLP collector, and token spend per org in Insights.
 - **A consistent, documented API.** Org API keys with capped roles, one error shape with
   request IDs, paginated lists, OpenAPI docs at `/api/docs`, and a non-streaming answer
   mode for scripts. See [`docs/API.md`](docs/API.md).

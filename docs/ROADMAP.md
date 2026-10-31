@@ -149,6 +149,15 @@ Deprioritised: expert finding (identities don't align across orgs), actions with
 
 ## 7. Sequencing
 
+**Progress, weeks 2–3 (2026-10-31):**
+- **Eval:** 150 questions (two new categories: table, cross-org) with a 15-question smoke set. Faithfulness and citation precision/recall are measured per statement by a judge from a different model family, with judge versions pinned, verdicts cached, a paired bootstrap in `compare`, and `label`/`kappa` for judge agreement. See [EVALUATION.md](EVALUATION.md). Retrieval baseline on 150: recall@5 0.937.
+- **Still to do for the eval:** the full 150-question answer baseline, and hand-labelling 50 judge verdicts for κ (it needs a person).
+- **Tracing:** OpenTelemetry, exported to Langfuse or any OTLP collector: one trace per answer with model turns (tokens), tools, retrieval and rerank, plus worker jobs; text only with `TRACE_CONTENT=true`. Token usage is also stored per answer and shown per org and model in Insights.
+- **Verified answers:** built. Indexed as boosted documents in their collection, with an owner, an expiry and re-verification; verifying can't widen access to restricted sources.
+- **Answer permalinks:** built. Permissions are checked per viewer, who sees the answer only if they can read every cited source, with access requests that admins approve.
+- **CI eval gate:** the repo has no CI yet; wiring the smoke set into it is open.
+
+
 | When | Track A: quality and platform | Track B: product |
 |---|---|---|
 | Week 1 | §2 bug fixes (C1, C2, S1, S3, S5, I1, O3/F1) | MCP server |
