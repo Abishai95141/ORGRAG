@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     nvidia_rerank_url: str = "https://ai.api.nvidia.com/v1/retrieval"
     fastembed_rerank_model: str = "Xenova/ms-marco-MiniLM-L-6-v2"
 
+    # Keyword ranking: "auto" uses BM25 (pg_textsearch) when its index exists, else
+    # ts_rank_cd; "ts_rank" forces the fallback (to compare); "bm25" warns if missing.
+    keyword_ranking: Literal["auto", "bm25", "ts_rank"] = "auto"
+
     # Contextual Retrieval: after indexing, a model writes a short context for each
     # chunk of a multi-chunk document, embedded and keyword-indexed with it.
     contextual_retrieval: bool = False

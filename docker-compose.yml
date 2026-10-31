@@ -33,7 +33,9 @@ x-backend-env: &backend-env
 
 services:
   db:
-    image: pgvector/pgvector:pg16
+    # Postgres 17 + pgvector + pg_textsearch (BM25). Upgrading from the old pg16 volume:
+    # see README "Upgrading to Postgres 17".
+    build: ./postgres
     environment:
       POSTGRES_DB: strata
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}

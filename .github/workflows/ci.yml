@@ -12,25 +12,33 @@ concurrency:
 jobs:
   backend:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: strata_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 5s
-          --health-timeout 5s --health-retries 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # plain: pgvector only, keyword search falls back to ts_rank_cd.
+        # bm25: the deployed image (postgres/Dockerfile) with pg_textsearch.
+        postgres: [plain, bm25]
     defaults:
       run:
         working-directory: backend
     env:
       TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/strata_test
       REQUIRE_TEST_DB: "1"  # integration tests fail instead of skipping
+      REQUIRE_BM25: ${{ matrix.postgres == 'bm25' && '1' || '' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Start Postgres (${{ matrix.postgres }})
+        working-directory: .
+        run: |
+          if [ "${{ matrix.postgres }}" = bm25 ]; then
+            docker build -t strata-postgres ./postgres
+            image=strata-postgres
+          else
+            image=pgvector/pgvector:pg17
+          fi
+          docker run -d --name pg -p 5432:5432 \
+            -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=strata_test "$image"
+          for _ in $(seq 60); do docker exec pg pg_isready -U postgres && break; sleep 1; done
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"

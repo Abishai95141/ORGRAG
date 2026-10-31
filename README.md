@@ -77,7 +77,7 @@ what changed.
 |---|---|
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind v4, TanStack Query, Radix primitives |
 | Backend | Python 3.12+, FastAPI, SQLAlchemy 2 (async), Alembic, Pydantic v2 |
-| Data | PostgreSQL 16 + pgvector (vectors, full-text search, and the job queue) |
+| Data | PostgreSQL 17 + pgvector + pg_textsearch (vectors, BM25 keyword search, and the job queue) |
 | AI | NVIDIA API (Nemotron 3 Ultra and other open models, OpenAI-compatible) or Anthropic Claude (adaptive thinking, structured outputs, refusal fallbacks) |
 | Retrieval | `fastembed` embeddings (local, BAAI/bge-small-en-v1.5); NVIDIA `nemotron-3.5-rerank-8b` or local cross-encoder reranking; Tavily/Brave web search |
 
@@ -123,7 +123,7 @@ git clone https://github.com/Abishai95141/ORGRAG.git
 cd ORGRAG
 cp .env.example .env          # set SECRET_KEY; add NVIDIA_API_KEY or ANTHROPIC_API_KEY
 make setup                    # uv sync (with local embeddings) + pnpm install
-make dev-db                   # Postgres 16 + pgvector on :5432
+make dev-db                   # Postgres 17 + pgvector + pg_textsearch on :5432
 make migrate                  # create tables and indexes
 make seed                     # demo data (first run downloads the ~70 MB embedding model)
 ```
@@ -143,10 +143,26 @@ make test-db
 TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/strata_test make test
 ```
 
-*Postgres without Docker:* install Postgres 16+ with the `pgvector` extension
+*Postgres without Docker:* install Postgres 17 with the `pgvector` extension
 (macOS: `brew install postgresql@17 pgvector`), create a `strata` database, and set
 `DEV_DB_URL=postgresql+asyncpg://<user>:<password>@localhost:5432/strata` when
-running `make migrate`, `make seed`, `make api` and `make worker`.
+running `make migrate`, `make seed`, `make api` and `make worker`. BM25 keyword
+ranking also needs [pg_textsearch](https://github.com/timescale/pg_textsearch)
+(build it with `make PG_CONFIG=$(brew --prefix postgresql@17)/bin/pg_config install`),
+`shared_preload_libraries = 'pg_textsearch'` in `postgresql.conf`, a restart, and
+`python -m app.retrieval.bm25` to create the index. Without it, keyword search uses
+`ts_rank_cd`; Postgres 16 still works that way.
+
+*Upgrading to Postgres 17:* the Docker database moved from pg16 to pg17, and a
+pg16 data volume won't start on pg17. Dump before pulling, then restore:
+
+```bash
+docker compose exec db pg_dump -U postgres -Fc strata > strata.dump   # on the old version
+docker compose down && docker volume rm orgrag_pgdata                  # volume name: docker volume ls
+docker compose up -d --build db
+docker compose exec -T db pg_restore -U postgres -d strata --no-owner < strata.dump
+make migrate                                                            # adds the BM25 index
+```
 
 ### Demo logins
 

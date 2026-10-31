@@ -27,7 +27,7 @@ retrieval, a tool-calling chat loop, streamed citations) and changing three thin
 | Web search | `web_search` + `open_url` tools, several providers | `search_web` tool (Tavily/Brave) returning snippets; `read_document` fetches a page through an SSRF-guarded fetcher, opening on the snippet |
 | API keys | Service-account users with group permissions | Per-org keys acting as their creator with a capped role (`app/core/deps.py`) |
 | Indexing pipeline | Celery docfetching → docprocessing, chunk + embed into Vespa/OpenSearch | `app/ingestion/pipeline.py` — parse → heading-aware chunking → embed → upsert into `chunks` (pgvector + tsvector) |
-| Hybrid search | Vespa/OpenSearch hybrid with ACL filters (`context/search/pipeline.py`) | `app/retrieval/hybrid.py` — vector (HNSW cosine) + `websearch_to_tsquery` BM25-ish rank fused with Reciprocal Rank Fusion, neighbour-chunk expansion into sections |
+| Hybrid search | Vespa/OpenSearch hybrid with ACL filters (`context/search/pipeline.py`) | `app/retrieval/hybrid.py` — vector (HNSW cosine) + keyword (BM25 via pg_textsearch, or `ts_rank_cd`) fused with Reciprocal Rank Fusion, neighbour-chunk expansion into sections |
 | Access control | `access/access.py` ACL lists on every chunk | Org scope + collection visibility (`org` / `restricted`) resolved into an allow-list of collection ids before every query |
 | Document sets | `DocumentSet` | `Collection` |
 | Personas ("Agents") | `Persona` table, prompt + tools + document sets | `Agent` — instructions, default collections, quick/deep mode |
@@ -52,7 +52,7 @@ retrieval, a tool-calling chat loop, streamed citations) and changing three thin
             └───────┬───────────────┬────────┘
                     │ SQLAlchemy    │ enqueue jobs
             ┌───────▼───────────────▼────────┐        ┌──────────────────┐
-            │ Postgres 16 + pgvector         │◀──────▶│ Worker           │
+            │ Postgres 17 + pgvector + BM25  │◀──────▶│ Worker           │
             │  orgs, users, sources, docs,   │  jobs  │  connectors →    │
             │  chunks(vector, tsvector),     │        │  parse → chunk → │
             │  conversations, jobs           │        │  embed → upsert  │
@@ -98,7 +98,10 @@ search_events (org_id, user_id, query, latency_ms, hits) — powers Insights
 
 Every row that holds tenant data has `org_id` and an index on it. `chunks` has
 `embedding vector(EMBEDDING_DIM)` with an HNSW cosine index and a generated
-`tsv tsvector` column with a GIN index.
+`tsv tsvector` column (heading A, content B, generated context C) with a GIN index.
+Keyword search matches on `tsv`, then ranks with BM25 through a pg_textsearch index
+(`ix_chunks_bm25`, `app/retrieval/bm25.py`) when the server has the extension, and
+with `ts_rank_cd` otherwise.
 
 ## Permission model
 

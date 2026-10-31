@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import telemetry
 from app.embeddings import get_embedder
+from app.retrieval import bm25
 from app.retrieval.rerank import get_reranker, sigmoid
 
 log = logging.getLogger("strata.retrieval")
@@ -129,6 +130,22 @@ _KEYWORD_SQL = text(
     """
 ).bindparams(bindparam("cids", expanding=True))
 
+# Top chunks by BM25, read from the pg_textsearch index in score order (scores are
+# negative: ascending), so the cost doesn't grow with the number of matches. Tenant
+# filters are post-filters the index scan keeps satisfying until LIMIT is filled;
+# `< 0` drops non-matching chunks on a plan that scores rows without the index. The
+# index is named explicitly because prepared statements can't infer it.
+_BM25_SQL = text(
+    f"""
+    SELECT c.id FROM chunks c
+    JOIN documents d ON d.id = c.document_id AND NOT d.hidden
+    WHERE c.collection_id IN :cids
+      AND {bm25.SCORE.format(alias="c.")} < 0
+    ORDER BY {bm25.SCORE.format(alias="c.")}
+    LIMIT :lim
+    """
+).bindparams(bindparam("cids", expanding=True))
+
 _DETAIL_SQL = text(
     """
     SELECT c.id, c.document_id, c.ordinal, c.org_id, c.collection_id, c.heading, c.content,
@@ -210,6 +227,7 @@ async def _hybrid_search(
     await db.execute(text("SET LOCAL hnsw.iterative_scan = relaxed_order"))
     await db.execute(text("SET LOCAL hnsw.ef_search = 100"))
 
+    keyword_sql = _BM25_SQL if await bm25.available(db) else _KEYWORD_SQL
     rankings: list[list[uuid.UUID]] = []
     for q in queries:
         qvec = await embedder.embed_query(q)
@@ -230,7 +248,7 @@ async def _hybrid_search(
         kw_ids = (
             (
                 await db.execute(
-                    _KEYWORD_SQL, {"cids": collection_ids, "qtext": q, "lim": CANDIDATES_PER_LIST}
+                    keyword_sql, {"cids": collection_ids, "qtext": q, "lim": CANDIDATES_PER_LIST}
                 )
             )
             .scalars()

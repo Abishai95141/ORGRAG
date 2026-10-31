@@ -84,6 +84,21 @@ Each item is an org setting (or a harness variant), so it can be switched off an
 - **Heading weight:** BM25 has no field weights. Test repeating the heading in the indexed expression as a variant.
 - **Known limitation:** IDF is computed over the whole index, across orgs. It only affects ordering, never visibility, which is the same exposure as today.
 
+**Built and measured (2026-10-31); on by default where the index exists.** `app/retrieval/bm25.py`, migration 0011 (a no-op without the extension), `python -m app.retrieval.bm25` to create the index later, `postgres/Dockerfile` (pgvector:pg17 + `postgresql-17-pg-textsearch=1.5.1-*`, confirmed in the PGDG apt index), and CI on both a plain pg17 and that image. `KEYWORD_RANKING=ts_rank` forces the old ranking.
+
+- **Changed from the plan above:** the `tsv @@` match is *not* kept. With it, Postgres finds every match through the GIN index and sorts them all, never using the BM25 index (checked with EXPLAIN), which scales exactly like `ts_rank_cd`. The query now filters on `score < 0` instead, which keeps the BM25 index scan and still drops non-matching chunks. With a very selective collection filter the planner may rightly filter first and score the few rows left.
+- **Results, 135 answerable questions, Postgres 17:**
+
+| | recall@5 | recall@10 | MRR |
+|---|---|---|---|
+| Reranked, ts_rank_cd | 0.939 | 0.970 | 0.942 |
+| Reranked, BM25 | 0.936 | 0.970 | 0.948 |
+| No reranker, ts_rank_cd | 0.839 | 0.926 | 0.841 |
+| No reranker, BM25 | 0.855 | 0.937 | 0.847 |
+
+- None of the differences is significant (reranked MRR +0.006, p 0.13; recall@5 −0.003). Reranked, cross-org vocabulary (r@5 0.844 → 0.861) and tables (MRR 0.967 → 1.0) gain and cross-org r@5 loses one question (0.875 → 0.812). Without the reranker BM25 helps cross-org (0.44 → 0.63) and multi-hop and hurts alias and table questions.
+- **Why it's on anyway:** quality is equal within noise here, and keyword search now reads its top results from the index instead of scoring every match, the scaling problem the audit flagged. Re-check at scale and in the four-way comparison below.
+
 ### 2b. Contextual Retrieval
 
 Following Anthropic's published recipe and cookbook prompt.
