@@ -267,7 +267,8 @@ async def extract_document(db: AsyncSession, schema: RecordSchema, doc: Document
                 collection_id=doc.collection_id,
                 schema_id=schema.id,
                 document_id=doc.id,
-                key=rec.key if n == 1 else f"{rec.key} #{n}",  # a register can repeat a key
+                # A register can repeat a key; the column holds 512 characters.
+                key=rec.key[:512] if n == 1 else f"{rec.key[:500]} #{n}",
                 values=rec.values,
                 provenance=rec.provenance,
                 method=method,
@@ -283,30 +284,37 @@ async def extract_document(db: AsyncSession, schema: RecordSchema, doc: Document
 
 
 async def extract_schema(db: AsyncSession, schema: RecordSchema, *, force: bool = False) -> dict:
-    """Extract every changed document of the schema's collection, committing each."""
-    docs = list(
-        (
+    """Extract every changed document of the schema's collection, committing each. A
+    failed document is recorded and skipped; the rest still run."""
+    # Plain values only: a rollback after a failure expires every loaded object.
+    schema_id, schema_name, origin = schema.id, schema.name, schema.origin
+    docs = (
+        await db.execute(
+            select(Document.id, Document.title, Document.content_hash)
+            .where(Document.collection_id == schema.collection_id, Document.hidden.is_(False))
+            .order_by(Document.title)
+        )
+    ).all()
+    previous = {
+        doc_id: (content_hash, error)
+        for doc_id, content_hash, error in (
             await db.execute(
-                select(Document)
-                .where(Document.collection_id == schema.collection_id, Document.hidden.is_(False))
-                .order_by(Document.title)
+                select(RecordRun.document_id, RecordRun.content_hash, RecordRun.error).where(
+                    RecordRun.schema_id == schema_id
+                )
             )
-        ).scalars()
-    )
-    runs = {
-        r.document_id: r
-        for r in (
-            await db.execute(select(RecordRun).where(RecordRun.schema_id == schema.id))
-        ).scalars()
+        ).all()
     }
     done = failed = skipped = 0
     cost = 0.0
-    for doc in docs:
-        run = runs.get(doc.id)
-        if not force and run is not None and run.content_hash == doc.content_hash and not run.error:
+    for doc_id, title, content_hash in docs:
+        before = previous.get(doc_id)
+        if not force and before is not None and before[0] == content_hash and not before[1]:
             skipped += 1
             continue
         try:
+            schema = await db.get(RecordSchema, schema_id, populate_existing=True)
+            doc = await db.get(Document, doc_id, populate_existing=True)
             run = await extract_document(db, schema, doc)
             cost += run.cost_usd or 0.0
             await db.commit()
@@ -314,19 +322,19 @@ async def extract_schema(db: AsyncSession, schema: RecordSchema, *, force: bool 
         except Exception as exc:  # one bad document doesn't stop the schema
             await db.rollback()
             failed += 1
-            log.warning("Extracting %s from %s failed: %s", schema.name, doc.title, exc)
-            run = await db.get(RecordRun, (schema.id, doc.id))
+            log.warning("Extracting %s from %s failed: %s", schema_name, title, exc)
+            run = await db.get(RecordRun, (schema_id, doc_id), populate_existing=True)
             if run is None:  # recorded, so the failure shows and the next run retries it
-                run = RecordRun(schema_id=schema.id, document_id=doc.id, content_hash="")
+                run = RecordRun(schema_id=schema_id, document_id=doc_id, content_hash="")
                 db.add(run)
-            run.method, run.records = schema.origin, 0
+            run.method, run.records = origin, 0
             run.error, run.extracted_at = str(exc)[:500], datetime.now(UTC)
             await db.commit()
     # Documents removed from the collection take their records with them (cascade).
     total = await db.scalar(
-        select(func.count()).select_from(Record).where(Record.schema_id == schema.id)
+        select(func.count()).select_from(Record).where(Record.schema_id == schema_id)
     )
-    schema = await db.get(RecordSchema, schema.id)
+    schema = await db.get(RecordSchema, schema_id, populate_existing=True)
     schema.extracted_at = datetime.now(UTC)
     schema.stats = {
         **(schema.stats or {}),

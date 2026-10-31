@@ -168,13 +168,19 @@ async def get_schema(schema_id: uuid.UUID, ctx: OrgContext = Depends(org_context
     ):
         raise not_found("Record schema")
     failed = (
-        await ctx.db.execute(
-            select(RecordRun.document_id, Document.title, RecordRun.error, RecordRun.extracted_at)
-            .join(Document, Document.id == RecordRun.document_id)
-            .where(RecordRun.schema_id == schema.id, RecordRun.error.is_not(None))
-            .order_by(Document.title)
-        )
-    ).all()
+        []
+        if ctx.role not in ADMIN_ROLES
+        else (
+            await ctx.db.execute(
+                select(
+                    RecordRun.document_id, Document.title, RecordRun.error, RecordRun.extracted_at
+                )
+                .join(Document, Document.id == RecordRun.document_id)
+                .where(RecordRun.schema_id == schema.id, RecordRun.error.is_not(None))
+                .order_by(Document.title)
+            )
+        ).all()
+    )
     return _out(
         schema,
         collections,
@@ -318,7 +324,7 @@ async def query_records(body: RecordQueryIn, ctx: OrgContext = Depends(org_conte
     schemas = [
         s
         for s in await records_query.schemas_in_scope(ctx.db, list(collections))
-        if s.name == body.schema_name
+        if s.name == body.schema_name and body.schema_id in (None, s.id)
     ]
     if not schemas:
         raise not_found(f"Record type '{body.schema_name}'")

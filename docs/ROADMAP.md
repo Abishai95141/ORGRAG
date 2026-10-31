@@ -161,7 +161,7 @@ Deprioritised: expert finding (identities don't align across orgs), actions with
 
 **Progress, weeks 3–5 (2026-10-31):** decisions and numbers in [LOG.md](LOG.md), status per step in [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md#status-2026-10-31).
 - **Claude Haiku 5.5 runs every LLM job** (chat, graph extraction, eval answers) on the Anthropic API. Smoke set: 14/15, citation recall 0.65 → 0.76 with step 1, median 4.9 s, $0.0011 per answer.
-- **Latency:** prompt caching and concurrent tool calls are in. Rerank-once was dropped after measuring (the rerank calls already run in parallel); the fast path is built but off: it saved 0.3 s at the median and cost 1 s at p90 (LOG D54).
+- **Latency:** prompt caching and concurrent tool calls are in. Rerank-once was dropped after measuring (the rerank calls already run in parallel); the fast path is built but off: it lifted fact recall 2 points but not speed (LOG D54).
 - **BM25:** pg_textsearch on Postgres 17, read top-k from its index; on where installed. Equal quality within noise here, chosen for scale.
 - **Contextual Retrieval:** built, off by default (+0.006 recall@5, not significant on this short-document corpus).
 - **Eval:** cost per answer recorded; smoke runs judged by Sonnet 5.5, full runs by the free Nemotron; answer-only runs judged later.

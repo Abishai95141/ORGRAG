@@ -1135,6 +1135,7 @@ class AgentRun:
                     status="done",
                     queries=outcome.queries,
                     refs=outcome.refs,
+                    found=outcome.hits,  # a count or group-by cites nothing but answers
                 )
                 return outcome.text, False
             if name == "list_collections":

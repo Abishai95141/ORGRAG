@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy import any_, delete, func, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import audit
@@ -628,8 +629,8 @@ def _link_out(link: SlackUserLink, workspace: SlackWorkspace) -> SlackLinkOut:
 async def _used(db: AsyncSession, claim) -> bool:
     """Links carry a one-time id, recorded with the dedupe ids of Slack events (pruned
     after a day, well past the link's hour)."""
-    if not claim.jti:
-        return False
+    if not claim.jti:  # made before links were single-use: treated as spent
+        return True
     return await db.get(SlackEvent, f"link:{claim.jti}") is not None
 
 
@@ -689,7 +690,13 @@ async def confirm_link(
         user_id=user.id,
     )
     db.add(link)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:  # the same link confirmed twice at once: one wins
+        await db.rollback()
+        raise conflict(
+            "This link was already used; ask the bot again for a new one", "link_used"
+        ) from None
     return _link_out(link, workspace)
 
 

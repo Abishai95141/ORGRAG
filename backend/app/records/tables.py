@@ -73,7 +73,9 @@ def clean(text: str) -> str:
 def normalize(label: str) -> str:
     """A label as a field name: "Data Processing Agreement (DPA)" → "data_processing_
     agreement_dpa"."""
-    return re.sub(r"[^a-z0-9]+", "_", clean(label).lower()).strip("_")[:64]
+    name = re.sub(r"[^a-z0-9]+", "_", clean(label).lower()).strip("_")[:64]
+    # Field and schema names start with a letter (the API's pattern): "2FA" → "f_2fa".
+    return f"f_{name}"[:64] if name[:1].isdigit() else name
 
 
 def _cells(line: str, offset: int) -> list[Cell]:

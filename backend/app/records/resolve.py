@@ -92,9 +92,11 @@ async def resolve(
                 holder = r.values[f["name"]]
                 matches.append(Match(query.row_of(r), schema, f["name"], holder, "column"))
 
-    # 2. Values that name the role ("Tomasz Wierzbicki (Head of Security)"); word-bounded,
-    # so "Security" alone doesn't match "Security on-call".
-    params["role"] = r"\m" + re.escape(role.lower()) + r"\M"
+    # 2. Values that name the role ("Tomasz Wierzbicki (Head of Security)"), as whole words
+    # ("lead" doesn't match "leadership"). Edges are any non-word character or the end of
+    # the value, so roles that start or end in punctuation ("C++ lead", "SRE (primary)")
+    # match too.
+    params["role"] = r"(^|[^[:alnum:]_])" + re.escape(role.lower()) + r"($|[^[:alnum:]_])"
     rows = await db.execute(
         text(
             f"SELECT m.*, kv.key AS matched_field, kv.value AS matched_value "

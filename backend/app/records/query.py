@@ -195,10 +195,11 @@ async def run(
         params |= p
     params |= {"sids": [s.id for s in schemas], "cids": list(collection_ids)}
     base = SCOPED
-    if latest_only:  # one record per entity: the one in its most recent document
+    if latest_only:  # one record per entity and record type: its most recent document's
+        # Per schema, so the same vendor in two clients' collections stays two records.
         base = (
-            f"SELECT DISTINCT ON (x.key) x.* FROM ({base}) x "
-            "ORDER BY x.key, x.doc_time DESC NULLS LAST, x.created_at DESC"
+            f"SELECT DISTINCT ON (x.schema_id, x.key) x.* FROM ({base}) x "
+            "ORDER BY x.schema_id, x.key, x.doc_time DESC NULLS LAST, x.created_at DESC"
         )
     where = " AND ".join(conditions) or "TRUE"
     matched = f"SELECT * FROM ({base}) r WHERE {where}"

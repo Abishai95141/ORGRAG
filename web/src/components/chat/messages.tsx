@@ -329,13 +329,18 @@ function MessageToolbar({
  */
 // The opening sentence says the knowledge base doesn't have it: the same rule as the gaps
 // report (says_not_found in backend/app/gaps/signals.py; keep the two in step).
+const SUBJECT = String.raw`\b(?:knowledge base|documents?|sources?|records?|collections?|searches|I|we)\b`;
+const NEAR = String.raw`(?:(?!\b(?:that|which|who|where)\b)[^.,;:]){0,25}?`;
+const NOT = String.raw`\b(?:do(?:es)?n[’']t|do(?:es)? not|did(?:n[’']t| not)|could(?:n[’']t| not)|can[’']?t|cannot)\b`;
 const NOT_FOUND = new RegExp(
   [
-    String.raw`\b(?:knowledge base|documents?|sources?|records?|collections?|searches|I|we)\b[^.]{0,80}?\b(?:do(?:es)?n[’']t|do(?:es)? not|did(?:n[’']t| not)|could(?:n[’']t| not)|can[’']?t|cannot|ha(?:s|ve) no)\b[^.]{0,40}?\b(?:contain|have|include|find|found|cover|mention|say|state|describe|list|address|specify|give|show|name|identify|record|document)`,
-    String.raw`\b(?:knowledge base|documents?|sources?|records?)\b (?:has|have|holds?|contains?|gives?|sets?|lists?|names?|shows?|includes?) no\b`,
-    String.raw`\bhas no (?:documented|recorded|stated|published|confirmed)\b`,
-    String.raw`\b(?:there (?:is|are|was|were) no|there[’']s no|I found no|no (?:policy|document|information|record|mention|guidance|data|details?)s?\b[^.]{0,60}?\b(?:found|exists?|in the|covers?|says?|states?))`,
-    String.raw`\b(?:isn[’']t|is not|wasn[’']t|was not|aren[’']t|are not) (?:in|covered (?:in|by)|mentioned (?:in|anywhere)|documented (?:in|anywhere)|stated (?:in|anywhere)|recorded (?:in|anywhere)) (?:the|our|any)\b`,
+    SUBJECT + NEAR + NOT + String.raw`[^.,;]{0,30}?\b(?:contain|include|find|found|cover|mention|say|state|describe|list|address|specify|give|show|name|identify|record|document)(?:s|ed)?\b`,
+    SUBJECT + NEAR + NOT + String.raw`\s+have\s+(?:any|a|an|the|information|details?|data|records?|documentation)\b`,
+    SUBJECT + String.raw` (?:has|have|holds?|contains?|gives?|sets?|lists?|names?|shows?|includes?) no\b`,
+    String.raw`\b(?:has|have|there (?:is|are|was|were)|there[’']s) no (?:documented|recorded|stated|published|confirmed)\b`,
+    String.raw`\b(?:there (?:is|are|was|were) no|there[’']s no|no) (?:policy|policies|document|documents|documentation|information|record|records|mention|guidance|data|details?)\b[^.]{0,60}?\b(?:found|exists?|in the|covers?|says?|states?|on (?:file|record)|about|on|for)\b`,
+    String.raw`\bI found no(?:thing)?\b`,
+    String.raw`\b(?:isn[’']t|is not|wasn[’']t|was not|aren[’']t|are not) (?:in|covered (?:in|by)|mentioned (?:in|anywhere)|documented (?:in|anywhere)|stated (?:in|anywhere)|recorded (?:in|anywhere)) (?:the |our |any )?(?:knowledge base|documents|sources|records|collections)\b`,
   ].join("|"),
   "i",
 );
@@ -353,7 +358,10 @@ function answerShortfall(steps: TraceStep[], cited: SourceRef[], content = ""): 
   if (cited.some((s) => s.origin === "attachment")) return "about-attachment";
   // The same rule as the gaps report (app/gaps/signals.py): listing collections or graph entities isn't research.
   const researched = steps.some((s) => (s.kind === "search" && !s.detail.listing) || s.kind === "read" || s.kind === "records");
-  if (researched && (!cited.some((s) => s.origin === "knowledge") || NOT_FOUND.test(leadSentence(content)))) return "short";
+  // A records lookup that found records answered from exact data even when it cites nothing (counts, group-bys).
+  const fromRecords = steps.some((s) => s.kind === "records" && (s.detail.found ?? 0) > 0);
+  const uncited = !cited.some((s) => s.origin === "knowledge") && !fromRecords;
+  if (researched && (uncited || NOT_FOUND.test(leadSentence(content)))) return "short";
   let missing = false;
   for (const s of steps) {
     if (s.kind !== "reflect") continue;

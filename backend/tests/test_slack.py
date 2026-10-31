@@ -952,3 +952,22 @@ async def test_unmapped_channels_stop_answering_when_the_default_org_leaves(app,
     await _send(alice, _event(slack.team[0], _mention("UA", "hello?", channel="C0RANDOM1")))
     await _run_jobs()
     assert "doesn't search any" in slack.of("chat.postEphemeral")[-1]["text"]
+
+
+async def test_links_without_a_one_time_id_are_spent(app, slack):
+    """Links made before links were single-use have no id to spend, so they're treated
+    as used rather than reusable for an hour."""
+    from datetime import timedelta
+
+    admin = await _signup(app, "slackadmin")
+    org = await _org(admin, "Old Links Co")
+    ws = await _connect(admin, org["slug"], slack)
+    old = signing._encode(
+        {"w": ws["id"], "t": slack.team[0], "u": "U7", "n": "ann"},
+        signing._LINK_AUDIENCE,
+        timedelta(minutes=30),
+    )
+    preview = (await admin.get(f"/api/slack/link/{old}")).json()
+    assert preview["used"] is True and preview["expired"] is False
+    r = await admin.post(f"/api/slack/link/{old}")
+    assert r.status_code == 409 and r.json()["code"] == "link_used"

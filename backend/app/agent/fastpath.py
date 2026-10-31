@@ -37,14 +37,16 @@ def eligible(question: str) -> bool:
     return len(names) <= 1
 
 
-def confident(scores: list[float], documents: list) -> bool:
+def confident(scores: list[float | None], documents: list) -> bool:
     """The first search found the answer: a clear top passage (reranker probability at
     least FAST_PATH_MIN_TOP and at least FAST_PATH_MIN_GAP above the fifth), or the top
-    three passages from one document."""
+    three passages from one document. Without reranker probabilities (scores None) only
+    the second rule applies: fusion scores are relative, not a confidence."""
     if not scores:
         return False
     s = get_settings()
-    fifth = scores[4] if len(scores) > 4 else 0.0
-    if scores[0] >= s.fast_path_min_top and scores[0] - fifth >= s.fast_path_min_gap:
-        return True
+    if scores[0] is not None:
+        fifth = scores[4] if len(scores) > 4 and scores[4] is not None else 0.0
+        if scores[0] >= s.fast_path_min_top and scores[0] - fifth >= s.fast_path_min_gap:
+            return True
     return len(documents) >= 3 and len(set(documents[:3])) == 1

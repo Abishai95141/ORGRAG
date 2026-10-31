@@ -366,6 +366,9 @@ def test_a_confident_first_search(monkeypatch):
     assert not fastpath.confident([0.65, 0.2, 0.1, 0.1, 0.1], [a, b, c, a, b])  # too weak
     assert fastpath.confident([0.3, 0.2, 0.1], [a, a, a])  # three passages of one document
     assert not fastpath.confident([], [])
+    # Without a reranker there's no probability: only the one-document rule applies.
+    assert not fastpath.confident([None, None, None], [a, b, c])
+    assert fastpath.confident([None, None, None], [a, a, a])
 
 
 async def test_fast_path_answers_from_a_confident_first_search(app, monkeypatch):

@@ -50,6 +50,9 @@ RESEARCHED = (
     '|| @.kind == "read" || @.kind == "records")'
 )
 REPORTED_MISSING = '$[*] ? (@.kind == "reflect" && exists(@.detail.missing))'
+# A records lookup that found records answered from exact data, even when the answer
+# cites nothing (a count or a group-by registers no sources).
+RECORDS_FOUND = '$[*] ? (@.kind == "records" && @.detail.found > 0)'
 COVERAGE_CHECKS = (
     '$[*] ? (@.kind == "reflect" && (exists(@.detail.missing) || @.label == "'
     + COVERED_LABEL
@@ -92,20 +95,37 @@ def _origin(source: dict[str, Any]) -> str:
 # plus what was found, so such answers often cite nearby material and aren't caught by
 # the citation rule. English phrasing; measured against the judge's abstention labels
 # (docs/LOG.md D51).
+_SUBJECT = r"\b(?:knowledge base|documents?|sources?|records?|collections?|searches|I|we)\b"
+# Between the subject and its negation: a few words, no clause break, no relative clause
+# ("documents that don't include a label" is a rule, not a gap).
+_NEAR = r"(?:(?!\b(?:that|which|who|where)\b)[^.,;:]){0,25}?"
+_NOT = (
+    r"\b(?:do(?:es)?n[’']t|do(?:es)? not|did(?:n[’']t| not)|could(?:n[’']t| not)|"
+    r"can[’']?t|cannot)\b"
+)
 _NOT_FOUND = re.compile(
-    r"\b(?:knowledge base|documents?|sources?|records?|collections?|searches|I|we)\b[^.]{0,80}?"
-    r"\b(?:do(?:es)?n[’']t|do(?:es)? not|did(?:n[’']t| not)|could(?:n[’']t| not)|can[’']?t|"
-    r"cannot|ha(?:s|ve) no)\b[^.]{0,40}?\b(?:contain|have|include|find|found|cover|mention|"
+    # "The knowledge base doesn't contain…", "I couldn't find…"
+    _SUBJECT + _NEAR + _NOT + r"[^.,;]{0,30}?\b(?:contain|include|find|found|cover|mention|"
     r"say|state|describe|list|address|specify|give|show|name|identify|record|document)"
-    r"|\b(?:knowledge base|documents?|sources?|records?)\b (?:has|have|holds?|contains?|gives?|"
-    r"sets?|lists?|names?|shows?|includes?) no\b"
-    r"|\bhas no (?:documented|recorded|stated|published|confirmed)\b"
-    r"|\b(?:there (?:is|are|was|were) no|there[’']s no|I found no|no (?:policy|document|"
-    r"information|record|mention|guidance|data|details?)s?\b[^.]{0,60}?\b(?:found|exists?|"
-    r"in the|covers?|says?|states?))"
+    r"(?:s|ed)?\b"
+    # "…doesn't have a drone policy" (not "records don't have to be kept")
+    r"|" + _SUBJECT + _NEAR + _NOT + r"\s+have\s+(?:any|a|an|the|information|details?|data|"
+    r"records?|documentation)\b"
+    # "The knowledge base has no Q4 figure", "INC-2351 has no documented root cause"
+    r"|" + _SUBJECT + r" (?:has|have|holds?|contains?|gives?|sets?|lists?|names?|shows?|"
+    r"includes?) no\b"
+    r"|\b(?:has|have|there (?:is|are|was|were)|there[’']s) no (?:documented|recorded|"
+    r"stated|published|confirmed)\b"
+    # "There is no policy on…", "No document covers…" (not "There is no limit on…")
+    r"|\b(?:there (?:is|are|was|were) no|there[’']s no|no) (?:policy|policies|document|"
+    r"documents|documentation|information|record|records|mention|guidance|data|details?)\b"
+    r"[^.]{0,60}?\b(?:found|exists?|in the|covers?|says?|states?|on (?:file|record)|about|on|for)\b"
+    r"|\bI found no(?:thing)?\b"
+    # "…isn't in the knowledge base" (not "Driftwood is not in the PCI scope")
     r"|\b(?:isn[’']t|is not|wasn[’']t|was not|aren[’']t|are not) (?:in|covered (?:in|by)|"
     r"mentioned (?:in|anywhere)|documented (?:in|anywhere)|stated (?:in|anywhere)|recorded "
-    r"(?:in|anywhere)) (?:the|our|any)\b",
+    r"(?:in|anywhere)) (?:the |our |any )?(?:knowledge base|documents|sources|records|"
+    r"collections)\b",
     re.IGNORECASE,
 )
 # A cheap SQL pre-filter for the same thing: some negation near the start (Postgres
@@ -136,6 +156,7 @@ def gap_reasons(
     researched: bool,
     checks: list[dict[str, Any]] | None,
     feedback: str | None,
+    records_found: bool = False,
 ) -> tuple[set[str], list[str]]:
     """Why a complete answer is a gap (empty: it isn't), and the facts the coverage
     check reported missing."""
@@ -143,7 +164,10 @@ def gap_reasons(
     if "attachment" in origins:
         return set(), []
     reasons: set[str] = set()
-    if researched and ("knowledge" not in origins or says_not_found(content)):
+    # Uncited after research is unanswered, unless a records lookup found the answer
+    # (counts and group-bys cite nothing); an opening that says it isn't there always is.
+    uncited = "knowledge" not in origins and not records_found
+    if researched and (uncited or says_not_found(content)):
         reasons.add("unanswered")
     missing = coverage_missing(checks)
     if missing:
@@ -236,6 +260,7 @@ async def answer_signals(
             researched.label("researched"),
             _checks().label("checks"),
             _asked().label("question"),
+            func.jsonb_path_exists(Message.trace, _path(RECORDS_FOUND)).label("records"),
         )
         .join(Conversation, Conversation.id == Message.conversation_id)
         .where(
@@ -257,13 +282,14 @@ async def answer_signals(
     rows = rows.all()
     out: list[Signal] = []
     out_of: int = len(rows)  # candidates read, before the reasons filter
-    for content, sources, feedback, at, user_id, did_research, checks, question in rows:
+    for content, sources, feedback, at, user_id, did_research, checks, question, records in rows:
         reasons, missing = gap_reasons(
             content=content,
             sources=sources,
             researched=bool(did_research),
             checks=checks,
             feedback=feedback,
+            records_found=bool(records),
         )
         if reasons and question and question.strip():
             out.append(Signal(question.strip(), user_id, at, reasons, missing))

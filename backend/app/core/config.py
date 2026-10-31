@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     sufficiency_check: Literal["off", "deep", "always"] = "deep"
     # Quick-mode fast path (app/agent/fastpath.py): a short, single-hop question whose
     # first search is confident is answered in one model call with no tools. Thresholds
-    # are on reranker probabilities. Off by default: measured no faster at p90 (LOG D54).
+    # are on reranker probabilities. Off by default: better recall, not faster (LOG D54).
     fast_path: bool = False
     fast_path_min_top: float = 0.7
     fast_path_min_gap: float = 0.2

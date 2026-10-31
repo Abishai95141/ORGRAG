@@ -183,6 +183,13 @@ def test_the_threshold_follows_the_embedder(monkeypatch):
         ("INC-2351 has no documented root cause yet [1].", True),
         ("Parental leave is 16 weeks [1]. The policy doesn't cover contractors.", False),
         ("Staff get 16 weeks of leave, and it can't be split [1].", False),
+        # Correct answers that open with a negation aren't gaps.
+        ("There is no limit on sick days [1].", False),
+        ("Driftwood is not in the PCI scope [2].", False),
+        ("According to the onboarding documents, contractors don't have VPN access [1].", False),
+        ("Records don't have to be kept beyond seven years [1].", False),
+        ("Documents that don't include a classification label default to Internal [2].", False),
+        ("The knowledge base doesn't have a drone policy.", True),
     ],
 )
 def test_an_opening_that_says_the_answer_is_not_there(answer, missing):
@@ -194,3 +201,18 @@ def test_an_opening_that_says_the_answer_is_not_there(answer, missing):
         content=answer, sources=cited, researched=True, checks=None, feedback=None
     )
     assert ("unanswered" in reasons) is missing
+
+
+def test_a_records_count_or_group_by_is_an_answer_without_citations():
+    from app.gaps.signals import gap_reasons
+
+    answer = "Ten vendors are High risk, 22 Medium and 28 Low."
+    reasons, _ = gap_reasons(
+        content=answer, sources=[], researched=True, checks=None, feedback=None,
+        records_found=True,
+    )  # fmt: skip
+    assert reasons == set()
+    reasons, _ = gap_reasons(
+        content=answer, sources=[], researched=True, checks=None, feedback=None
+    )
+    assert reasons == {"unanswered"}

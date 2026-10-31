@@ -105,6 +105,9 @@ class RecordQueryIn(BaseModel):
     """Same shape as the agent's query_records tool."""
 
     schema_name: str = Field(alias="schema")
+    # Only this schema (the Records page); by default every active schema with the name
+    # in readable collections, as the agent queries.
+    schema_id: uuid.UUID | None = None
     filters: list[RecordFilter] = Field(default_factory=list, max_length=12)
     mode: Literal["list", "count", "group"] = "list"
     group_by: str | None = None

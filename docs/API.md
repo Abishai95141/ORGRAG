@@ -362,7 +362,7 @@ type RecordRow = {
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | GET | `/orgs/{slug}/record-schemas?collection_id=` | – | `RecordSchema[]` (members: active schemas in readable collections; admins: every status) |
-| GET | `/orgs/{slug}/record-schemas/{id}` | – | `RecordSchema & {failures: {document_id, title, error, extracted_at}[]}` |
+| GET | `/orgs/{slug}/record-schemas/{id}` | – | `RecordSchema & {failures: {document_id, title, error, extracted_at}[]}` (failures for admins only; members get `[]`) |
 | POST | `/orgs/{slug}/collections/{id}/record-schemas/suggest` `[admin]` | – | `RecordSchema[]` found in the collection (saved as `suggested`; active and archived schemas are returned unchanged) |
 | POST | `/orgs/{slug}/record-schemas` `[admin]` | `{collection_id, name, label, description?, fields, key_field}` | `201 RecordSchema` (origin `llm`, status `suggested`); 409 `name_taken` |
 | PATCH | `/orgs/{slug}/record-schemas/{id}` `[admin]` | `{label?, description?, fields?, key_field?, status?}` | `RecordSchema`. Activating, or changing an active schema's fields or key, re-extracts every document; deactivating deletes its records. 400 `invalid_fields` |
@@ -375,12 +375,13 @@ type RecordRow = {
 ```ts
 type RecordQuery = {
   schema: string;               // a schema name; the same name in several readable collections is queried together
+  schema_id?: string;           // only this schema (one collection's record type)
   filters?: { field: string; op: Op; value?: unknown }[];   // ANDed, at most 12
   mode?: "list" | "count" | "group";                         // default list
   group_by?: string;            // mode=group: count per value of this field
   sort?: string; descending?: boolean;
   limit?: number;               // 1–300, default 100 (list mode)
-  latest_only?: boolean;        // one record per key: the newest document's
+  latest_only?: boolean;        // one record per key and record type: the newest document's
 };
 // Op by type — text: eq ne contains in exists missing; choice: eq ne in exists missing;
 // number, date: eq ne lt lte gt gte exists missing; boolean: eq exists missing.
@@ -814,12 +815,15 @@ What counts as a read (`kind`):
 
 `channel` is `app` (signed in), `api` (an API key on the REST API), `mcp` (an API key
 through the MCP server) or `slack` (asked through the Slack bot, as the linked user).
-Records queries (`POST /records/query`, MCP `query_records`) are logged as `search` with
-the query `records {type}: {filters}`; `GET /records/{id}` as `read`. Admin actions also
+Records queries that return records (`POST /records/query` in list or count mode, MCP
+`query_records`, `/records/resolve`, MCP `resolve_role`) are logged as `search` with the
+query `records {type}: {filters}` and the documents they returned; a group-by returns
+counts, not documents, and isn't logged. `GET /records/{id}` is logged as `read`. Admin actions also
 include `agent.*`, `graph.rebuilt`, `record_schema.*` (suggested, created, updated,
 activated, archived, extracted, deleted), `doc_request.fulfilled` / `.dismissed` and
 `slack.*` (connected, disconnected, and `channel_added` / `channel_removed` in each org a
-channel starts or stops answering from, never naming the channel's other orgs). Web results and attached files aren't org data and aren't
+channel starts or stops answering from, never naming the channel's other orgs).
+Web results and attached files aren't org data and aren't
 listed.
 
 ```ts

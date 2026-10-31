@@ -261,6 +261,7 @@ function RecordsBrowser({ schema: s }: { schema: RecordSchemaDetail }) {
 
   const body = {
     schema: s.name,
+    schema_id: s.id,
     filters,
     mode: view === "counts" ? ("group" as const) : ("list" as const),
     group_by: view === "counts" ? groupBy : undefined,
@@ -341,7 +342,6 @@ function RecordsBrowser({ schema: s }: { schema: RecordSchemaDetail }) {
             </span>
             {filters.length ? "match" : null}
             {view === "rows" && data.total > data.rows.length ? <span>· showing the first {data.rows.length}</span> : null}
-            {data.schemas.length > 1 ? <span>· across {data.schemas.length} collections</span> : null}
             {result.isFetching ? <span>· updating…</span> : null}
           </>
         ) : null}
@@ -454,7 +454,7 @@ function FilterBar({
         .map((v) => v.trim())
         .filter(Boolean);
     if (type === "number") return value.trim() === "" ? undefined : Number(value);
-    if (type === "boolean") return value === "true";
+    if (type === "boolean") return value === "" ? undefined : value === "true";
     return value.trim() || undefined;
   };
   const v = parsed();

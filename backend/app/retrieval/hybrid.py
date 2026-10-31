@@ -62,9 +62,12 @@ class Hit:
     url: str | None
     heading: str
     content: str
-    score: float
+    score: float  # relative: the best hit of the search is 1.0
     updated_at: datetime | None = None
     page: int | None = None  # where the passage starts, in paginated formats
+    # The reranker's probability that the passage answers the query (absolute, before
+    # boosts and recency); None when reranking didn't run.
+    relevance: float | None = None
 
 
 def rrf_fuse(rankings: list[list[uuid.UUID]], k: int = RRF_K) -> dict[uuid.UUID, float]:
@@ -275,6 +278,7 @@ async def _hybrid_search(
             break
 
     base = await _rerank_scores(queries, rows) if ranking.rerank else None
+    reranked = base is not None
     if base is None:
         best = max(fused.values())
         base = {r.id: fused[r.id] / best for r in rows}
@@ -309,6 +313,7 @@ async def _hybrid_search(
             score=round(scores[r.id] / top, 4),
             updated_at=r.doc_time,
             page=r.page,
+            relevance=round(base[r.id], 4) if reranked else None,
         )
         for r in sorted(rows, key=lambda r: scores[r.id], reverse=True)
     ]

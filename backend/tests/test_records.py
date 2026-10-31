@@ -59,6 +59,10 @@ def test_values_and_offsets():
     assert parse_number("$96,000") == 96000 and parse_number("INC-2264") is None
     assert parse_date("Jul 9") is None and parse_date("Jul 9", 2026) == "2026-07-09"
     assert infer_type(["Low", "High", "Low", "Medium", "High"])["type"] == "choice"
+    # Field names start with a letter, as the API requires ("2FA enabled" → f_2fa_enabled).
+    from app.records.tables import normalize
+
+    assert normalize("2FA enabled") == "f_2fa_enabled" and normalize("Risk tier") == "risk_tier"
 
 
 @pytest.mark.integration
@@ -428,6 +432,7 @@ DIRECTORY = """# Team directory and change approvers
 | PLAT | Platform | Oluwaseun Adeyemi | Oluwaseun Adeyemi | Kofi Mensah |
 | DP | Data Plane | Priya Raman | Lin Zhou | Mei Tanaka |
 | SEC | Security | Tomasz Wierzbicki (Head of Security) | Tomasz Wierzbicki | Security on-call |
+| OBS | Observability | Ravi Subramanian | Ravi Subramanian | Mei Tanaka, SRE (primary) |
 """
 
 
@@ -471,5 +476,86 @@ async def test_resolve_role_finds_role_columns_and_values_naming_a_role(app):
         # Word-bounded: "Security" matches the team and the delegate cell, not other rows.
         assert {v for _, v in await holders("security on-call")} == {"Security on-call"}
         assert await holders("chief of staff") == []
+        # Roles that end in punctuation still match as whole words.
+        assert await holders("SRE (primary)") == [("value", "Mei Tanaka, SRE (primary)")]
+        assert await holders("SRE (prim") == []
         # Another collection's records are out of scope.
         assert await resolve(db, schemas, [uuid.uuid4()], "change approver", "PLAT") == []
+
+
+@pytest.mark.integration
+async def test_a_failing_document_is_recorded_and_the_rest_still_extract(app, monkeypatch):
+    """One document's extraction raising (a model error, say) is recorded on its run,
+    shown to admins (not members), and the other documents are still extracted."""
+    from app.records import extract
+
+    admin = await _signup(app, f"rf{uuid.uuid4().hex[:6]}")
+    member = await _signup(app, f"rg{uuid.uuid4().hex[:6]}")
+    org = await _org(admin, "Failing Co")
+    slug = org["slug"]
+    await _join(admin, member, slug)
+    general = _general(org, (await admin.get(f"/api/orgs/{slug}/collections")).json())
+    await _ingest(admin, slug, general, _vendor_files())
+    found = (
+        await admin.post(f"/api/orgs/{slug}/collections/{general}/record-schemas/suggest")
+    ).json()
+    vendor = next(s for s in found if s["name"] == "vendor_record")
+
+    real = extract.extract_document
+
+    async def flaky(db, schema, doc):
+        if doc.title.endswith("Basalt Analytics"):  # the first document in title order
+            raise RuntimeError("model unavailable")
+        return await real(db, schema, doc)
+
+    monkeypatch.setattr(extract, "extract_document", flaky)
+    await admin.patch(f"/api/orgs/{slug}/record-schemas/{vendor['id']}", json={"status": "active"})
+    with pytest.raises(RuntimeError, match="1 documents failed"):  # the worker retries the job
+        await _run_jobs()
+
+    one = f"/api/orgs/{slug}/record-schemas/{vendor['id']}"
+    detail = (await admin.get(one)).json()
+    assert detail["stats"]["failed"] == 1 and detail["stats"]["records"] == 3
+    (failure,) = detail["failures"]
+    assert failure["title"] == "Vendor record: Basalt Analytics"
+    assert failure["error"] == "model unavailable"
+    assert (await member.get(one)).json()["failures"] == []  # titles and errors: admins only
+    q = {"schema": "vendor_record"}
+    assert (await member.post(f"/api/orgs/{slug}/records/query", json=q)).json()["total"] == 3
+
+    # The next run retries the failed document (it changed nothing, but it has an error).
+    monkeypatch.setattr(extract, "extract_document", real)
+    await admin.post(f"/api/orgs/{slug}/record-schemas/{vendor['id']}/extract")
+    await _run_jobs()
+    detail = (await admin.get(one)).json()
+    assert detail["failures"] == [] and detail["stats"]["records"] == 4
+    assert detail["stats"]["unchanged"] == 3
+
+
+@pytest.mark.integration
+async def test_latest_only_and_schema_id_keep_collections_apart(app):
+    """The same vendor in two clients' collections is two records; latest_only picks the
+    newest version per record type, never across collections, and schema_id narrows a
+    query to one collection's record type."""
+    admin = await _signup(app, f"rl{uuid.uuid4().hex[:6]}")
+    org = await _org(admin, "Two Clients")
+    slug = org["slug"]
+    a = _general(org, (await admin.get(f"/api/orgs/{slug}/collections")).json())
+    b = (await admin.post(f"/api/orgs/{slug}/collections", json={"name": "Client B"})).json()["id"]
+    schemas = {}
+    for col in (a, b):
+        await _ingest(admin, slug, col, _vendor_files())
+        found = (
+            await admin.post(f"/api/orgs/{slug}/collections/{col}/record-schemas/suggest")
+        ).json()
+        schemas[col] = next(s for s in found if s["name"] == "vendor_record")["id"]
+        await admin.patch(
+            f"/api/orgs/{slug}/record-schemas/{schemas[col]}", json={"status": "active"}
+        )
+    await _run_jobs()
+    q = f"/api/orgs/{slug}/records/query"
+    assert (await admin.post(q, json={"schema": "vendor_record"})).json()["total"] == 8
+    latest = {"schema": "vendor_record", "latest_only": True}
+    assert (await admin.post(q, json=latest)).json()["total"] == 8
+    only_b = (await admin.post(q, json={**latest, "schema_id": schemas[b]})).json()
+    assert only_b["total"] == 4 and only_b["schemas"] == [schemas[b]]

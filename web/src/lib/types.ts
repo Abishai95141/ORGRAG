@@ -201,6 +201,8 @@ export type TraceStep = {
     listing?: boolean;
     /** query_records: the record type looked up. */
     record_type?: string;
+    /** records steps: how many records (or role matches) were found. */
+    found?: number;
   };
   started_at: string;
   finished_at: string | null;
@@ -433,6 +435,8 @@ export type RecordFilter = { field: string; op: RecordOp; value?: RecordValue | 
 
 export type RecordQuery = {
   schema: string;
+  /** Only this record type (else every readable one with the name). */
+  schema_id?: string;
   filters?: RecordFilter[];
   mode?: "list" | "count" | "group";
   group_by?: string;
