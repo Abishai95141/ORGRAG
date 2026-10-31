@@ -125,9 +125,15 @@ async def structured_call(
 
 
 async def complete_text(
-    *, model: str | None, system: str, prompt: str, max_tokens: int = 4096
+    *,
+    model: str | None,
+    system: str,
+    prompt: str,
+    max_tokens: int = 4096,
+    effort: str | None = None,
 ) -> str:
-    """One plain-text completion on whichever provider the model resolves to."""
+    """One plain-text completion on whichever provider the model resolves to. `effort`
+    applies to Claude only (it bounds adaptive thinking; the API default is high)."""
     provider, model = resolve_model(model)
     if provider in nvidia.OPENAI_COMPATIBLE:
         return await nvidia.complete(
@@ -143,5 +149,6 @@ async def complete_text(
         max_tokens=max_tokens,
         system=system,
         messages=[{"role": "user", "content": prompt}],
+        **({"output_config": {"effort": effort}} if effort else {}),
     )
     return next((b.text for b in message.content if b.type == "text"), "")

@@ -256,7 +256,29 @@ async def ingest(force: bool = False) -> None:
     marker.write_text(digest)
 
 
-JUDGE_MODEL = os.environ.get("EVAL_JUDGE_MODEL", "nvidia/nemotron-3-ultra-550b-a55b")
+# Full runs are judged by a free model from another family; smoke runs, which gate every
+# change, by Sonnet 5.5, which answers in seconds for ~$0.30 a run. Sonnet judging
+# Claude answers is same-family grading (results record it); the κ check against
+# human labels measures how far each judge can be trusted. --judge or
+# EVAL_JUDGE_MODEL overrides both.
+FULL_JUDGE = "nvidia/nemotron-3-ultra-550b-a55b"
+SMOKE_JUDGE = "claude-sonnet-5-5"
+JUDGE_MODEL = os.environ.get("EVAL_JUDGE_MODEL") or FULL_JUDGE
+
+
+def use_judge(model: str | None, question_set: str) -> str:
+    global JUDGE_MODEL
+    JUDGE_MODEL = (
+        model
+        or os.environ.get("EVAL_JUDGE_MODEL")
+        or (SMOKE_JUDGE if question_set == "smoke" else FULL_JUDGE)
+    )
+    return JUDGE_MODEL
+
+
+def model_family(model: str | None) -> str:
+    model = (model or "").removeprefix("explabs:")
+    return "claude" if model.startswith("claude") else model.split("/")[0]
 
 
 class JudgeCache:
@@ -308,7 +330,11 @@ async def judge_call(system: str, prompt: str, parse, max_tokens: int = 4096):
     for attempt in range(3):
         try:
             reply = await complete_text(
-                model=JUDGE_MODEL, system=system, prompt=prompt, max_tokens=max_tokens
+                model=JUDGE_MODEL,
+                system=system,
+                prompt=prompt,
+                max_tokens=max_tokens,
+                effort="low",  # Claude judges: a little thinking, not the default high
             )
             parsed = parse(reply)
             CACHE.put(key, reply)
@@ -834,7 +860,13 @@ async def rejudge(run: dict, source_name: str, with_grounding: bool) -> Path:
     summary = summarize_answers(rows)
     print_table(summary)
     extra = {k: v for k, v in run.items() if k not in ("kind", "variant", "summary", "rows")}
-    extra.update(judge_versions(), rejudged_from=source_name, judged=True)
+    model = (run.get("settings") or {}).get("model")
+    extra.update(
+        judge_versions(),
+        rejudged_from=source_name,
+        judged=True,
+        same_family_judge=model_family(model) == model_family(JUDGE_MODEL),
+    )
     return save("answers", f"{run['variant']}-rejudged", rows, summary, extra)
 
 
@@ -968,7 +1000,12 @@ async def main_async(args) -> None:
             + (f"-{args.chat_model.split(':')[-1]}" if args.chat_model else "")
             + ("-smoke" if args.set == "smoke" else "")
         )
-        extra = {"settings": overrides, "judged": not args.no_judge}
+        extra = {
+            "settings": overrides,
+            "question_set": args.set,
+            "judged": not args.no_judge,
+            "same_family_judge": model_family(overrides.get("model")) == model_family(JUDGE_MODEL),
+        }
         print("saved", save("answers", name, rows, summary, extra))
 
 
@@ -994,6 +1031,10 @@ def main() -> None:
     p.add_argument("--no-grounding", action="store_true", help="skip faithfulness/citations")
     p.add_argument("--no-cache", action="store_true", help="don't reuse cached verdicts")
     p.add_argument(
+        "--judge",
+        help=f"judge model (default: {SMOKE_JUDGE} for --set smoke, else {FULL_JUDGE})",
+    )
+    p.add_argument(
         "--no-judge",
         action="store_true",
         help="answers: answer only; score later with `rejudge` (for a model you can use now)",
@@ -1018,6 +1059,10 @@ def main() -> None:
     if args.cmd == "rejudge":
         for path in args.paths:
             run = json.loads(Path(path).read_text())
+            question_set = run.get("question_set") or (
+                "smoke" if run["variant"].endswith("-smoke") else "all"
+            )
+            print(f"judge: {use_judge(args.judge, question_set)}")
             saved = asyncio.run(rejudge(run, Path(path).name, not args.no_grounding))
             print("saved", saved)
         return
@@ -1037,6 +1082,8 @@ def main() -> None:
 
         asyncio.run(run())
         return
+    if args.cmd == "answers" and not args.no_judge:
+        print(f"judge: {use_judge(args.judge, args.set)}")
     asyncio.run(main_async(args))
 
 
