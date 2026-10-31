@@ -182,7 +182,7 @@ export type Attachment = {
 
 export type MessageAttachment = Pick<Attachment, "id" | "filename" | "mime" | "size_bytes" | "token_count">;
 
-export type StepKind = "plan" | "search" | "records" | "web" | "read" | "reflect" | "answer";
+export type StepKind = "plan" | "search" | "records" | "scan" | "web" | "read" | "reflect" | "answer";
 
 export type TraceStep = {
   id: string;
@@ -201,6 +201,13 @@ export type TraceStep = {
     listing?: boolean;
     /** query_records: the record type looked up. */
     record_type?: string;
+    /** scan: documents the filter matched, checked one by one, and found to match;
+     * checks that failed, and claimed matches dropped because their quote isn't in the document. */
+    total?: number;
+    scanned?: number;
+    matched?: number;
+    failed?: number;
+    unverified?: number;
   };
   started_at: string;
   finished_at: string | null;

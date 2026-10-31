@@ -73,7 +73,7 @@ PREAMBLE_CHARS = 160  # text shorter than this before a tool call is treated as 
 ToolContent = str | list[dict[str, Any]]
 MAX_PARALLEL_TOOLS = 4  # tool calls from one turn running at once (each holds a DB session)
 # Tools whose results are evidence for the sufficient-context check.
-EVIDENCE_TOOLS = frozenset({"search_knowledge", "read_document", "search_web"})
+EVIDENCE_TOOLS = frozenset({"search_knowledge", "read_document", "search_web", "scan"})
 MAX_COVERAGE_CHECKS = 2  # after the first research round, and after a follow-up
 
 # The toolbox (with its DB session) of the tool call running in the current task.
@@ -203,6 +203,9 @@ class AgentRun:
         # and Claude's citations become [n] markers (CLAUDE_CITATIONS).
         self.native_citations = False
         self.coverage_checks = 0
+        # A scan refused for matching too many documents gives its turn back, once: the
+        # refusal is one SQL count, and it exists so the model narrows and scans again.
+        self.extra_turns = 0
         self.status = "streaming"
 
     def _add_usage(self, model: str, usage: dict[str, int] | None) -> None:
@@ -308,6 +311,8 @@ class AgentRun:
         )
         # Structured records: query_records when an active schema covers the scope.
         self.record_schemas = await records_query.schemas_in_scope(db, self.scope.collection_ids)
+        # Exhaustive scans (SCAN_TOOL), whenever there's knowledge to scan.
+        self.scan_enabled = bool(get_settings().scan_tool and self.scope.collections)
         self._toolbox = ToolBox(
             None,  # bound per tool call by _tool_session
             scope,
@@ -319,6 +324,7 @@ class AgentRun:
             attachments=self.attachments,
             graph=self.graph_enabled,
             record_schemas=self.record_schemas,
+            scan_enabled=self.scan_enabled,
         )
 
     async def _history(self, db) -> list[dict[str, Any]]:
@@ -487,6 +493,50 @@ class AgentRun:
         )
         return outcome
 
+    async def _scan(self, args: dict[str, Any]) -> str:
+        """The scan tool: "Scanning N documents" while the checks run, "Found M of N"
+        after. Its model calls are added to the answer's usage, so its cost is the
+        answer's."""
+        question = args.get("question")
+        asked = question.strip() if isinstance(question, str) else ""
+        step = await self.em.step_start(
+            "scan", "Scanning documents", {"queries": [asked] if asked else []}
+        )
+
+        async def scanning(n: int) -> None:
+            await self.em.step_update(
+                step, label=f"Scanning {n} document{'s' if n != 1 else ''}", scanned=n
+            )
+
+        started = time.perf_counter()
+        try:
+            result = await self.tools.scan(args, on_usage=self._add_usage, on_start=scanning)
+        except ToolInputError:
+            await self.em.step_update(step, label="Scan failed", status="error")
+            raise
+        self.retrieval_ms += int((time.perf_counter() - started) * 1000)
+        if result.refused:
+            self.extra_turns = 1
+        await self.em.sources([s.to_source_ref() for s in result.new_sources])
+        await self.em.step_update(
+            step,
+            label=(
+                f"{result.total} documents match, too many to scan"
+                if result.refused
+                else f"Found {len(result.matches)} of {result.checked}"
+                if result.total
+                else "No documents match the filter"
+            ),
+            status="done",
+            refs=result.refs,
+            scanned=result.checked,
+            matched=len(result.matches),
+            total=result.total,
+            failed=result.failed,
+            unverified=result.unverified,
+        )
+        return result.render()
+
     async def _run_retrieval_only(self) -> None:
         step = await self.em.step_start(
             "search", "Searching knowledge", {"queries": [self.req.question]}
@@ -615,6 +665,7 @@ class AgentRun:
             records=records_tool.describe(
                 self.record_schemas, self.scope.collections, self.scope.orgs
             ),
+            scan=self.scan_enabled,
         )
         user_content = self.req.question
         attachment_context = self._attachment_context()
@@ -626,7 +677,10 @@ class AgentRun:
         if attachment_context:
             user_content = f"{attachment_context}\n\n{user_content}"
         definitions = tool_definitions(
-            web=self.web_enabled, graph=self.graph_enabled, records=bool(self.record_schemas)
+            web=self.web_enabled,
+            graph=self.graph_enabled,
+            records=bool(self.record_schemas),
+            scan=self.scan_enabled,
         )
         if provider in nvidia.OPENAI_COMPATIBLE:
             self.provider = provider
@@ -658,8 +712,8 @@ class AgentRun:
                 {"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}
             ]
 
-        while turn < max_turns:
-            last_turn = turn == max_turns - 1
+        while turn < max_turns + self.extra_turns:
+            last_turn = turn == max_turns + self.extra_turns - 1
             kwargs: dict[str, Any] = {
                 "model": model,
                 "max_tokens": 32000,
@@ -888,9 +942,11 @@ class AgentRun:
         researched = False
         retried_empty_start = False
 
-        for turn in range(max_turns):
+        turn = 0
+        while turn < max_turns + self.extra_turns:
             # Research budget spent: the model must answer with what it has.
-            tool_choice = "none" if turn == max_turns - 1 else "auto"
+            tool_choice = "none" if turn == max_turns + self.extra_turns - 1 else "auto"
+            turn += 1
             result = await self._nvidia_turn(model, messages, tools, tool_choice, deep)
             calls = result.tool_calls
             if (
@@ -1072,6 +1128,8 @@ class AgentRun:
                     refs=outcome.refs,
                 )
                 return outcome.text, False
+            if name == "scan" and self.scan_enabled:
+                return await self._scan(args), False
             if name == "list_collections":
                 step = await self.em.step_start("search", "Listing collections", {"listing": True})
                 content = await self.tools.list_collections()

@@ -302,6 +302,16 @@ export const IconAnswer = make(
   </>,
 );
 
+/** Viewfinder with a scan line: every document checked in turn. */
+export const IconScan = make(
+  "Scan",
+  <>
+    <path d="M2.75 6.5V4.5c0-.97.78-1.75 1.75-1.75h2M13.5 2.75h2c.97 0 1.75.78 1.75 1.75v2M17.25 13.5v2c0 .97-.78 1.75-1.75 1.75h-2M6.5 17.25h-2c-.97 0-1.75-.78-1.75-1.75v-2" />
+    <path d="M5.5 10h9" />
+    <path d="M7 6.75h6M7 13.25h4" opacity=".55" />
+  </>,
+);
+
 export const IconFilter = make("Filter", <path d="M3.5 5h13M6 10h8M8.5 15h3" />);
 
 export const IconTable = make(

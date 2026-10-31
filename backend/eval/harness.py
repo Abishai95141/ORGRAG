@@ -1135,6 +1135,7 @@ async def main_async(args) -> None:
     )
     overrides = await apply_variant(args.variant, args.chat_model)
     overrides["records"] = await apply_records(args.records)
+    overrides["scan"] = engine.get_settings().scan_tool  # SCAN_TOOL=false: no scan tool
     if args.cmd == "retrieval":
         rows = [r.__dict__ for r in await run_retrieval(questions)]
         summary = summarize_retrieval(rows)

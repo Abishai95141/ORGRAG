@@ -9,8 +9,10 @@ as its creator, inside its org, with at most the key's role, so a key never sees
 collection, document or org its role can't. Search results and answers carry
 org-labelled citations.
 
-Tools: `search` (no LLM), `read_document`, `list_collections`, and `ask` (the full
-agent; spends the org's model budget and appears in the key owner's chat history).
+Tools: `search` (no LLM), `read_document`, `list_collections`, `list_record_types` and
+`query_records` (exact lookups), `scan` (checks every document matching a filter with
+one cheap model call each), and `ask` (the full agent; spends the org's model budget and
+appears in the key owner's chat history).
 """
 
 import contextlib
@@ -32,7 +34,8 @@ from sqlalchemy import func, select
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.agent.citations import cited_refs
+from app.agent import scan_tool
+from app.agent.citations import CitationRegistry, cited_refs
 from app.agent.engine import direct_search
 from app.agent.tools import paginate
 from app.api.chat import DEFAULT_TITLE, begin_answer, wait_for_answer
@@ -46,7 +49,7 @@ from app.core.errors import ApiError
 from app.core.security import API_KEY_PREFIX
 from app.models import ApiKey, Collection, Conversation, Document, SearchEvent
 from app.records import query as records_query
-from app.retrieval.access import visible_collections
+from app.retrieval.access import RetrievalScope, visible_collections
 from app.schemas.common import MessageCreate
 
 log = logging.getLogger("strata.mcp")
@@ -56,8 +59,11 @@ MCP_PATH = "/api/mcp"
 INSTRUCTIONS = """Strata searches an organization's internal knowledge base (documents, \
 wikis, repositories, Drive, Slack and Notion) with the permissions of the API key you \
 were given. Use `search` to find passages and `read_document` to read one in full; \
-cite results by title and organization. Use `ask` for a researched, cited answer \
-written by Strata's own agent (slower, and it uses the organization's model budget)."""
+cite results by title and organization. For which / every / find-all questions, use \
+`query_records` when a record type covers them, else `scan`, which checks every \
+matching document with one model call each. Use `ask` for a researched, cited answer \
+written by Strata's own agent. `scan` and `ask` are slower than search and use the \
+organization's model budget."""
 
 
 # ── auth ─────────────────────────────────────────────────────────────────────
@@ -389,6 +395,109 @@ async def query_records(
             ],
             groups=[{"value": v, "count": n} for v, n in result.groups],
         )
+
+
+class ScanMatch(BaseModel):
+    title: str
+    collection: str | None
+    url: str | None
+    document_id: str = Field(description="Pass to read_document for the full text")
+    answer: str = Field(description="What the document says, in a few words")
+    evidence: str = Field(description="The passage that shows the match, quoted from it")
+
+
+class ScanResults(BaseModel):
+    documents_matching_filter: int = Field(description="Documents in scope the filter matched")
+    checked: int = Field(description="Documents checked one by one (0 when too many matched)")
+    complete: bool = Field(description="Every matching document was checked")
+    note: str = Field(description="What the scan did; read it before using the matches")
+    matches: list[ScanMatch]
+    cost_usd: float | None = Field(description="Model cost of the checks, when priced")
+
+
+@server.tool(annotations=READ_ONLY)
+async def scan(
+    question: Annotated[str, Field(min_length=1, max_length=1000)],
+    collection_ids: list[str] | None = None,
+    title_contains: Annotated[str | None, Field(max_length=200)] = None,
+    must_mention: list[str] | None = None,
+    updated_after: str | None = None,
+    updated_before: str | None = None,
+    limit: Annotated[int, Field(ge=1, le=get_settings().scan_max_documents)] = (
+        scan_tool.DEFAULT_LIMIT
+    ),
+) -> ScanResults:
+    """Check EVERY document that matches a filter against `question` (one model call per
+    document) and return the ones that match, each with the passage that shows it. For
+    which / every / find-all questions that search (the top few passages) and the record
+    types don't answer completely. Phrase the question about one document ("Does this
+    postmortem blame an expired certificate?"). If more than `limit` documents match,
+    nothing is checked: narrow with collection_ids, must_mention (words every match must
+    contain), title_contains, or updated_after / updated_before (YYYY-MM-DD, when the
+    document was last edited, not dates written in it). Slower than search, and uses the
+    organization's model budget."""
+    if not get_settings().scan_tool:
+        raise ToolError("Scanning is turned off on this server")
+    async with _context() as ctx:
+        scoped = set(await key_collection_ids(ctx, _ids(collection_ids, "collection_ids")))
+        cols = await visible_collections(ctx.db, ctx.org_id, ctx.user.id, ctx.role)
+        scope = RetrievalScope(
+            orgs={ctx.org_id: ctx.org}, collections={c.id: c for c in cols if c.id in scoped}
+        )
+        try:
+            flt = scan_tool.ScanFilter(
+                collection_ids=scope.collection_ids,
+                title_contains=scan_tool.parse_text(title_contains, "title_contains"),
+                updated_after=scan_tool.parse_day(updated_after, "updated_after"),
+                updated_before=scan_tool.parse_day(updated_before, "updated_before"),
+                must_mention=scan_tool.parse_terms(must_mention),
+            )
+            if not flt.collection_ids:
+                raise scan_tool.ScanError("There are no collections in scope to scan")
+            result = await scan_tool.scan(
+                ctx.db, scope, CitationRegistry(), question, flt, limit=limit
+            )
+        except scan_tool.ScanError as e:
+            raise ToolError(str(e)) from e
+        # Logged like search: the documents it returned (the matches).
+        refs = [m.entry.to_source_ref() for m in result.matches]
+        audit.record_reads(
+            ctx.db,
+            audit.Actor.of(ctx),
+            "search",
+            refs,
+            query=f"scan: {question} ({result.described})",
+            origin_org_id=ctx.org_id,
+        )
+        ctx.db.add(
+            SearchEvent(
+                org_id=ctx.org_id,
+                user_id=ctx.user.id,
+                kind="scan",
+                query=question,
+                latency_ms=int(result.seconds * 1000),
+                hits=len(result.matches),
+            )
+        )
+        await ctx.db.commit()
+    return ScanResults(
+        documents_matching_filter=result.total,
+        checked=result.checked,
+        complete=result.complete,
+        note=result.note(),
+        matches=[
+            ScanMatch(
+                title=m.title,
+                collection=m.entry.collection.name,
+                url=m.entry.url,
+                document_id=str(m.document_id),
+                answer=m.answer,
+                evidence=m.evidence,
+            )
+            for m in result.matches
+        ],
+        cost_usd=result.cost_usd,
+    )
 
 
 @server.tool(annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=True))

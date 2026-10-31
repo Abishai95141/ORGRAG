@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 import re
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any
@@ -353,8 +353,10 @@ async def complete(
     max_tokens: int = 2048,
     temperature: float = 0.2,
     provider: str = "nvidia",
+    on_usage: Callable[[str, dict[str, int]], None] | None = None,
 ) -> str:
-    """Non-streaming convenience wrapper: the final text of one turn."""
+    """Non-streaming convenience wrapper: the final text of one turn. `on_usage(model,
+    usage)` gets its token usage when the API reports it."""
     turn = ChatTurn()
     async for kind, value in stream_chat(
         model=model,
@@ -365,6 +367,8 @@ async def complete(
     ):
         if kind == "done":
             turn = value
+    if on_usage is not None and turn.usage:
+        on_usage(model, turn.usage)
     return turn.content
 
 

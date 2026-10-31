@@ -352,7 +352,7 @@ function leadSentence(content: string) {
 function answerShortfall(steps: TraceStep[], cited: SourceRef[], content = ""): "short" | "fine" | "about-attachment" {
   if (cited.some((s) => s.origin === "attachment")) return "about-attachment";
   // The same rule as the gaps report (app/gaps/signals.py): listing collections or graph entities isn't research.
-  const researched = steps.some((s) => (s.kind === "search" && !s.detail.listing) || s.kind === "read" || s.kind === "records");
+  const researched = steps.some((s) => (s.kind === "search" && !s.detail.listing) || s.kind === "read" || s.kind === "records" || s.kind === "scan");
   if (researched && (!cited.some((s) => s.origin === "knowledge") || NOT_FOUND.test(leadSentence(content)))) return "short";
   let missing = false;
   for (const s of steps) {

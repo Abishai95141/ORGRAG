@@ -161,15 +161,18 @@ type Attachment = {
 
 type TraceStep = {
   id: string;
-  kind: "plan" | "search" | "web" | "read" | "reflect" | "answer";
-  label: string;                 // human label, e.g. "Searching 3 queries"
+  kind: "plan" | "search" | "records" | "scan" | "web" | "read" | "reflect" | "answer";
+  label: string;                 // human label, e.g. "Searching 3 queries", "Found 8 of 60"
   status: "running" | "done" | "error";
   detail: {
-    queries?: string[];
+    queries?: string[];          // scan: its per-document question
     refs?: number[];             // sources this step surfaced
     reasoning?: string;          // summarized thinking text
     plan?: { question: string; rationale: string }[];
     document_title?: string;
+    record_type?: string;        // records
+    total?: number; scanned?: number; matched?: number;  // scan: matched the filter, checked, matches
+    failed?: number; unverified?: number;  // scan: checks that failed; matches dropped (quote not in the document)
   };
   started_at: string; finished_at: string | null;
 };
@@ -389,6 +392,33 @@ type RecordQuery = {
 Unknown schema → 404; a field or operator that doesn't apply → 400 `invalid_query` with
 a readable message. Records of hidden documents are never returned.
 
+## Scan
+
+For "which / every / find all" questions that no record type covers, the agent's `scan`
+tool and the MCP `scan` tool check **every** document matching a filter, one cheap model
+call each (`SCAN_MODEL`, Haiku 5.5, thinking off, 8 at a time), instead of the top few
+passages search returns. No REST route.
+
+* **Filter** (SQL, no top-k): the caller's readable collections (optionally fewer), never
+  hidden documents; `title_contains`; `updated_after` / `updated_before` (the document's
+  last edit, `YYYY-MM-DD`, inclusive); `must_mention`, up to 6 words or phrases every
+  match must contain (Postgres full-text on the title and chunks, `websearch_to_tsquery`
+  syntax: `"exact phrase"`, `a or b`).
+* **Limit**: `limit` documents (default 100, at most `SCAN_MAX_DOCUMENTS`, 200). A filter
+  matching more checks **nothing** and returns the count, split by collection and edit
+  dates, so the caller narrows it; in chat that refusal gives the agent its turn back.
+* **Each check** reads the question and the document (a long one: its most relevant
+  chunks plus its opening, ≤ 12,000 characters) and answers `{match, evidence, answer}`.
+  A match is kept only if `evidence` is the document's own words (compared with case,
+  whitespace, quotes, dashes, emphasis and table pipes evened out; `...` may join pieces);
+  the chunk holding the quote is the match's citation. Failed checks are counted and the
+  result says it may be incomplete.
+* **Cost**: in chat the checks are added to the answer's `usage` (and so its cost); MCP
+  returns `cost_usd`. About $0.0001 and 1 s per document, 8 in parallel (60 documents:
+  8.5 s, $0.005).
+* **Audit**: an MCP scan logs its matches like a search's results (`kind: "search"`,
+  query `scan: …`); a chat answer logs its sources as usual.
+
 ## Shared answers (permalinks)
 
 A link to one answer, `{PUBLIC_URL}/a/{token}`. Opening it requires signing in, and
@@ -592,11 +622,12 @@ claude mcp add --transport http strata https://strata.example.com/api/mcp \
 | `list_collections` | – | the collections the key can read, with document counts |
 | `list_record_types` | – | the active record types the key can query: name, label, collection, fields, record count |
 | `query_records` | `record_type`, `filters?`, `mode?`, `group_by?`, `sort?`, `descending?`, `latest_only?`, `limit?` | the matching records (or count, or groups), each with its document; same query as `/records/query` |
+| `scan` | `question`, `collection_ids?`, `title_contains?`, `must_mention?`, `updated_after?`, `updated_before?`, `limit?` (1–200, default 100) | `{documents_matching_filter, checked, complete, note, matches: {title, collection, url, document_id, answer, evidence}[], cost_usd}`: every matching document checked (see [Scan](#scan)); more than `limit` → nothing checked, `note` says how to narrow. Uses the org's model budget; matches logged like `search` |
 | `ask` | `question`, `mode?` (`quick` \| `deep`), `collection_ids?` | `{answer, status, sources, conversation_id}`: the agent's cited answer, with only the cited sources. Uses the org's model budget and appears in the key owner's chat history |
 
 Tools return structured content (and the same JSON as text). Anticipated failures
 (bad ids, no access, model errors) come back as tool errors with a readable message.
-`search`, `read_document` and `list_collections` are annotated read-only.
+Every tool except `ask` is annotated read-only.
 
 ## Agents
 

@@ -104,6 +104,7 @@ async def test_nvidia_tool_loop_searches_then_answers(app, monkeypatch):
         "search_knowledge",
         "read_document",
         "list_collections",
+        "scan",
     }
     tool_msg = second["messages"][-1]
     assert tool_msg["role"] == "tool" and tool_msg["tool_call_id"] == "call-1"

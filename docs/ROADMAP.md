@@ -15,7 +15,7 @@ plus our own measurements in [EVALUATION.md](EVALUATION.md). Effort: **S** ≈ �
 | | Today |
 |---|---|
 | Answers (45 questions) | 42–44/45 correct; 100% honest abstention on unanswerable questions |
-| Exhaustive lists (60 records) | 50/50 items with structured records (26/50 from search alone) |
+| Exhaustive lists (60 records) | 50/50 items with structured records, and 50/50 with the scan tool and no records (23–26/50 from search alone) |
 | Speed | ~8 s per answer on Claude Haiku 5.5 (gateway); 20–30 s on Nemotron |
 | Retrieval | recall@5 0.94 with reranking |
 | Connectors | Upload and Tavily web search verified live; Drive, Slack and Notion only against simulated APIs |
@@ -109,7 +109,7 @@ This fixes our weakest measured category properly. The benchmarks agree that top
    - Docling tables and `Field: value` lines are parsed deterministically for free; the LLM handles only the rest.
    - Rows land in typed Postgres tables with `org_id`, `collection_id` and access filtering.
    - The agent gets a `query_records` tool with exact filters, COUNT and DISTINCT, so answers become exact and cited.
-2. **Exhaustive `scan` tool (M).** For questions no schema covers: take *every* document matching a filter (no top-k), then run a cheap per-document check in parallel, in the style of [LOTUS](https://github.com/lotus-data/lotus) and [DocETL](https://github.com/ucbepic/docetl). Slower, but complete, and it says so.
+2. **Exhaustive `scan` tool (M).** For questions no schema covers: take *every* document matching a filter (no top-k), then run a cheap per-document check in parallel, in the style of [LOTUS](https://github.com/lotus-data/lotus) and [DocETL](https://github.com/ucbepic/docetl). Slower, but complete, and it says so. *Built (docs/LOG.md D52–D57).*
 3. **People, roles and aliases (M).** Tables of people, aliases ("Oluwaseun" = "Seun" = "OA") and role assertions with dates (who is Head of Security, and since when). A `resolve_role` mode in the explorer, plus an explicit "next hop" step in the agent prompt (IRCoT-style). This targets our remaining multi-hop misses (q21, q24).
 4. **Graph cleanup.** Keep the LightRAG graph opt-in. If structured records and the people/roles tables deliver, retire it.
 

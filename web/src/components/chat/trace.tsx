@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { IconAnswer, IconChevronDown, IconGlobe, IconPlan, IconRead, IconReflect, IconSearch, IconTable, IconWarning, Spinner } from "@/components/icons";
+import { IconAnswer, IconChevronDown, IconGlobe, IconPlan, IconRead, IconReflect, IconScan, IconSearch, IconTable, IconWarning, Spinner } from "@/components/icons";
 import type { SourceRef, StepKind, TraceStep } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ const STEP_ICON: Record<StepKind, typeof IconPlan> = {
   plan: IconPlan,
   search: IconSearch,
   records: IconTable,
+  scan: IconScan,
   web: IconGlobe,
   read: IconRead,
   reflect: IconReflect,
@@ -49,6 +50,8 @@ export function Trace({
 
   const searches = steps.filter((s) => s.kind === "search").reduce((n, s) => n + (s.detail.queries?.length ?? 1), 0);
   const lookups = steps.filter((s) => s.kind === "records").length;
+  const scans = steps.filter((s) => s.kind === "scan");
+  const scanned = scans.reduce((n, s) => n + (s.detail.scanned ?? 0), 0);
   const webSearches = steps.filter((s) => s.kind === "web").reduce((n, s) => n + (s.detail.queries?.length ?? 1), 0);
   const reads = steps.filter((s) => s.kind === "read").length;
   const failed = steps.some((s) => s.status === "error");
@@ -73,6 +76,7 @@ export function Trace({
               <span className="font-medium text-ink-2">Researched</span>
               {searches ? ` · ${searches} ${searches === 1 ? "search" : "searches"}` : ""}
               {lookups ? ` · ${lookups} records ${lookups === 1 ? "lookup" : "lookups"}` : ""}
+              {scans.length ? ` · ${scans.length} ${scans.length === 1 ? "scan" : "scans"} of ${scanned} ${scanned === 1 ? "document" : "documents"}` : ""}
               {webSearches ? ` · ${webSearches} web` : ""}
               {reads ? ` · ${reads} ${reads === 1 ? "read" : "reads"}` : ""}
               {sources.length ? ` · ${sources.length} sources` : ""}
@@ -154,6 +158,8 @@ function TraceRow({
             <span key={q} className="inline-flex max-w-full items-center gap-1.5 rounded-[7px] border border-line bg-surface px-2 py-0.5 text-[12px] text-ink-2">
               {step.kind === "web" ? (
                 <IconGlobe size={12} className="shrink-0 text-ink-3" />
+              ) : step.kind === "scan" ? (
+                <IconScan size={12} className="shrink-0 text-ink-3" />
               ) : (
                 <IconSearch size={12} className="shrink-0 text-ink-3" />
               )}

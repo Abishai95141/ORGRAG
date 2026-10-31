@@ -10,9 +10,10 @@ from xml.sax.saxutils import escape, quoteattr
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agent import records_tool
+from app.agent import records_tool, scan_tool
 from app.agent.citations import CitationRegistry, Registered, search_result
 from app.agent.records_tool import QUERY_RECORDS
+from app.agent.scan_tool import SCAN
 from app.graph import query as graph
 from app.graph.extract import ENTITY_TYPES
 from app.models import ChatAttachment, Document
@@ -147,11 +148,13 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [SEARCH_KNOWLEDGE, READ_DOCUMENT, LIST_
 
 
 def tool_definitions(
-    *, web: bool, graph: bool = False, records: bool = False
+    *, web: bool, graph: bool = False, records: bool = False, scan: bool = False
 ) -> list[dict[str, Any]]:
     out = list(TOOL_DEFINITIONS)
     if records:
         out.append(QUERY_RECORDS)
+    if scan:
+        out.append(SCAN)
     if graph:
         out += [LIST_ENTITIES, EXPLORE_ENTITY]
     if web:
@@ -229,6 +232,7 @@ class ToolBox:
     graph: bool = False
     # Active record schemas in scope, for query_records (app/agent/records_tool.py).
     record_schemas: list[Any] = field(default_factory=list)
+    scan_enabled: bool = False  # the scan tool is offered (app/agent/scan_tool.py)
     _web_pages: dict[int, tuple[str | None, str]] = field(default_factory=dict)
 
     # ── validation ────────────────────────────────────────────────────────
@@ -330,6 +334,12 @@ class ToolBox:
     async def query_records(self, args: dict[str, Any]) -> SearchOutcome:
         return await records_tool.run(self, self.record_schemas, args)
 
+    async def scan(
+        self, args: dict[str, Any], *, on_usage=None, on_start=None
+    ) -> scan_tool.ScanResult:
+        """Check every matching document in scope (app/agent/scan_tool.py)."""
+        return await scan_tool.run(self, args, on_usage=on_usage, on_start=on_start)
+
     async def list_collections(self) -> str:
         if not self.scope.collections:
             return "No collections are available in this scope."
@@ -356,12 +366,18 @@ class ToolBox:
 
     def _capped_note(self, hits: int) -> str:
         """Search results are capped; say so where the model reads them, and point to
-        the complete-set tools, rather than relying on the system prompt alone."""
-        if not self.graph or hits < self.top_k:
+        the complete-set tools, rather than relying on the system prompt alone (measured:
+        with the scan tool in the prompt only, Haiku still answered a 27-item "which
+        vendors" question from two searches)."""
+        if hits < self.top_k or not (self.graph or self.scan_enabled):
             return ""
+        tools = [
+            *(["scan, which checks every matching document"] if self.scan_enabled else []),
+            *(["list_entities or explore_entity"] if self.graph else []),
+        ]
         return (
             f"\n\n(Search returns at most {self.top_k} passages, so this may not be "
-            "everything. For lists or counts, also check list_entities or explore_entity.)"
+            f"everything. For lists or counts, also check {'; or '.join(tools)}.)"
         )
 
     # ── knowledge graph ───────────────────────────────────────────────────
