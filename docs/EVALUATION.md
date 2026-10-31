@@ -58,6 +58,17 @@ Quick mode, 15 questions. The Haiku baseline is the native Anthropic API with no
 
 Against the Nemotron answers above (citation recall 0.337, 30.7 s mean), Haiku roughly doubles citation recall and answers 4–6× faster. Step 1 changed no question's outcome. The only failure is q100, the multi-hop rota question. The full 150-question Haiku run and the Sonnet comparison runs are in [LOG.md](LOG.md#evals-and-metrics) until they're judged.
 
+### Real files in every format (2026-11-01)
+
+`EVAL_CORPUS=public`: Microsoft's public FY26 Q1 investor-relations packet and 2026 sustainability PDFs (fetched by `eval/public/fetch.py`, not committed), plus a CSV, a scanned page and legacy .doc/.ppt derived from them; 20 questions in `eval/questions_public.jsonl`. `parse-recall` checks, without any LLM, that each question's facts are in the stored text of its source file:
+
+| | Facts found |
+|---|---|
+| Docling | 27/27 |
+| Docling + vision on weak pages (27 pages, $0.0104) | 27/27 |
+
+The earnings and outlook decks are pictures of slides; parsed as pages they OCR well enough that every targeted figure was found, but stylised text garbles, which the vision pass fixes (a garbled scanned page came back as a clean transcript). Answer quality on these files is still to be judged. Details: [LOG.md](LOG.md#2026-11-01--step-2c-and-step-3-embeddings-parsing-every-format).
+
 ### Sufficient-context check (2026-10-31)
 
 After a research round, Haiku 5.5 names the facts the sources don't state yet, and the answering model is told before it writes. On the 55 hardest questions (multi-hop, unanswerable, cross-org vocabulary), Sonnet judge:

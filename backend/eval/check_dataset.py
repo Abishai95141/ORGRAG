@@ -39,10 +39,13 @@ CATEGORIES = {
     "table",
     # Answers that need facts from both orgs (compare, reconcile, "which of us").
     "cross_org",
+    # Public-files set: answers that need two or more file types (a slide and a
+    # spreadsheet, a PDF and a Word filing).
+    "cross_format",
 }
-ORGS = {"northwind", "halcyon"}
+ORGS = {"northwind", "halcyon", "microsoft"}
 REQUIRED = {"id", "category", "scope", "question", "gold_docs", "facts", "notes"}
-OPTIONAL = {"smoke"}  # smoke: part of the 15-question set run on every change
+OPTIONAL = {"smoke", "files"}  # smoke: run on every change; files: formats it needs
 EVAL_WORDS = (150, 900)
 ALT_ONLY: list[str] = []  # any_of phrasings absent from gold docs (answer-side alternatives)
 

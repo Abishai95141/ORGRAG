@@ -7,7 +7,14 @@ indexed with higher weight and shown in citations.
 
 No chunk exceeds `max_chars`: the embedder reads only ~512 tokens, so anything past
 that is unsearchable. Oversized paragraphs are split by sentence, then by line (code,
-JSON, tables), then by word, and a single giant token is cut by characters."""
+JSON), then by word, and a single giant token is cut by characters.
+
+A large Markdown table (a spreadsheet, a PDF table) becomes passages of its own: row
+groups under the section heading, each repeating the header row so every passage says
+what its columns are. Small tables stay inline with the prose around them.
+
+Parsers that know page numbers (Docling) mark page starts with `<!-- page N -->`; each
+chunk records the page it starts on, and the markers aren't indexed."""
 
 import re
 from dataclasses import dataclass
@@ -18,6 +25,9 @@ _SENTENCE = re.compile(r"(?<=[.!?])\s+")
 
 MAX_CHUNK_CHARS = 2600  # ≈ 512 embedder tokens of English prose
 PIECE_WORDS = 200  # target size of the pieces an oversized paragraph is cut into
+OWN_PASSAGE_TABLE_CHARS = 1200  # tables larger than this get passages of their own
+_PAGE = re.compile(r"^<!-- page (\d+) -->$")
+_TABLE_RULE = re.compile(r"^\|?\s*:?-{3,}")
 
 
 @dataclass
@@ -26,6 +36,37 @@ class ChunkDraft:
     heading: str
     content: str
     word_count: int
+    page: int | None = None  # the page the chunk starts on, when the format has pages
+
+
+def page_marker(n: int) -> str:
+    return f"<!-- page {n} -->"
+
+
+def _is_table(para: str) -> bool:
+    lines = para.splitlines()
+    return len(lines) >= 2 and all(line.lstrip().startswith("|") for line in lines)
+
+
+def table_passages(table: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
+    """Row groups of a Markdown table, each under the table's header (and rule)."""
+    lines = table.splitlines()
+    head_len = 2 if len(lines) > 1 and _TABLE_RULE.match(lines[1].strip()) else 1
+    head, rows = "\n".join(lines[:head_len]), lines[head_len:]
+    room = max(max_chars - len(head) - 1, 200)
+    groups: list[str] = []
+    cur: list[str] = []
+    size = 0
+    for row in rows:
+        row = row if len(row) <= room else row[:room]  # one giant cell: cut, don't drop
+        if cur and size + len(row) + 1 > room:
+            groups.append(head + "\n" + "\n".join(cur))
+            cur, size = [], 0
+        cur.append(row)
+        size += len(row) + 1
+    if cur or not groups:
+        groups.append(head + ("\n" + "\n".join(cur) if cur else ""))
+    return groups
 
 
 def estimate_tokens(text: str) -> int:
@@ -107,7 +148,9 @@ def _paragraphs(body: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
     paras = [p.strip() for p in re.split(r"\n\s*\n", body) if p.strip()]
     out: list[str] = []
     for p in paras:
-        if len(p.split()) <= 400 and len(p) <= max_chars:
+        if _is_table(p) or _PAGE.match(p):
+            out.append(p)  # placed whole by chunk_markdown
+        elif len(p.split()) <= 400 and len(p) <= max_chars:
             out.append(p)
         else:
             # Very long paragraph (PDF page text, minified JSON, a code block…).
@@ -124,6 +167,7 @@ def chunk_markdown(
     max_chars: int = MAX_CHUNK_CHARS,
 ) -> list[ChunkDraft]:
     drafts: list[ChunkDraft] = []
+    page: int | None = None  # current page, from Docling's markers
     for path, body in _sections(markdown) or [([], markdown)]:
         # The document title is usually the H1; don't repeat it in every heading path.
         trail = [h for h in path if h.strip().lower() != title.strip().lower()]
@@ -131,11 +175,26 @@ def chunk_markdown(
         window: list[str] = []
         words = chars = 0
         fresh = False  # window holds content not yet emitted (beyond the overlap tail)
+        start_page = page
         for para in _paragraphs(body, max_chars):
+            if m := _PAGE.match(para):
+                page = int(m.group(1))
+                if not fresh:
+                    start_page = page
+                continue
+            if _is_table(para) and (len(para) > OWN_PASSAGE_TABLE_CHARS or len(para) > max_chars):
+                if fresh:  # the prose so far, then the table on its own
+                    text = "\n\n".join(window)
+                    drafts.append(ChunkDraft(len(drafts), heading, text, words, start_page))
+                for piece in table_passages(para, max_chars):
+                    drafts.append(ChunkDraft(len(drafts), heading, piece, len(piece.split()), page))
+                window, words, chars, fresh, start_page = [], 0, 0, False, page
+                continue
             n = len(para.split())
             if fresh and (words + n > target_words or chars + len(para) + 2 > max_chars):
                 text = "\n\n".join(window)
-                drafts.append(ChunkDraft(len(drafts), heading, text, words))
+                drafts.append(ChunkDraft(len(drafts), heading, text, words, start_page))
+                start_page = page
                 tail = text.split()[-overlap_words:] if overlap_words else []
                 carry = " ".join(tail)
                 # Carry the overlap only when it leaves room for the next paragraph.
@@ -148,8 +207,11 @@ def chunk_markdown(
             chars += len(para) + 2
             fresh = True
         if fresh:
-            drafts.append(ChunkDraft(len(drafts), heading, "\n\n".join(window), words))
-    return [d for d in drafts if d.content.strip()]
+            drafts.append(ChunkDraft(len(drafts), heading, "\n\n".join(window), words, start_page))
+    kept = [d for d in drafts if d.content.strip()]
+    for i, d in enumerate(kept):
+        d.ordinal = i
+    return kept
 
 
 def embedding_text(title: str, heading: str, content: str, context: str = "") -> str:

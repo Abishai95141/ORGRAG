@@ -74,6 +74,20 @@ class Settings(BaseSettings):
     nvidia_rerank_url: str = "https://ai.api.nvidia.com/v1/retrieval"
     fastembed_rerank_model: str = "Xenova/ms-marco-MiniLM-L-6-v2"
 
+    # Docling parsing (the `parsing` extra): "auto" uses it when installed, "off" keeps
+    # the light PDF/DOCX parsers. Workers are separate processes; see docling_parser.py.
+    docling: Literal["auto", "off"] = "auto"
+    docling_workers: int = 2
+    docling_threads: int = 2  # torch threads per worker
+    docling_timeout_seconds: int = 600  # per file: a 22-slide picture deck OCRs in ~5 min
+    docling_tasks_per_worker: int = 25  # documents before a worker is replaced
+    docling_artifacts_path: str | None = None  # prefetched models (Docker); else HF cache
+    # Optional, at indexing time only: pages Docling reads weakly (sparse text, mostly
+    # pictures or charts) are transcribed by a vision model. Off: indexing uses no LLM.
+    vision_parsing: bool = False
+    vision_model: str = "claude-haiku-5-5"
+    vision_max_pages: int = 200  # per document, a cost ceiling
+
     # Keyword ranking: "auto" uses BM25 (pg_textsearch) when its index exists, else
     # ts_rank_cd; "ts_rank" forces the fallback (to compare); "bm25" warns if missing.
     keyword_ranking: Literal["auto", "bm25", "ts_rank"] = "auto"

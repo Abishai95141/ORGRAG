@@ -64,6 +64,7 @@ class Hit:
     content: str
     score: float
     updated_at: datetime | None = None
+    page: int | None = None  # where the passage starts, in paginated formats
 
 
 def rrf_fuse(rankings: list[list[uuid.UUID]], k: int = RRF_K) -> dict[uuid.UUID, float]:
@@ -149,8 +150,8 @@ _BM25_SQL = text(
 _DETAIL_SQL = text(
     """
     SELECT c.id, c.document_id, c.ordinal, c.org_id, c.collection_id, c.heading, c.content,
-           d.title, d.url, d.source_id, s.kind, d.boost, d.feedback_up, d.feedback_down,
-           d.source_updated_at AS doc_time
+           c.page, d.title, d.url, d.source_id, s.kind, d.boost, d.feedback_up,
+           d.feedback_down, d.source_updated_at AS doc_time
     FROM chunks c
     JOIN documents d ON d.id = c.document_id
     JOIN sources s ON s.id = d.source_id
@@ -307,6 +308,7 @@ async def _hybrid_search(
             content=r.content,
             score=round(scores[r.id] / top, 4),
             updated_at=r.doc_time,
+            page=r.page,
         )
         for r in sorted(rows, key=lambda r: scores[r.id], reverse=True)
     ]
@@ -344,6 +346,7 @@ async def hits_for_chunks(db: AsyncSession, chunk_ids: list[uuid.UUID]) -> list[
             content=r.content,
             score=1.0,
             updated_at=r.doc_time,
+            page=r.page,
         )
         for cid in chunk_ids
         if (r := rows.get(cid)) is not None and r.document_id not in hidden

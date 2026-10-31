@@ -2,7 +2,6 @@
 problems surface before the message is sent); sending a message with
 `attachment_ids` binds the files to that conversation."""
 
-import asyncio
 import re
 import uuid
 
@@ -13,7 +12,7 @@ from app.core.config import get_settings
 from app.core.deps import OrgContext, org_context
 from app.core.errors import ApiError, bad_request, not_found
 from app.ingestion.chunker import estimate_tokens
-from app.ingestion.parsers import UnsupportedFileType, mime_for, parse
+from app.ingestion.parsers import UnsupportedFileType, mime_for, parse_document
 from app.models import ChatAttachment, Conversation
 from app.schemas.common import AttachmentDetail, AttachmentOut
 
@@ -60,7 +59,7 @@ async def upload_attachment(
         if conv is None or conv.org_id != ctx.org_id or conv.user_id != ctx.user.id:
             raise not_found("Conversation")
     try:
-        markdown, _ = await asyncio.to_thread(parse, data, mime)
+        markdown = (await parse_document(data, mime)).markdown
     except Exception as exc:
         raise bad_request(f"Couldn't read {filename}: {exc}", "unreadable_file") from exc
     markdown = markdown.strip()

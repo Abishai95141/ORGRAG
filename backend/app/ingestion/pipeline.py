@@ -27,7 +27,8 @@ from app.core.config import get_settings
 from app.embeddings import get_embedder
 from app.ingestion.chunker import chunk_markdown, embedding_text, estimate_tokens
 from app.ingestion.dates import document_date
-from app.ingestion.parsers import parse
+from app.ingestion.docling_parser import ParseError
+from app.ingestion.parsers import UnsupportedFileType, parse_document
 from app.models import Chunk, Document, Source
 
 log = logging.getLogger("strata.ingestion")
@@ -50,7 +51,12 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
             existing.source_updated_at = document_date(existing.content, existing.title)
         return "unchanged"
 
-    markdown, detected_title = parse(raw.data, raw.mime)
+    try:
+        parsed = await parse_document(raw.data, raw.mime)
+    except (ParseError, UnsupportedFileType) as exc:
+        log.warning("Couldn't parse %s: %s", raw.external_id, exc)
+        return "failed"
+    markdown, detected_title = parsed.markdown, parsed.title
     markdown = markdown.strip()
     if not markdown:
         return "empty"
@@ -75,7 +81,7 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
     doc.mime = raw.mime
     doc.content = markdown
     doc.content_hash = content_hash
-    doc.meta = raw.metadata
+    doc.meta = {**(raw.metadata or {}), **({"parse": parsed.info} if parsed.info else {})}
     # The source system's own timestamp when there is one; otherwise the date the
     # document states about itself (uploads have no trustworthy modified time).
     doc.source_updated_at = raw.updated_at or document_date(markdown, title)
@@ -110,6 +116,7 @@ async def write_chunks(db: AsyncSession, doc: Document) -> int:
             heading=d.heading,
             content=d.content,
             token_count=estimate_tokens(d.content),
+            page=d.page,
             embedding=vec,
         )
         for d, vec in zip(drafts, vectors, strict=True)

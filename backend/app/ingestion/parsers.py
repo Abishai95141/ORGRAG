@@ -1,13 +1,22 @@
 """Turn raw bytes into normalized Markdown. Each parser keeps headings so the
-chunker can attach a heading path to every chunk."""
+chunker can attach a heading path to every chunk.
 
+`parse_document` is the entry point for indexing: PDF, Office files, email and images
+go through Docling (docling_parser.py) when it's installed; everything else, and PDF
+and DOCX without Docling, uses the light parsers here."""
+
+import asyncio
 import csv
 import io
 import json
 import re
 from pathlib import PurePosixPath
+from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup
+
+if TYPE_CHECKING:
+    from app.ingestion.docling_parser import Parsed
 
 SUPPORTED_EXTENSIONS = {
     ".pdf": "application/pdf",
@@ -20,17 +29,60 @@ SUPPORTED_EXTENSIONS = {
     ".csv": "text/csv",
     ".json": "application/json",
 }
+# Accepted only when Docling is installed (the `parsing` extra).
+RICH_EXTENSIONS = {
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".eml": "message/rfc822",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".tif": "image/tiff",
+    ".tiff": "image/tiff",
+}
+# Legacy binary Office: also needs LibreOffice, which Docling converts them with.
+LEGACY_EXTENSIONS = {
+    ".doc": "application/msword",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".xls": "application/vnd.ms-excel",
+}
 
 
 class UnsupportedFileType(ValueError):
     pass
 
 
+def supported_extensions() -> dict[str, str]:
+    """Extension → mime for every type this deployment can parse."""
+    from app.ingestion import docling_parser
+
+    supported = dict(SUPPORTED_EXTENSIONS)
+    if docling_parser.available():
+        supported |= RICH_EXTENSIONS
+    if docling_parser.legacy_office_available():
+        supported |= LEGACY_EXTENSIONS
+    return supported
+
+
 def mime_for(filename: str) -> str:
     ext = PurePosixPath(filename.lower()).suffix
-    if ext not in SUPPORTED_EXTENSIONS:
+    supported = supported_extensions()
+    if ext not in supported:
         raise UnsupportedFileType(f"Unsupported file type: {ext or filename}")
-    return SUPPORTED_EXTENSIONS[ext]
+    return supported[ext]
+
+
+async def parse_document(data: bytes, mime: str) -> "Parsed":
+    """Markdown, detected title and parse details, using Docling for the formats it
+    handles (and the light parsers otherwise)."""
+    from app.ingestion import docling_parser
+
+    if mime in docling_parser.DOCLING_TYPES and docling_parser.available():
+        return await docling_parser.convert(data, mime)
+    if mime in RICH_EXTENSIONS.values() or mime in LEGACY_EXTENSIONS.values():
+        raise UnsupportedFileType(f"Parsing {mime} needs the `parsing` extra (Docling)")
+    markdown, title = await asyncio.to_thread(parse, data, mime)  # CPU-bound
+    return docling_parser.Parsed(markdown, title)
 
 
 def parse(data: bytes, mime: str) -> tuple[str, str | None]:

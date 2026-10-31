@@ -2,6 +2,44 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
 
+## 2026-11-01 — Step 2c and step 3: embeddings, parsing every format
+
+### Decisions
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D27 | **granite-embedding-small-english-r2 is not adopted**; bge-small stays. | No gain at our ~512-token chunks; its advantage is long documents. | BM25 server, 135 questions. Reranked: recall@5 0.936 → 0.932, recall@10 0.970 → 0.966 (CI [−0.010, 0.000]), MRR 0.948 → 0.946. No reranker: MRR 0.847 → 0.822. | `EMBEDDING_MODEL`. |
+| D28 | **Docling 2.145.0 parses PDF, Word, Excel, PowerPoint, email and images** (the `parsing` extra), once, at indexing; questions only read stored chunks. Legacy .doc/.ppt/.xls too when LibreOffice is installed. | Today's parsers lose structure (Word tables moved to the end, PDFs split by page, no OCR) and don't read Excel, PowerPoint, email or images at all. | Real files (D32): every format parsed, all 27 target facts found. A Word table stays between its paragraphs (`test_docling_keeps_word_tables_in_place_and_reads_excel`). | `DOCLING=off` (or no extra): the light parsers. |
+| D29 | **Docling runs in spawned worker processes**, a warm converter each, replaced after 25 documents; a file past `DOCLING_TIMEOUT_SECONDS` (600) kills the pool. OCR pinned to RapidOCR on onnxruntime. Zip-bomb guard on Office files; 50 MB and 500-page limits. | Fork hangs with torch (Docling #1277); memory growth (#2209, #2788); a hung conversion can't be interrupted; same OCR in dev and production. | First use ~85 s (model load), then a 10-Q in 6 s, a 28-page PDF in 90 s. | Settings `DOCLING_*`. |
+| D30 | **Slide decks are parsed as PDF pages** (LibreOffice), so every slide gets layout analysis and OCR. Without LibreOffice, Docling's PowerPoint reader. | Investor and board decks are often pictures of slides: Microsoft's earnings and outlook decks are one picture per slide, and the PowerPoint reader returned 93 and 429 characters for 5 and 22 slides. | As pages: the outlook deck's guidance table and the slides' figures were read (all slide facts found). | — |
+| D31 | **Large tables become passages of their own**, row groups under the section heading, each repeating the header row; small tables stay with their prose. Paginated formats mark pages, and each chunk stores the page it starts on (`chunks.page`, migration 0012), shown to the model with the source. | A spreadsheet or PDF table split line by line lost its header after the first piece. | Retrieval on the 150-question set unchanged after re-indexing (recall@5 0.936, recall@10 0.970, MRR 0.948; table category 1.0 on all three). | — |
+| D32 | **A public, real-file test set**: Microsoft's FY26 Q1 investor-relations packet (slides, outlook, call transcript, press release, 10-Q, financial statements) and its 2026 environmental data fact sheet and sustainability report, plus a CSV, a scanned page and legacy .doc/.ppt derived from them. Fetched by `eval/public/fetch.py` (URLs and SHA-256 recorded); the files aren't committed. 20 questions (`eval/questions_public.jsonl`), including three that need two file types. | The user's call: synthetic files are too clean to test a parser. It surfaced the picture-slide problem at once. | `EVAL_CORPUS=public`: its own databases (with and without vision). | — |
+| D33 | **Optional vision pass for weak pages** (`VISION_PARSING`, off by default; Haiku 5.5): a page is weak when it has pictures but little text, when pictures cover ≥ 30% of it, or when its OCR text is debris (≥ 6% of words are stray fragments or vowelless runs). Weak pages are rendered and transcribed; every other page keeps Docling's text; any failure keeps Docling's. Cost recorded on the document. | Local OCR garbles stylised text and can't read charts; a vision model reads those pages, at indexing only. | Debris signal on the real files: clean pages ≤ 0.048, the scan 0.146, garbled slide OCR up to 0.122. Whole public corpus: 27 weak pages transcribed for **$0.0104**. The scan went from "Ast snsg t a ng r ot o ng s f o the…" to a clean transcript. Parsing recall 27/27 with or without. | `VISION_PARSING=false` (default). |
+| D34 | **Picture-slide handling is general, not per document.** An earlier version OCR'd the pictures inside a deck when it looked empty; replaced by slides-as-pages plus the per-page weak signals. | The user asked for parsing that isn't tuned to particular files. | — | — |
+| D35 | **The NVIDIA judge run was stopped** (user's call). Its free tier rate-limited (HTTP 429) when two runs shared it: two deep-mode re-judges and half of the public-files answers failed. The harness now backs off exponentially on judge errors (up to 60 s), keeps an answer whose judging failed, and re-judging leaves a failed row unjudged instead of aborting. | — | 10 of 20 public answers lost to 429s in the first run. | — |
+
+### Evals
+
+Parsing recall (no LLM: is each fact in the stored text of its source file?):
+
+| Index | Facts found | File types |
+|---|---|---|
+| Docling only | **27/27** | Word ×3, Excel, CSV, PDF ×2, scanned PDF, picture slides ×2, legacy .doc/.ppt |
+| Docling + vision on weak pages | **27/27** | same; 27 pages transcribed, $0.0104 |
+
+Parsing times (this Mac, CPU): 10-Q (Word, 520K characters) 5.7 s; financial statements (Excel, 11 sheets) 0.2 s; fact sheet (PDF, 28 pages) 90 s; sustainability report (PDF, 66 pages) 80 s; scanned page 20 s; 22 picture slides 146 s. Whole public corpus indexed in 10 min 54 s.
+
+Answer quality on the public questions is **not measured yet**: the first run lost half its judging to the NVIDIA rate limit, and the judge run was stopped.
+
+Quick mode, 150 questions, Nemotron judge (judged overnight):
+
+| Model | Pass | Multi-hop | Faithfulness | Citation recall | Mean | $ per answer |
+|---|---|---|---|---|---|---|
+| Haiku 5.5 | 0.940 | 0.76 | 0.955 | 0.628 | 5.4 s | 0.00114 |
+| Sonnet 5.5 | 0.933 | 0.80 | 0.968 | 0.528 | 6.0 s | 0.01585 |
+
+Sonnet costs 14× as much per answer for no better result in quick mode, so Haiku stays the default. The deep-mode comparison wasn't judged (D35).
+
 ## 2026-10-31 (later) — Step 4: citations, grounding, sufficient context
 
 ### Decisions

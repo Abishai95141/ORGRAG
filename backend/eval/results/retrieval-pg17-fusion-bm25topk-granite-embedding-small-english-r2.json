@@ -1,0 +1,2779 @@
+{
+ "kind": "retrieval",
+ "variant": "pg17-fusion-bm25topk-granite-embedding-small-english-r2",
+ "corpus": "55fb424818e93128",
+ "index": {
+  "embedding": "fastembed:ibm-granite/granite-embedding-small-english-r2"
+ },
+ "settings": {
+  "rerank": false,
+  "recency_bias": "off"
+ },
+ "summary": {
+  "ALL": {
+   "n": 135,
+   "recall@5": 0.861,
+   "recall@10": 0.914,
+   "mrr": 0.822,
+   "ms": 24
+  },
+  "alias": {
+   "n": 12,
+   "recall@5": 0.694,
+   "recall@10": 0.847,
+   "mrr": 0.69,
+   "ms": 19
+  },
+  "cross_org": {
+   "n": 8,
+   "recall@5": 0.688,
+   "recall@10": 0.75,
+   "mrr": 0.535,
+   "ms": 22
+  },
+  "cross_org_vocab": {
+   "n": 15,
+   "recall@5": 0.689,
+   "recall@10": 0.772,
+   "mrr": 0.786,
+   "ms": 23
+  },
+  "list_aggregate": {
+   "n": 18,
+   "recall@5": 0.935,
+   "recall@10": 0.986,
+   "mrr": 0.907,
+   "ms": 23
+  },
+  "multi_hop": {
+   "n": 25,
+   "recall@5": 0.769,
+   "recall@10": 0.856,
+   "mrr": 0.887,
+   "ms": 20
+  },
+  "single_fact": {
+   "n": 30,
+   "recall@5": 0.967,
+   "recall@10": 0.983,
+   "mrr": 0.956,
+   "ms": 34
+  },
+  "superseded": {
+   "n": 12,
+   "recall@5": 1.0,
+   "recall@10": 1.0,
+   "mrr": 0.667,
+   "ms": 20
+  },
+  "table": {
+   "n": 15,
+   "recall@5": 1.0,
+   "recall@10": 1.0,
+   "mrr": 0.767,
+   "ms": 21
+  }
+ },
+ "rows": [
+  {
+   "id": "q01",
+   "category": "single_fact",
+   "ranked": [
+    "Northwind Engineering Handbook",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Northwind Pipelines API rate limits by plan",
+    "Northwind support SLA tiers (2025 edition)",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Production change approval policy",
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "On-call compensation update (October 2026)",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Welcome to Northwind Labs"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 515
+  },
+  {
+   "id": "q02",
+   "category": "single_fact",
+   "ranked": [
+    "Expense and travel policy",
+    "Northwind offices and workplace guide",
+    "Information security policy",
+    "Northwind on-call rota: November\u2013December 2026",
+    "Pricing and discount policy",
+    "Northwind Pipelines API rate limits by plan",
+    "Welcome to Northwind Labs",
+    "On-call compensation update (October 2026)",
+    "On-call runbook",
+    "Hydrant launch notes: ingest gateway autoscaling"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 14
+  },
+  {
+   "id": "q03",
+   "category": "single_fact",
+   "ranked": [
+    "Billing and insurance FAQ (for staff)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Halcyon medical records and forms fee schedule",
+    "Business associate record: Brightwater Billing Services",
+    "Patient intake procedure",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Sentinel and adverse event reporting policy",
+    "Business associate record: Polyglen Interpreting"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 17
+  },
+  {
+   "id": "q04",
+   "category": "single_fact",
+   "ranked": [
+    "Clinical escalation protocol",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "PTO and clinic scheduling policy",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Business associate record: Quillon Ambient",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Clinical and business systems inventory",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 17
+  },
+  {
+   "id": "q05",
+   "category": "single_fact",
+   "ranked": [
+    "Pricing and discount policy",
+    "Sales desk memo: discount authority from October 1, 2026",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Northwind support SLA tiers (2025 edition)",
+    "Expense and travel policy",
+    "Q3 2026 board update (confidential)",
+    "Product spec: Streaming joins",
+    "On-call compensation update (October 2026)",
+    "Welcome to Northwind Labs"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 15
+  },
+  {
+   "id": "q06",
+   "category": "single_fact",
+   "ranked": [
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Telehealth platform: requirements v3",
+    "Clinical escalation protocol",
+    "Business associate record: Larkspur Telehealth",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Halcyon clinic directory and hours (October 2026)",
+    "PTO and clinic scheduling policy",
+    "Billing and insurance FAQ (for staff)",
+    "Halcyon medical records and forms fee schedule"
+   ],
+   "recall5": 0.5,
+   "recall10": 1.0,
+   "mrr": 0.3333333333333333,
+   "latency_ms": 17
+  },
+  {
+   "id": "q07",
+   "category": "single_fact",
+   "ranked": [
+    "Emergency access to customer workspaces",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Production change approval policy",
+    "Service catalog",
+    "Welcome to Northwind Labs",
+    "Information security policy",
+    "Customer data retention standard (v1)",
+    "On-call runbook",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Northwind Pipelines API rate limits by plan"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 18
+  },
+  {
+   "id": "q08",
+   "category": "single_fact",
+   "ranked": [
+    "Clinical systems change control",
+    "Sentinel and adverse event reporting policy",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Juniper steering committee notes \u2014 October 2026",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Halcyon digital projects register (Q4 2026)",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Approved AI tools for Halcyon staff"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 14
+  },
+  {
+   "id": "q09",
+   "category": "single_fact",
+   "ranked": [
+    "Approved AI tools for Halcyon staff",
+    "Break-the-glass access to the EHR",
+    "Halcyon medical records and forms fee schedule",
+    "Patient intake procedure",
+    "Staff onboarding at Halcyon Health",
+    "Business associate record: Quillon Ambient",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Clinical and business systems inventory",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 1.0,
+   "latency_ms": 17
+  },
+  {
+   "id": "q10",
+   "category": "single_fact",
+   "ranked": [
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Northwind Pipelines API rate limits by plan",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Cycle 5 pitch review notes",
+    "Emergency access to customer workspaces",
+    "On-call runbook",
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Vendor register: Saltmarsh Analytics",
+    "Product spec: Streaming joins",
+    "Customer data retention standard (v2)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q11",
+   "category": "single_fact",
+   "ranked": [
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Northwind incident log: July\u2013October 2026",
+    "On-call compensation update (October 2026)",
+    "Pricing and discount policy",
+    "Leadership offsite notes (October 2026)",
+    "Emergency access to customer workspaces",
+    "Production change approval policy",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.3333333333333333,
+   "latency_ms": 19
+  },
+  {
+   "id": "q12",
+   "category": "single_fact",
+   "ranked": [
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Clinical escalation protocol",
+    "Sentinel and adverse event reporting policy",
+    "Juniper steering committee notes \u2014 October 2026",
+    "HIPAA privacy and PHI handling policy",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Break-the-glass access to the EHR",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Clinical systems change control",
+    "Halcyon on-call medical director rota \u2014 November 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q13",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "On-call runbook",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Northwind incident log: July\u2013October 2026",
+    "Incident roles FAQ",
+    "Halcyon medical records and forms fee schedule",
+    "Staff onboarding at Halcyon Health",
+    "Sentinel and adverse event reporting policy",
+    "Break-the-glass access to the EHR",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Halcyon vendor support and escalation matrix"
+   ],
+   "recall5": 0.5,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 26
+  },
+  {
+   "id": "q14",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Staff onboarding at Halcyon Health",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Clinical escalation protocol",
+    "Patient intake procedure",
+    "Incident roles FAQ",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Clinical systems change control",
+    "Halcyon clinic staffing standard (2025)",
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "Halcyon on-call medical director rota \u2014 November 2026"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 0.2,
+   "latency_ms": 20
+  },
+  {
+   "id": "q15",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Northwind offices and workplace guide",
+    "Annual leave policy (effective October 1, 2026)",
+    "Welcome to Northwind Labs",
+    "Northwind Engineering Handbook",
+    "Emergency access to customer workspaces",
+    "Information security policy",
+    "Northwind production cell inventory",
+    "PTO and clinic scheduling policy",
+    "On-call runbook",
+    "Leadership offsite notes (October 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 19
+  },
+  {
+   "id": "q16",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Approved AI tools for Halcyon staff",
+    "Halcyon vendor support and escalation matrix",
+    "Clinical and business systems inventory",
+    "Halcyon digital projects register (Q4 2026)",
+    "Vendor register: Hollowpine Helpdesk",
+    "Expense and travel policy",
+    "Vendor register: Parcelwise",
+    "Halcyon medical records and forms fee schedule",
+    "Information security policy",
+    "Vendor register: Cobaltline"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.75,
+   "mrr": 1.0,
+   "latency_ms": 25
+  },
+  {
+   "id": "q17",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Break-the-glass access to the EHR",
+    "Emergency access to customer workspaces",
+    "Information security policy",
+    "HIPAA privacy and PHI handling policy",
+    "Northwind offices and workplace guide",
+    "Northwind Engineering Handbook",
+    "Welcome to Northwind Labs",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Northwind on-call rota: November\u2013December 2026",
+    "Halcyon medical records and forms fee schedule"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 20
+  },
+  {
+   "id": "q18",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Customer data retention standard (v1)",
+    "Information security policy",
+    "Emergency access to customer workspaces",
+    "Northwind production cell inventory",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Vendor register: Parcelwise",
+    "Northwind project codename register",
+    "Halcyon vendor support and escalation matrix",
+    "Northwind Engineering Handbook",
+    "Clinical escalation protocol"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 0.5,
+   "latency_ms": 23
+  },
+  {
+   "id": "q19",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Welcome to Northwind Labs",
+    "Northwind Engineering Handbook",
+    "Northwind Pipelines API rate limits by plan",
+    "Pricing and discount policy",
+    "Northwind offices and workplace guide",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Emergency access to customer workspaces",
+    "Northwind deploy pipeline changes (October 2026)",
+    "RFC-031: Persisting Tributary snapshots",
+    "Halcyon patient no-show and late arrival policy (2025)"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 1.0,
+   "latency_ms": 24
+  },
+  {
+   "id": "q20",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Information security policy",
+    "HIPAA privacy and PHI handling policy",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Emergency access to customer workspaces",
+    "Northwind offices and workplace guide",
+    "Halcyon language access report \u2014 Q3 2026",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Customer data retention standard (v1)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 24
+  },
+  {
+   "id": "q21",
+   "category": "multi_hop",
+   "ranked": [
+    "Customer data retention standard (v2)",
+    "Customer data retention standard (v1)",
+    "Production change approval policy",
+    "RFC-031: Persisting Tributary snapshots",
+    "Sales desk memo: discount authority from October 1, 2026",
+    "Pricing and discount policy",
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Cobaltline",
+    "Information security policy",
+    "Leadership offsite notes (October 2026)"
+   ],
+   "recall5": 0.4,
+   "recall10": 0.4,
+   "mrr": 1.0,
+   "latency_ms": 23
+  },
+  {
+   "id": "q22",
+   "category": "multi_hop",
+   "ranked": [
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Service catalog",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Engineering team directory and change approvers",
+    "Production change approval policy",
+    "Leadership offsite notes (October 2026)",
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind deploy pipeline changes (October 2026)",
+    "On-call compensation update (October 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 20
+  },
+  {
+   "id": "q23",
+   "category": "multi_hop",
+   "ranked": [
+    "Vendor register: Parcelwise",
+    "Customer data retention standard (v1)",
+    "Emergency access to customer workspaces",
+    "Engineering team directory and change approvers",
+    "Vendor register: Saltmarsh Analytics",
+    "Production change approval policy",
+    "Vendor register: Hollowpine Helpdesk",
+    "Customer data retention standard (v2)",
+    "Service catalog",
+    "Information security policy"
+   ],
+   "recall5": 0.6666666666666666,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q24",
+   "category": "multi_hop",
+   "ranked": [
+    "Vendor register: Hollowpine Helpdesk",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Customer data retention standard (v1)",
+    "Emergency access to customer workspaces",
+    "Production change approval policy",
+    "Vendor register: Saltmarsh Analytics",
+    "Leadership offsite notes (October 2026)",
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind support SLA tiers (2025 edition)",
+    "Information security policy"
+   ],
+   "recall5": 0.3333333333333333,
+   "recall10": 0.6666666666666666,
+   "mrr": 1.0,
+   "latency_ms": 26
+  },
+  {
+   "id": "q25",
+   "category": "multi_hop",
+   "ranked": [
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Clinical systems change control",
+    "PTO and clinic scheduling policy",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Annual leave policy (effective October 1, 2026)",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Halcyon digital projects register (Q4 2026)",
+    "Staff onboarding at Halcyon Health"
+   ],
+   "recall5": 0.6666666666666666,
+   "recall10": 0.6666666666666666,
+   "mrr": 1.0,
+   "latency_ms": 23
+  },
+  {
+   "id": "q26",
+   "category": "multi_hop",
+   "ranked": [
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Juniper steering committee notes \u2014 October 2026",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Sentinel and adverse event reporting policy",
+    "Clinical systems change control",
+    "Clinical and business systems inventory",
+    "Halcyon digital projects register (Q4 2026)",
+    "Business associate record: Quillon Ambient",
+    "Clinical escalation protocol",
+    "HIPAA privacy and PHI handling policy"
+   ],
+   "recall5": 0.6666666666666666,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 21
+  },
+  {
+   "id": "q27",
+   "category": "multi_hop",
+   "ranked": [
+    "Business associate record: Larkspur Telehealth",
+    "Telehealth platform: requirements v3",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Tallgrass Survey Co.",
+    "Business associate record: Coriander Media",
+    "Business associate record: Quillon Ambient",
+    "Approved AI tools for Halcyon staff",
+    "Business associate record: Brightwater Billing Services",
+    "Halcyon vendor support and escalation matrix"
+   ],
+   "recall5": 0.3333333333333333,
+   "recall10": 0.6666666666666666,
+   "mrr": 0.3333333333333333,
+   "latency_ms": 17
+  },
+  {
+   "id": "q28",
+   "category": "list_aggregate",
+   "ranked": [
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Saltmarsh Analytics",
+    "Vendor register: Cobaltline",
+    "Vendor register: Parcelwise",
+    "Expense and travel policy",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Leadership offsite notes (October 2026)",
+    "Pricing and discount policy",
+    "Sales desk memo: discount authority from October 1, 2026",
+    "Hydrant launch notes: ingest gateway autoscaling"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 13
+  },
+  {
+   "id": "q29",
+   "category": "list_aggregate",
+   "ranked": [
+    "Vendor register: Cobaltline",
+    "Leadership offsite notes (October 2026)",
+    "Vendor register: Parcelwise",
+    "Northwind on-call rota: November\u2013December 2026",
+    "Pricing and discount policy",
+    "Customer data retention standard (v2)",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Vendor register: Hollowpine Helpdesk",
+    "Expense and travel policy",
+    "On-call compensation update (October 2026)"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.75,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q30",
+   "category": "list_aggregate",
+   "ranked": [
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Brightwater Billing Services",
+    "Business associate record: Tallgrass Survey Co.",
+    "Business associate record: Quillon Ambient",
+    "Business associate record: Coriander Media",
+    "Business associate record: Polyglen Interpreting",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Approved AI tools for Halcyon staff",
+    "Clinical and business systems inventory",
+    "Billing and insurance FAQ (for staff)"
+   ],
+   "recall5": 0.8333333333333334,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 14
+  },
+  {
+   "id": "q31",
+   "category": "list_aggregate",
+   "ranked": [
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Brightwater Billing Services",
+    "Business associate record: Tallgrass Survey Co.",
+    "Business associate record: Quillon Ambient",
+    "Annual leave policy (effective October 1, 2026)",
+    "Business associate record: Coriander Media",
+    "Juniper steering committee notes \u2014 October 2026",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Billing and insurance FAQ (for staff)"
+   ],
+   "recall5": 0.8333333333333334,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q32",
+   "category": "list_aggregate",
+   "ranked": [
+    "Cycle 5 pitch review notes",
+    "Northwind Engineering Handbook",
+    "Product spec: Streaming joins",
+    "Leadership offsite notes (October 2026)",
+    "Pricing and discount policy",
+    "Welcome to Northwind Labs",
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind project codename register",
+    "Q3 2026 board update (confidential)",
+    "Incident roles FAQ"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 15
+  },
+  {
+   "id": "q33",
+   "category": "list_aggregate",
+   "ranked": [
+    "Northwind incident log: July\u2013October 2026",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Cycle 5 pitch review notes",
+    "Leadership offsite notes (October 2026)",
+    "Q3 2026 board update (confidential)",
+    "Northwind production cell inventory",
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Information security policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.3333333333333333,
+   "latency_ms": 16
+  },
+  {
+   "id": "q34",
+   "category": "superseded",
+   "ranked": [
+    "Customer data retention standard (v1)",
+    "Customer data retention standard (v2)",
+    "Production change approval policy",
+    "Product spec: Streaming joins",
+    "Pricing and discount policy",
+    "Service catalog",
+    "RFC-031: Persisting Tributary snapshots",
+    "Emergency access to customer workspaces",
+    "Vendor register: Saltmarsh Analytics",
+    "Information security policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 16
+  },
+  {
+   "id": "q35",
+   "category": "superseded",
+   "ranked": [
+    "Customer data retention standard (v1)",
+    "Customer data retention standard (v2)",
+    "Vendor register: Hollowpine Helpdesk",
+    "Production change approval policy",
+    "Pricing and discount policy",
+    "Emergency access to customer workspaces",
+    "Vendor register: Parcelwise",
+    "Expense and travel policy",
+    "Vendor register: Cobaltline",
+    "On-call runbook"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 18
+  },
+  {
+   "id": "q36",
+   "category": "superseded",
+   "ranked": [
+    "On-call runbook",
+    "On-call compensation update (October 2026)",
+    "Northwind on-call rota: November\u2013December 2026",
+    "Leadership offsite notes (October 2026)",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Welcome to Northwind Labs",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Expense and travel policy",
+    "Pricing and discount policy",
+    "Hydrant launch notes: ingest gateway autoscaling"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 19
+  },
+  {
+   "id": "q37",
+   "category": "superseded",
+   "ranked": [
+    "PTO and clinic scheduling policy",
+    "Annual leave policy (effective October 1, 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Business associate record: Tallgrass Survey Co.",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Staff onboarding at Halcyon Health"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 17
+  },
+  {
+   "id": "q38",
+   "category": "alias",
+   "ranked": [
+    "Northwind Pipelines API rate limits by plan",
+    "Product spec: Streaming joins",
+    "Production change approval policy",
+    "Customer data retention standard (v2)",
+    "RFC-031: Persisting Tributary snapshots",
+    "Service catalog",
+    "Customer data retention standard (v1)",
+    "Northwind support SLA tiers (2025 edition)",
+    "Emergency access to customer workspaces",
+    "Vendor register: Saltmarsh Analytics"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 0.5,
+   "latency_ms": 18
+  },
+  {
+   "id": "q39",
+   "category": "alias",
+   "ranked": [
+    "Business associate record: Larkspur Telehealth",
+    "Telehealth platform: requirements v3",
+    "Juniper steering committee notes \u2014 October 2026",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Clinical escalation protocol",
+    "Billing and insurance FAQ (for staff)",
+    "Clinical and business systems inventory",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Break-the-glass access to the EHR"
+   ],
+   "recall5": 0.5,
+   "recall10": 1.0,
+   "mrr": 0.3333333333333333,
+   "latency_ms": 17
+  },
+  {
+   "id": "q40",
+   "category": "alias",
+   "ranked": [
+    "RFC-031: Persisting Tributary snapshots",
+    "Information security policy",
+    "Cycle 5 pitch review notes",
+    "Leadership offsite notes (October 2026)",
+    "Customer data retention standard (v2)",
+    "Customer data retention standard (v1)",
+    "Product spec: Streaming joins",
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind Pipelines API rate limits by plan",
+    "Pricing and discount policy"
+   ],
+   "recall5": 0.6666666666666666,
+   "recall10": 0.6666666666666666,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q41",
+   "category": "alias",
+   "ranked": [
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Cycle 5 pitch review notes",
+    "Product spec: Streaming joins",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Pricing and discount policy",
+    "Vendor register: Saltmarsh Analytics",
+    "RFC-031: Persisting Tributary snapshots",
+    "Vendor register: Parcelwise",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Northwind project codename register"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 0.5,
+   "latency_ms": 22
+  },
+  {
+   "id": "q046",
+   "category": "single_fact",
+   "ranked": [
+    "Information security policy",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Welcome to Northwind Labs",
+    "Emergency access to customer workspaces",
+    "Northwind offices and workplace guide",
+    "On-call runbook",
+    "Leadership offsite notes (October 2026)",
+    "Northwind incident log: July\u2013October 2026",
+    "On-call compensation update (October 2026)",
+    "Customer data retention standard (v1)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 22
+  },
+  {
+   "id": "q047",
+   "category": "single_fact",
+   "ranked": [
+    "Expense and travel policy",
+    "Pricing and discount policy",
+    "Welcome to Northwind Labs",
+    "Emergency access to customer workspaces",
+    "Sales desk memo: discount authority from October 1, 2026",
+    "Northwind offices and workplace guide",
+    "Customer data retention standard (v1)",
+    "Vendor register: Saltmarsh Analytics",
+    "Q3 2026 board update (confidential)",
+    "Customer data retention standard (v2)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 25
+  },
+  {
+   "id": "q048",
+   "category": "single_fact",
+   "ranked": [
+    "Emergency access to customer workspaces",
+    "Information security policy",
+    "Customer data retention standard (v2)",
+    "Customer data retention standard (v1)",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Northwind support SLA tiers (2025 edition)",
+    "On-call runbook",
+    "Welcome to Northwind Labs"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 22
+  },
+  {
+   "id": "q049",
+   "category": "single_fact",
+   "ranked": [
+    "Welcome to Northwind Labs",
+    "Information security policy",
+    "Northwind offices and workplace guide",
+    "Leadership offsite notes (October 2026)",
+    "Q3 2026 board update (confidential)",
+    "On-call runbook",
+    "On-call compensation update (October 2026)",
+    "Emergency access to customer workspaces",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Identity & Billing weekly status: week of October 26, 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 17
+  },
+  {
+   "id": "q050",
+   "category": "single_fact",
+   "ranked": [
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Cycle 5 pitch review notes",
+    "Northwind Pipelines API rate limits by plan",
+    "Northwind deploy pipeline changes (October 2026)",
+    "On-call runbook",
+    "Northwind Engineering Handbook",
+    "RFC-031: Persisting Tributary snapshots",
+    "Northwind production cell inventory"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 18
+  },
+  {
+   "id": "q051",
+   "category": "single_fact",
+   "ranked": [
+    "Northwind offices and workplace guide",
+    "Northwind on-call rota: November\u2013December 2026",
+    "Leadership offsite notes (October 2026)",
+    "Emergency access to customer workspaces",
+    "Customer data retention standard (v2)",
+    "Customer data retention standard (v1)",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Welcome to Northwind Labs",
+    "Northwind production cell inventory",
+    "Northwind support SLA tiers (effective August 1, 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 14
+  },
+  {
+   "id": "q052",
+   "category": "single_fact",
+   "ranked": [
+    "Northwind Pipelines API rate limits by plan",
+    "Customer data retention standard (v1)",
+    "Vendor register: Parcelwise",
+    "Emergency access to customer workspaces",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "On-call runbook",
+    "Service catalog",
+    "Northwind incident log: July\u2013October 2026",
+    "Customer data retention standard (v2)",
+    "Vendor register: Saltmarsh Analytics"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q053",
+   "category": "single_fact",
+   "ranked": [
+    "Northwind project codename register",
+    "Engineering team directory and change approvers",
+    "Welcome to Northwind Labs",
+    "Northwind offices and workplace guide",
+    "Northwind Engineering Handbook",
+    "Incident roles FAQ",
+    "Production change approval policy",
+    "On-call compensation update (October 2026)",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Leadership offsite notes (October 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q054",
+   "category": "single_fact",
+   "ranked": [
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Service catalog",
+    "Leadership offsite notes (October 2026)",
+    "Cycle 5 pitch review notes",
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Customer data retention standard (v2)",
+    "Sales desk memo: discount authority from October 1, 2026",
+    "On-call compensation update (October 2026)",
+    "Production change approval policy",
+    "Vendor register: Hollowpine Helpdesk"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q055",
+   "category": "multi_hop",
+   "ranked": [
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Production change approval policy",
+    "Service catalog",
+    "Engineering team directory and change approvers",
+    "Cycle 5 pitch review notes",
+    "Sales desk memo: discount authority from October 1, 2026",
+    "RFC-031: Persisting Tributary snapshots",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Slack export: #inc-2340-ledger-double-invoices"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 17
+  },
+  {
+   "id": "q056",
+   "category": "multi_hop",
+   "ranked": [
+    "On-call runbook",
+    "On-call compensation update (October 2026)",
+    "Northwind on-call rota: November\u2013December 2026",
+    "Leadership offsite notes (October 2026)",
+    "Welcome to Northwind Labs",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Northwind support SLA tiers (2025 edition)",
+    "Engineering team directory and change approvers",
+    "Emergency access to customer workspaces",
+    "Hydrant launch notes: ingest gateway autoscaling"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 19
+  },
+  {
+   "id": "q057",
+   "category": "multi_hop",
+   "ranked": [
+    "Engineering team directory and change approvers",
+    "Production change approval policy",
+    "Service catalog",
+    "Northwind incident log: July\u2013October 2026",
+    "Northwind Engineering Handbook",
+    "Information security policy",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Customer data retention standard (v1)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 18
+  },
+  {
+   "id": "q058",
+   "category": "multi_hop",
+   "ranked": [
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind production cell inventory",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind incident log: July\u2013October 2026",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Leadership offsite notes (October 2026)",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "On-call runbook",
+    "Cycle 5 pitch review notes",
+    "Northwind Pipelines API rate limits by plan"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 1.0,
+   "latency_ms": 20
+  },
+  {
+   "id": "q059",
+   "category": "multi_hop",
+   "ranked": [
+    "Incident roles FAQ",
+    "Engineering team directory and change approvers",
+    "Northwind on-call rota: November\u2013December 2026",
+    "Northwind incident log: July\u2013October 2026",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "On-call runbook",
+    "Emergency access to customer workspaces",
+    "On-call compensation update (October 2026)",
+    "Production change approval policy",
+    "Northwind support SLA tiers (effective August 1, 2026)"
+   ],
+   "recall5": 0.6666666666666666,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 19
+  },
+  {
+   "id": "q060",
+   "category": "multi_hop",
+   "ranked": [
+    "Northwind Pipelines API rate limits by plan",
+    "Pricing and discount policy",
+    "Customer data retention standard (v1)",
+    "Vendor register: Saltmarsh Analytics",
+    "Customer data retention standard (v2)",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Service catalog",
+    "Sales desk memo: discount authority from October 1, 2026",
+    "Emergency access to customer workspaces",
+    "Northwind support SLA tiers (effective August 1, 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 23
+  },
+  {
+   "id": "q061",
+   "category": "multi_hop",
+   "ranked": [
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind production cell inventory",
+    "On-call runbook",
+    "Northwind on-call rota: November\u2013December 2026",
+    "On-call compensation update (October 2026)",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Leadership offsite notes (October 2026)",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind Engineering Handbook",
+    "Welcome to Northwind Labs"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 20
+  },
+  {
+   "id": "q062",
+   "category": "multi_hop",
+   "ranked": [
+    "Northwind production cell inventory",
+    "Northwind incident log: July\u2013October 2026",
+    "On-call runbook",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Cycle 5 pitch review notes",
+    "RFC-031: Persisting Tributary snapshots",
+    "Service catalog",
+    "Northwind deploy pipeline changes (October 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 20
+  },
+  {
+   "id": "q063",
+   "category": "multi_hop",
+   "ranked": [
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind Pipelines API rate limits by plan",
+    "Pricing and discount policy",
+    "On-call runbook",
+    "Welcome to Northwind Labs",
+    "Northwind Engineering Handbook",
+    "Northwind support SLA tiers (2025 edition)",
+    "Cycle 5 pitch review notes",
+    "Product spec: Streaming joins",
+    "Emergency access to customer workspaces"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 0.3333333333333333,
+   "latency_ms": 21
+  },
+  {
+   "id": "q064",
+   "category": "list_aggregate",
+   "ranked": [
+    "Northwind incident log: July\u2013October 2026",
+    "On-call runbook",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Incident roles FAQ",
+    "Service catalog",
+    "Information security policy",
+    "Engineering team directory and change approvers",
+    "Northwind support SLA tiers (2025 edition)",
+    "On-call compensation update (October 2026)",
+    "Northwind support SLA tiers (effective August 1, 2026)"
+   ],
+   "recall5": 0.6666666666666666,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 22
+  },
+  {
+   "id": "q065",
+   "category": "list_aggregate",
+   "ranked": [
+    "Vendor register: Parcelwise",
+    "Vendor register: Cobaltline",
+    "Vendor register: Saltmarsh Analytics",
+    "Vendor register: Hollowpine Helpdesk",
+    "Expense and travel policy",
+    "Pricing and discount policy",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Welcome to Northwind Labs",
+    "Leadership offsite notes (October 2026)",
+    "Sales desk memo: discount authority from October 1, 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 20
+  },
+  {
+   "id": "q066",
+   "category": "list_aggregate",
+   "ranked": [
+    "On-call compensation update (October 2026)",
+    "Northwind on-call rota: November\u2013December 2026",
+    "On-call runbook",
+    "Leadership offsite notes (October 2026)",
+    "Northwind support SLA tiers (2025 edition)",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Q3 2026 board update (confidential)",
+    "Engineering team directory and change approvers",
+    "Northwind Engineering Handbook",
+    "Hydrant launch notes: ingest gateway autoscaling"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 20
+  },
+  {
+   "id": "q067",
+   "category": "list_aggregate",
+   "ranked": [
+    "Northwind Pipelines API rate limits by plan",
+    "Emergency access to customer workspaces",
+    "Service catalog",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Northwind offices and workplace guide",
+    "On-call runbook",
+    "Information security policy",
+    "Customer data retention standard (v1)",
+    "Northwind production cell inventory",
+    "Customer data retention standard (v2)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 22
+  },
+  {
+   "id": "q068",
+   "category": "list_aggregate",
+   "ranked": [
+    "Service catalog",
+    "Production change approval policy",
+    "Information security policy",
+    "Emergency access to customer workspaces",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Vendor register: Cobaltline",
+    "Northwind project codename register",
+    "Vendor register: Saltmarsh Analytics",
+    "Northwind support SLA tiers (2025 edition)",
+    "Northwind production cell inventory"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 22
+  },
+  {
+   "id": "q069",
+   "category": "list_aggregate",
+   "ranked": [
+    "Northwind incident log: July\u2013October 2026",
+    "On-call runbook",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind on-call rota: November\u2013December 2026",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Northwind support SLA tiers (2025 edition)",
+    "Incident roles FAQ",
+    "Northwind deploy pipeline changes (October 2026)",
+    "On-call compensation update (October 2026)",
+    "Engineering team directory and change approvers"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 20
+  },
+  {
+   "id": "q070",
+   "category": "superseded",
+   "ranked": [
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Northwind support SLA tiers (2025 edition)",
+    "On-call runbook",
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Parcelwise",
+    "Emergency access to customer workspaces",
+    "Northwind Pipelines API rate limits by plan",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Customer data retention standard (v1)",
+    "Pricing and discount policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q071",
+   "category": "superseded",
+   "ranked": [
+    "Pricing and discount policy",
+    "Sales desk memo: discount authority from October 1, 2026",
+    "Leadership offsite notes (October 2026)",
+    "RFC-031: Persisting Tributary snapshots",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Q3 2026 board update (confidential)",
+    "Expense and travel policy",
+    "Production change approval policy",
+    "Welcome to Northwind Labs",
+    "Engineering team directory and change approvers"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 20
+  },
+  {
+   "id": "q072",
+   "category": "superseded",
+   "ranked": [
+    "Northwind deploy pipeline changes (October 2026)",
+    "Northwind Engineering Handbook",
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind production cell inventory",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Emergency access to customer workspaces",
+    "RFC-031: Persisting Tributary snapshots",
+    "Production change approval policy",
+    "On-call runbook",
+    "Sales desk memo: discount authority from October 1, 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 26
+  },
+  {
+   "id": "q073",
+   "category": "superseded",
+   "ranked": [
+    "On-call runbook",
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind incident log: July\u2013October 2026",
+    "Cycle 5 pitch review notes",
+    "Northwind Pipelines API rate limits by plan",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "On-call compensation update (October 2026)",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Northwind production cell inventory"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 30
+  },
+  {
+   "id": "q074",
+   "category": "alias",
+   "ranked": [
+    "Northwind production cell inventory",
+    "Northwind project codename register",
+    "On-call runbook",
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Northwind support SLA tiers (2025 edition)",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Northwind Pipelines API rate limits by plan",
+    "Information security policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q075",
+   "category": "alias",
+   "ranked": [
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Leadership offsite notes (October 2026)",
+    "Service catalog",
+    "Cycle 5 pitch review notes",
+    "Northwind project codename register",
+    "Sales desk memo: discount authority from October 1, 2026",
+    "Customer data retention standard (v2)",
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Q3 2026 board update (confidential)",
+    "Northwind support SLA tiers (effective August 1, 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 21
+  },
+  {
+   "id": "q076",
+   "category": "alias",
+   "ranked": [
+    "Service catalog",
+    "Information security policy",
+    "Northwind project codename register",
+    "Customer data retention standard (v1)",
+    "Northwind production cell inventory",
+    "Vendor register: Cobaltline",
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Saltmarsh Analytics",
+    "Pricing and discount policy",
+    "Engineering team directory and change approvers"
+   ],
+   "recall5": 0.6666666666666666,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q077",
+   "category": "alias",
+   "ranked": [
+    "Customer data retention standard (v1)",
+    "Customer data retention standard (v2)",
+    "RFC-031: Persisting Tributary snapshots",
+    "Vendor register: Hollowpine Helpdesk",
+    "Production change approval policy",
+    "On-call runbook",
+    "Emergency access to customer workspaces",
+    "Product spec: Streaming joins",
+    "Northwind project codename register",
+    "Pricing and discount policy"
+   ],
+   "recall5": 0.5,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 22
+  },
+  {
+   "id": "q078",
+   "category": "table",
+   "ranked": [
+    "Northwind support SLA tiers (2025 edition)",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Vendor register: Hollowpine Helpdesk",
+    "On-call runbook",
+    "Emergency access to customer workspaces",
+    "Northwind Pipelines API rate limits by plan",
+    "Incident roles FAQ",
+    "On-call compensation update (October 2026)",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Cycle 5 pitch review notes"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 25
+  },
+  {
+   "id": "q079",
+   "category": "table",
+   "ranked": [
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind production cell inventory",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "On-call runbook",
+    "Cycle 5 pitch review notes",
+    "Northwind incident log: July\u2013October 2026",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Northwind Pipelines API rate limits by plan",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Vendor register: Cobaltline"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 26
+  },
+  {
+   "id": "q080",
+   "category": "table",
+   "ranked": [
+    "Northwind on-call rota: November\u2013December 2026",
+    "On-call compensation update (October 2026)",
+    "On-call runbook",
+    "Hydrant launch notes: ingest gateway autoscaling",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Leadership offsite notes (October 2026)",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind Engineering Handbook",
+    "Welcome to Northwind Labs"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 17
+  },
+  {
+   "id": "q081",
+   "category": "table",
+   "ranked": [
+    "Northwind Pipelines API rate limits by plan",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Emergency access to customer workspaces",
+    "On-call runbook",
+    "Product spec: Streaming joins",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Customer data retention standard (v2)",
+    "Northwind production cell inventory",
+    "Pricing and discount policy",
+    "Customer data retention standard (v1)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 18
+  },
+  {
+   "id": "q082",
+   "category": "table",
+   "ranked": [
+    "On-call runbook",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Incident roles FAQ",
+    "Northwind incident log: July\u2013October 2026",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Emergency access to customer workspaces",
+    "Information security policy",
+    "Engineering team directory and change approvers",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Slack export: #inc-2340-ledger-double-invoices"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.25,
+   "latency_ms": 19
+  },
+  {
+   "id": "q083",
+   "category": "table",
+   "ranked": [
+    "Sales desk memo: discount authority from October 1, 2026",
+    "Pricing and discount policy",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Q3 2026 board update (confidential)",
+    "Production change approval policy",
+    "RFC-031: Persisting Tributary snapshots",
+    "Northwind Pipelines API rate limits by plan",
+    "Northwind support SLA tiers (2025 edition)",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Customer data retention standard (v1)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 23
+  },
+  {
+   "id": "q084",
+   "category": "table",
+   "ranked": [
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Pricing and discount policy",
+    "Vendor register: Hollowpine Helpdesk",
+    "Northwind support SLA tiers (2025 edition)",
+    "Sales desk memo: discount authority from October 1, 2026",
+    "Northwind Pipelines API rate limits by plan",
+    "Q3 2026 board update (confidential)",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "On-call runbook",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 28
+  },
+  {
+   "id": "q085",
+   "category": "table",
+   "ranked": [
+    "Northwind Pipelines API rate limits by plan",
+    "RFC-031: Persisting Tributary snapshots",
+    "Product spec: Streaming joins",
+    "Customer data retention standard (v2)",
+    "Customer data retention standard (v1)",
+    "Production change approval policy",
+    "Service catalog",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "On-call runbook",
+    "Emergency access to customer workspaces"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q091",
+   "category": "single_fact",
+   "ranked": [
+    "Business associate record: Coriander Media",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Larkspur Telehealth",
+    "Telehealth platform: requirements v3",
+    "Clinical escalation protocol",
+    "HIPAA privacy and PHI handling policy",
+    "Halcyon medical records and forms fee schedule",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Clinical and business systems inventory"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q092",
+   "category": "single_fact",
+   "ranked": [
+    "Business associate record: Quillon Ambient",
+    "Approved AI tools for Halcyon staff",
+    "Billing and insurance FAQ (for staff)",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Staff onboarding at Halcyon Health",
+    "Clinical escalation protocol",
+    "Halcyon medical records and forms fee schedule",
+    "Business associate record: Coriander Media",
+    "Telehealth platform: requirements v3",
+    "CSCAB minutes \u2014 October 28, 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 17
+  },
+  {
+   "id": "q093",
+   "category": "single_fact",
+   "ranked": [
+    "HIPAA privacy and PHI handling policy",
+    "Clinical and business systems inventory",
+    "Approved AI tools for Halcyon staff",
+    "Staff onboarding at Halcyon Health",
+    "Break-the-glass access to the EHR",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon medical records and forms fee schedule",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Clinical systems change control",
+    "Business associate record: Quillon Ambient"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q094",
+   "category": "single_fact",
+   "ranked": [
+    "Patient intake procedure",
+    "Billing and insurance FAQ (for staff)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon clinic staffing standard (2025)",
+    "Break-the-glass access to the EHR",
+    "Sentinel and adverse event reporting policy",
+    "Clinical escalation protocol",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q095",
+   "category": "single_fact",
+   "ranked": [
+    "Staff onboarding at Halcyon Health",
+    "Billing and insurance FAQ (for staff)",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Halcyon medical records and forms fee schedule",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Clinical and business systems inventory",
+    "Business associate record: Brightwater Billing Services",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon clinic staffing standard (2025)",
+    "Halcyon vendor support and escalation matrix"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 18
+  },
+  {
+   "id": "q096",
+   "category": "single_fact",
+   "ranked": [
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Clinical escalation protocol",
+    "PTO and clinic scheduling policy",
+    "Business associate record: Quillon Ambient",
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "Patient intake procedure",
+    "Annual leave policy (effective October 1, 2026)",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon clinic staffing standard (2025)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 17
+  },
+  {
+   "id": "q097",
+   "category": "single_fact",
+   "ranked": [
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Sentinel and adverse event reporting policy",
+    "Clinical escalation protocol",
+    "Patient intake procedure",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon clinic staffing standard (2025)",
+    "Staff onboarding at Halcyon Health",
+    "Clinical systems change control",
+    "Business associate record: Brightwater Billing Services"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 17
+  },
+  {
+   "id": "q098",
+   "category": "single_fact",
+   "ranked": [
+    "Halcyon medical records and forms fee schedule",
+    "Break-the-glass access to the EHR",
+    "HIPAA privacy and PHI handling policy",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Billing and insurance FAQ (for staff)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Patient intake procedure",
+    "Approved AI tools for Halcyon staff"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q099",
+   "category": "single_fact",
+   "ranked": [
+    "Sentinel and adverse event reporting policy",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Clinical systems change control",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Clinical escalation protocol",
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Break-the-glass access to the EHR",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Halcyon patient no-show and late arrival policy (2025)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q100",
+   "category": "multi_hop",
+   "ranked": [
+    "Clinical escalation protocol",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "PTO and clinic scheduling policy",
+    "Annual leave policy (effective October 1, 2026)",
+    "Patient intake procedure",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Billing and insurance FAQ (for staff)",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 23
+  },
+  {
+   "id": "q101",
+   "category": "multi_hop",
+   "ranked": [
+    "Halcyon language access report \u2014 Q3 2026",
+    "Business associate record: Polyglen Interpreting",
+    "Patient intake procedure",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Halcyon medical records and forms fee schedule",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "PTO and clinic scheduling policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 24
+  },
+  {
+   "id": "q102",
+   "category": "multi_hop",
+   "ranked": [
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Halcyon clinic staffing standard (2025)",
+    "Billing and insurance FAQ (for staff)",
+    "PTO and clinic scheduling policy",
+    "Staff onboarding at Halcyon Health",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Business associate record: Polyglen Interpreting"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q103",
+   "category": "multi_hop",
+   "ranked": [
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon clinic staffing standard (2025)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Staff onboarding at Halcyon Health",
+    "Patient intake procedure",
+    "PTO and clinic scheduling policy",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Halcyon medical records and forms fee schedule",
+    "Annual leave policy (effective October 1, 2026)",
+    "Clinical systems change control"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q104",
+   "category": "multi_hop",
+   "ranked": [
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Clinical escalation protocol",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Approved AI tools for Halcyon staff",
+    "Halcyon medical records and forms fee schedule",
+    "Halcyon patient no-show and late arrival policy (2025)"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 0.5,
+   "latency_ms": 17
+  },
+  {
+   "id": "q105",
+   "category": "multi_hop",
+   "ranked": [
+    "Sentinel and adverse event reporting policy",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Clinical escalation protocol",
+    "Clinical systems change control",
+    "Annual leave policy (effective October 1, 2026)",
+    "PTO and clinic scheduling policy",
+    "Patient intake procedure",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Break-the-glass access to the EHR"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 20
+  },
+  {
+   "id": "q106",
+   "category": "multi_hop",
+   "ranked": [
+    "Halcyon vendor support and escalation matrix",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Clinical escalation protocol",
+    "Break-the-glass access to the EHR",
+    "Clinical systems change control",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Business associate record: Coriander Media",
+    "Approved AI tools for Halcyon staff",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Halcyon medical records and forms fee schedule"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 1.0,
+   "latency_ms": 21
+  },
+  {
+   "id": "q107",
+   "category": "multi_hop",
+   "ranked": [
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Break-the-glass access to the EHR",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Business associate record: Quillon Ambient",
+    "Halcyon vendor support and escalation matrix",
+    "PTO and clinic scheduling policy",
+    "Business associate record: Larkspur Telehealth"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q108",
+   "category": "multi_hop",
+   "ranked": [
+    "Juniper steering committee notes \u2014 October 2026",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Business associate record: Quillon Ambient",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Tallgrass Survey Co.",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Annual leave policy (effective October 1, 2026)",
+    "PTO and clinic scheduling policy"
+   ],
+   "recall5": 0.5,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 23
+  },
+  {
+   "id": "q109",
+   "category": "list_aggregate",
+   "ranked": [
+    "Halcyon language access report \u2014 Q3 2026",
+    "Business associate record: Polyglen Interpreting",
+    "Halcyon vendor support and escalation matrix",
+    "Patient intake procedure",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Business associate record: Coriander Media",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Business associate record: Larkspur Telehealth",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 21
+  },
+  {
+   "id": "q110",
+   "category": "list_aggregate",
+   "ranked": [
+    "PTO and clinic scheduling policy",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Halcyon clinic staffing standard (2025)",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Patient intake procedure",
+    "Business associate record: Quillon Ambient",
+    "Juniper steering committee notes \u2014 October 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 22
+  },
+  {
+   "id": "q111",
+   "category": "list_aggregate",
+   "ranked": [
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Break-the-glass access to the EHR",
+    "Clinical escalation protocol",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Approved AI tools for Halcyon staff",
+    "Clinical and business systems inventory",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Halcyon digital projects register (Q4 2026)",
+    "Juniper steering committee notes \u2014 October 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 35
+  },
+  {
+   "id": "q112",
+   "category": "list_aggregate",
+   "ranked": [
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Clinical and business systems inventory",
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Business associate record: Tallgrass Survey Co.",
+    "Halcyon clinic staffing standard (2025)",
+    "Annual leave policy (effective October 1, 2026)",
+    "PTO and clinic scheduling policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 46
+  },
+  {
+   "id": "q113",
+   "category": "list_aggregate",
+   "ranked": [
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon clinic staffing standard (2025)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "PTO and clinic scheduling policy",
+    "Clinical and business systems inventory",
+    "Business associate record: Quillon Ambient",
+    "Patient intake procedure",
+    "Annual leave policy (effective October 1, 2026)",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 56
+  },
+  {
+   "id": "q114",
+   "category": "list_aggregate",
+   "ranked": [
+    "Halcyon vendor support and escalation matrix",
+    "PTO and clinic scheduling policy",
+    "Telehealth platform: requirements v3",
+    "Business associate record: Coriander Media",
+    "Approved AI tools for Halcyon staff",
+    "Clinical and business systems inventory",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Break-the-glass access to the EHR",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 21
+  },
+  {
+   "id": "q115",
+   "category": "superseded",
+   "ranked": [
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Billing and insurance FAQ (for staff)",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Patient intake procedure",
+    "Halcyon clinic staffing standard (2025)",
+    "Halcyon medical records and forms fee schedule",
+    "Halcyon vendor support and escalation matrix",
+    "Sentinel and adverse event reporting policy",
+    "Juniper steering committee notes \u2014 October 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q116",
+   "category": "superseded",
+   "ranked": [
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Patient intake procedure",
+    "Billing and insurance FAQ (for staff)",
+    "PTO and clinic scheduling policy",
+    "Halcyon medical records and forms fee schedule",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Halcyon clinic staffing standard (2025)",
+    "Halcyon language access report \u2014 Q3 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 22
+  },
+  {
+   "id": "q117",
+   "category": "superseded",
+   "ranked": [
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon clinic staffing standard (2025)",
+    "Patient intake procedure",
+    "Business associate record: Quillon Ambient",
+    "Staff onboarding at Halcyon Health",
+    "PTO and clinic scheduling policy",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Halcyon medical records and forms fee schedule",
+    "Annual leave policy (effective October 1, 2026)",
+    "Juniper steering committee notes \u2014 October 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q118",
+   "category": "superseded",
+   "ranked": [
+    "Halcyon clinic staffing standard (2025)",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "PTO and clinic scheduling policy",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Billing and insurance FAQ (for staff)",
+    "Clinical systems change control",
+    "Staff onboarding at Halcyon Health",
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "Business associate record: Brightwater Billing Services"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 19
+  },
+  {
+   "id": "q119",
+   "category": "alias",
+   "ranked": [
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon medical records and forms fee schedule",
+    "Break-the-glass access to the EHR",
+    "Clinical and business systems inventory",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Business associate record: Polyglen Interpreting",
+    "Clinical systems change control",
+    "Halcyon digital projects register (Q4 2026)",
+    "Business associate record: Quillon Ambient",
+    "Approved AI tools for Halcyon staff"
+   ],
+   "recall5": 0.5,
+   "recall10": 1.0,
+   "mrr": 0.2,
+   "latency_ms": 18
+  },
+  {
+   "id": "q120",
+   "category": "alias",
+   "ranked": [
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Clinical systems change control",
+    "Business associate record: Quillon Ambient",
+    "Halcyon digital projects register (Q4 2026)",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Sentinel and adverse event reporting policy",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Halcyon vendor support and escalation matrix",
+    "Approved AI tools for Halcyon staff"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q121",
+   "category": "alias",
+   "ranked": [
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "Break-the-glass access to the EHR",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Juniper steering committee notes \u2014 October 2026",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Business associate record: Quillon Ambient",
+    "Annual leave policy (effective October 1, 2026)",
+    "Telehealth platform: requirements v3",
+    "Business associate record: Larkspur Telehealth",
+    "PTO and clinic scheduling policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 16
+  },
+  {
+   "id": "q122",
+   "category": "alias",
+   "ranked": [
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Clinical escalation protocol",
+    "Juniper steering committee notes \u2014 October 2026",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Halcyon medical records and forms fee schedule",
+    "Patient intake procedure",
+    "Sentinel and adverse event reporting policy",
+    "Break-the-glass access to the EHR",
+    "Clinical systems change control",
+    "Halcyon on-call medical director rota \u2014 November 2026"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 0.25,
+   "latency_ms": 17
+  },
+  {
+   "id": "q123",
+   "category": "table",
+   "ranked": [
+    "Business associate record: Polyglen Interpreting",
+    "Halcyon language access report \u2014 Q3 2026",
+    "Patient intake procedure",
+    "Halcyon medical records and forms fee schedule",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Clinical and business systems inventory",
+    "Halcyon on-call medical director rota \u2014 November 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 18
+  },
+  {
+   "id": "q124",
+   "category": "table",
+   "ranked": [
+    "Billing and insurance FAQ (for staff)",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Patient intake procedure",
+    "PTO and clinic scheduling policy",
+    "Staff onboarding at Halcyon Health",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Halcyon medical records and forms fee schedule",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Annual leave policy (effective October 1, 2026)",
+    "Clinical and business systems inventory"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 19
+  },
+  {
+   "id": "q125",
+   "category": "table",
+   "ranked": [
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Sentinel and adverse event reporting policy",
+    "Clinical escalation protocol",
+    "Annual leave policy (effective October 1, 2026)",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "PTO and clinic scheduling policy",
+    "Halcyon clinic staffing standard (2025)",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Patient intake procedure"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 18
+  },
+  {
+   "id": "q126",
+   "category": "table",
+   "ranked": [
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "Billing and insurance FAQ (for staff)",
+    "Patient intake procedure",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Annual leave policy (effective October 1, 2026)",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Halcyon language access report \u2014 Q3 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 19
+  },
+  {
+   "id": "q127",
+   "category": "table",
+   "ranked": [
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Business associate record: Brightwater Billing Services",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon medical records and forms fee schedule",
+    "Clinical escalation protocol",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon language access report \u2014 Q3 2026",
+    "Clinical and business systems inventory"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.25,
+   "latency_ms": 23
+  },
+  {
+   "id": "q128",
+   "category": "table",
+   "ranked": [
+    "Halcyon clinic directory and hours (October 2026)",
+    "PTO and clinic scheduling policy",
+    "Business associate record: Quillon Ambient",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Halcyon clinic staffing standard (2025)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "Annual leave policy (effective October 1, 2026)",
+    "Halcyon digital projects register (Q4 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 21
+  },
+  {
+   "id": "q129",
+   "category": "table",
+   "ranked": [
+    "Halcyon medical records and forms fee schedule",
+    "Patient intake procedure",
+    "Billing and insurance FAQ (for staff)",
+    "Staff onboarding at Halcyon Health",
+    "Sentinel and adverse event reporting policy",
+    "Business associate record: Quillon Ambient",
+    "HIPAA privacy and PHI handling policy",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Incident review: duplicate medication reminders (IR-0412)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 22
+  },
+  {
+   "id": "q136",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Staff onboarding at Halcyon Health",
+    "Welcome to Northwind Labs",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon medical records and forms fee schedule",
+    "Approved AI tools for Halcyon staff",
+    "Northwind offices and workplace guide",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Northwind Engineering Handbook",
+    "Patient intake procedure",
+    "Halcyon on-call medical director rota \u2014 November 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 26
+  },
+  {
+   "id": "q137",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Clinical and business systems inventory",
+    "Clinical systems change control",
+    "Northwind offices and workplace guide",
+    "Northwind production cell inventory",
+    "Information security policy",
+    "Northwind Engineering Handbook",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "HIPAA privacy and PHI handling policy",
+    "Northwind incident log: July\u2013October 2026",
+    "Welcome to Northwind Labs"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 1.0,
+   "latency_ms": 25
+  },
+  {
+   "id": "q138",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Incident roles FAQ",
+    "Northwind incident log: July\u2013October 2026",
+    "On-call runbook",
+    "Northwind support SLA tiers (2025 edition)",
+    "Emergency access to customer workspaces",
+    "Halcyon medical records and forms fee schedule",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Business associate record: Brightwater Billing Services",
+    "Halcyon clinic staffing standard (2025)",
+    "Staff onboarding at Halcyon Health"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 0.3333333333333333,
+   "latency_ms": 26
+  },
+  {
+   "id": "q139",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Sentinel and adverse event reporting policy",
+    "Incident roles FAQ",
+    "Northwind Engineering Handbook",
+    "Emergency access to customer workspaces",
+    "Northwind incident log: July\u2013October 2026",
+    "Production change approval policy",
+    "On-call runbook",
+    "Information security policy",
+    "Northwind project codename register",
+    "Pricing and discount policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 20
+  },
+  {
+   "id": "q140",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "HIPAA privacy and PHI handling policy",
+    "Emergency access to customer workspaces",
+    "Break-the-glass access to the EHR",
+    "Information security policy",
+    "Northwind offices and workplace guide",
+    "Welcome to Northwind Labs",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Northwind Engineering Handbook",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Halcyon emergency equipment inventory (Q4 2026 check)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 23
+  },
+  {
+   "id": "q141",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Approved AI tools for Halcyon staff",
+    "Halcyon vendor support and escalation matrix",
+    "Vendor register: Saltmarsh Analytics",
+    "Halcyon medical records and forms fee schedule",
+    "Clinical and business systems inventory",
+    "Patient intake procedure",
+    "Halcyon digital projects register (Q4 2026)",
+    "Expense and travel policy",
+    "Business associate record: Quillon Ambient",
+    "Customer data retention standard (v1)"
+   ],
+   "recall5": 0.5,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 24
+  },
+  {
+   "id": "q142",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Approved AI tools for Halcyon staff",
+    "Billing and insurance FAQ (for staff)",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Clinical systems change control",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Patient intake procedure",
+    "Halcyon medical records and forms fee schedule",
+    "Hydrant launch notes: ingest gateway autoscaling"
+   ],
+   "recall5": 0.3333333333333333,
+   "recall10": 0.3333333333333333,
+   "mrr": 0.25,
+   "latency_ms": 26
+  },
+  {
+   "id": "q143",
+   "category": "cross_org",
+   "ranked": [
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Clinical systems change control",
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Northwind incident log: July\u2013October 2026",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "CSCAB minutes \u2014 October 28, 2026",
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 24
+  },
+  {
+   "id": "q144",
+   "category": "cross_org",
+   "ranked": [
+    "Billing and insurance FAQ (for staff)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Business associate record: Brightwater Billing Services",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon medical records and forms fee schedule",
+    "Northwind offices and workplace guide",
+    "Annual leave policy (effective October 1, 2026)",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Welcome to Northwind Labs",
+    "HIPAA privacy and PHI handling policy"
+   ],
+   "recall5": 0.0,
+   "recall10": 0.5,
+   "mrr": 0.1111111111111111,
+   "latency_ms": 18
+  },
+  {
+   "id": "q145",
+   "category": "cross_org",
+   "ranked": [
+    "Production change approval policy",
+    "Engineering team directory and change approvers",
+    "Northwind production cell inventory",
+    "Identity & Billing weekly status: week of October 26, 2026",
+    "Northwind deploy pipeline changes (October 2026)",
+    "RFC-031: Persisting Tributary snapshots",
+    "Northwind on-call rota: November\u2013December 2026",
+    "Northwind Engineering Handbook",
+    "Halcyon digital projects register (Q4 2026)",
+    "Annual leave policy (effective October 1, 2026)"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 1.0,
+   "latency_ms": 18
+  },
+  {
+   "id": "q146",
+   "category": "cross_org",
+   "ranked": [
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Halcyon patient no-show and late arrival policy (2025)",
+    "Sentinel and adverse event reporting policy",
+    "Incident roles FAQ",
+    "Northwind support SLA tiers (2025 edition)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon vendor support and escalation matrix",
+    "Billing and insurance FAQ (for staff)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.3333333333333333,
+   "latency_ms": 25
+  },
+  {
+   "id": "q147",
+   "category": "cross_org",
+   "ranked": [
+    "Vendor register: Saltmarsh Analytics",
+    "Halcyon vendor support and escalation matrix",
+    "Vendor register: Hollowpine Helpdesk",
+    "Business associate record: Tallgrass Survey Co.",
+    "Approved AI tools for Halcyon staff",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Northwind production cell inventory",
+    "Customer data retention standard (v1)",
+    "Halcyon medical records and forms fee schedule",
+    "Clinical and business systems inventory"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.3333333333333333,
+   "latency_ms": 23
+  },
+  {
+   "id": "q148",
+   "category": "cross_org",
+   "ranked": [
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Billing and insurance FAQ (for staff)",
+    "Pricing and discount policy",
+    "PTO and clinic scheduling policy",
+    "Annual leave policy (effective October 1, 2026)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Halcyon patient no-show and late arrival policy (revised October 2026)",
+    "Staff onboarding at Halcyon Health",
+    "Halcyon medical records and forms fee schedule",
+    "Sales desk memo: discount authority from October 1, 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 23
+  },
+  {
+   "id": "q149",
+   "category": "cross_org",
+   "ranked": [
+    "Halcyon clinic directory and hours (October 2026)",
+    "Northwind production cell inventory",
+    "Northwind Engineering Handbook",
+    "Northwind offices and workplace guide",
+    "Halcyon vendor support and escalation matrix",
+    "Vendor register: Parcelwise",
+    "Welcome to Northwind Labs",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind project codename register",
+    "Clinical escalation protocol"
+   ],
+   "recall5": 0.0,
+   "recall10": 0.0,
+   "mrr": 0.0,
+   "latency_ms": 24
+  },
+  {
+   "id": "q150",
+   "category": "cross_org",
+   "ranked": [
+    "Production change approval policy",
+    "Northwind Engineering Handbook",
+    "Halcyon emergency equipment inventory (Q4 2026 check)",
+    "Northwind deploy pipeline changes (October 2026)",
+    "Clinical systems change control",
+    "Halcyon vendor support and escalation matrix",
+    "Halcyon on-call medical director rota \u2014 November 2026",
+    "Emergency access to customer workspaces",
+    "Northwind support SLA tiers (effective August 1, 2026)",
+    "Halcyon clinic directory and hours (October 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 20
+  }
+ ]
+}

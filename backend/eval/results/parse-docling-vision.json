@@ -1,0 +1,140 @@
+{
+ "kind": "parse",
+ "variant": "docling-vision",
+ "corpus": "6aba956a631c66d9",
+ "index": {
+  "embedding": "fastembed:BAAI/bge-small-en-v1.5",
+  "corpus": "public",
+  "vision": true
+ },
+ "summary": {
+  "ALL": {
+   "facts": 27,
+   "recall": 1.0
+  },
+  "2026 environmental data fact sheet": {
+   "facts": 2,
+   "found": 2,
+   "recall": 1.0,
+   "format": ".pdf",
+   "pages": 28,
+   "parser": "docling",
+   "weak_pages": [
+    1,
+    28
+   ],
+   "vision_pages": [
+    1,
+    28
+   ],
+   "vision_cost_usd": 0.00046
+  },
+  "2026 environmental sustainability report": {
+   "facts": 3,
+   "found": 3,
+   "recall": 1.0,
+   "format": ".pdf",
+   "pages": 66,
+   "parser": "docling",
+   "weak_pages": [
+    1,
+    4,
+    15,
+    16,
+    21,
+    31,
+    33,
+    36,
+    43,
+    47,
+    52,
+    58,
+    66
+   ],
+   "vision_pages": [
+    1,
+    4,
+    15,
+    16,
+    21,
+    31,
+    33,
+    36,
+    43,
+    47,
+    52,
+    58,
+    66
+   ],
+   "vision_cost_usd": 0.00521
+  },
+  "fy26 q1 earnings call transcript": {
+   "facts": 3,
+   "found": 3,
+   "recall": 1.0,
+   "format": ".docx",
+   "parser": "docling"
+  },
+  "fy26 q1 earnings slides": {
+   "facts": 3,
+   "found": 3,
+   "recall": 1.0,
+   "format": ".pptx",
+   "pages": 22,
+   "parser": "docling",
+   "weak_pages": [
+    1,
+    2,
+    3,
+    7,
+    9,
+    11,
+    12,
+    17,
+    22
+   ],
+   "vision_pages": [
+    1,
+    2,
+    3,
+    7,
+    9,
+    11,
+    12,
+    17,
+    22
+   ],
+   "vision_cost_usd": 0.00333
+  },
+  "fy26 q1 financial statements": {
+   "facts": 2,
+   "found": 2,
+   "recall": 1.0,
+   "format": ".xlsx",
+   "parser": "docling"
+  },
+  "fy26 q1 press release": {
+   "facts": 6,
+   "found": 6,
+   "recall": 1.0,
+   "format": ".docx",
+   "parser": "docling"
+  },
+  "fy26 q2 outlook": {
+   "facts": 4,
+   "found": 4,
+   "recall": 1.0,
+   "format": ".pptx",
+   "pages": 5,
+   "parser": "docling",
+   "weak_pages": [
+    5
+   ],
+   "vision_pages": [
+    5
+   ],
+   "vision_cost_usd": 0.00022
+  }
+ },
+ "rows": []
+}

@@ -37,7 +37,7 @@ what changed.
   - Admins boost, lower or hide documents; readers vote sources up or down, and both feed
     into ranking.
 - **Connectors.**
-  - File upload: PDF, DOCX, Markdown, HTML, CSV, JSON, text.
+  - File upload: PDF, DOCX, Markdown, HTML, CSV, JSON, text; with the `parsing` extra (Docling), also Excel, PowerPoint, email and images, scanned PDFs through OCR, tables kept as tables, and page numbers on citations (legacy .doc/.ppt/.xls need LibreOffice).
   - Website crawler: same domain only, respects robots.txt.
   - GitHub repositories.
   - Google Drive (service account), Slack (bot token) and Notion (integration token),
@@ -123,6 +123,7 @@ git clone https://github.com/Abishai95141/ORGRAG.git
 cd ORGRAG
 cp .env.example .env          # set SECRET_KEY; add NVIDIA_API_KEY or ANTHROPIC_API_KEY
 make setup                    # uv sync (with local embeddings) + pnpm install
+# Optional: rich parsing (Docling: ~1 GB of packages incl. PyTorch, ~0.5 GB of models): cd backend && uv sync --extra parsing
 make dev-db                   # Postgres 17 + pgvector + pg_textsearch on :5432
 make migrate                  # create tables and indexes
 make seed                     # demo data (first run downloads the ~70 MB embedding model)

@@ -13,8 +13,8 @@ This is the build plan for [ROADMAP.md](ROADMAP.md) §3 (quality and speed upgra
 | 1. Latency | Prompt caching and concurrent tool calls done; rerank-once dropped after measuring; fast path not started (smoke p50 is already 4.9 s). |
 | 2a. BM25 | Done; on where the index exists. |
 | 2b. Contextual Retrieval | Built; off until long documents (step 3) can show a significant gain. |
-| 2c. Embedding A/B | Not started. |
-| 3 | Not started. |
+| 2c. Embedding A/B | Done: granite not adopted (no gain at ~512-token chunks). |
+| 3. Docling | Built: every format (PDF with OCR, Word, Excel, PowerPoint as pages, email, images, legacy Office with LibreOffice), large tables as passages, page numbers, optional vision pass for weak pages. Tested on real public files: parsing recall 27/27. Open: answer-quality eval on those files (needs a judge), Docker image with the extra and prefetched models, Contextual Retrieval re-test on long documents. |
 | 4. Citations and abstention | Done: per-item [n] rule (citation recall 0.79); native citations built, off (they cite only near-quotes); unknown [n] flagged; HHEM tested and not adopted (25% false alarms, 1.4 s per claim); sufficient-context check on for deep mode (multi-hop pass 0.72 → 0.88, ~2x latency). Citation recall 0.85 not reached. |
 | 5–6 | Not started. |
 

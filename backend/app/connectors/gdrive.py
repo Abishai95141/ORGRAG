@@ -15,7 +15,7 @@ import httpx
 import jwt
 
 from app.connectors.base import Connector, ConnectorError, ProgressFn, RawDocument
-from app.ingestion.parsers import SUPPORTED_EXTENSIONS
+from app.ingestion.parsers import supported_extensions
 
 _API = "https://www.googleapis.com/drive/v3"
 _TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -28,7 +28,6 @@ _EXPORTS = {
     "application/vnd.google-apps.spreadsheet": ("text/csv",),
     "application/vnd.google-apps.presentation": ("text/plain",),
 }
-_SUPPORTED_MIMES = set(SUPPORTED_EXTENSIONS.values())
 _MAX_BYTES = 20 * 1024 * 1024
 _FIELDS = (
     "nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink,size,"
@@ -340,9 +339,10 @@ def _plan(item: dict[str, Any]) -> tuple[str, tuple[str, ...]] | None:
     if mime in _EXPORTS:
         return "export", _EXPORTS[mime]
     ext = PurePosixPath(str(item.get("name", "")).lower()).suffix
-    if ext in SUPPORTED_EXTENSIONS:
-        return "download", (SUPPORTED_EXTENSIONS[ext],)
-    if mime in _SUPPORTED_MIMES:
+    supported = supported_extensions()
+    if ext in supported:
+        return "download", (supported[ext],)
+    if mime in set(supported.values()):
         return "download", (mime,)
     return None
 

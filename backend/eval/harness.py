@@ -41,7 +41,7 @@ import sys
 import time
 import uuid
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 HERE = Path(__file__).resolve().parent
@@ -50,7 +50,11 @@ SEED_DIR = BACKEND / "app" / "seed_data"
 EVAL_CORPUS = HERE / "corpus"
 # A 60-record vendor register for a third org, from eval/scale/generate.py.
 SCALE_CORPUS = HERE / "corpus_scale"
-QUESTIONS = HERE / "questions.jsonl"
+# EVAL_CORPUS=public: real files in every format (eval/public/fetch.py), with their
+# own questions, instead of the Markdown corpus. Needs the `parsing` extra.
+PUBLIC = os.environ.get("EVAL_CORPUS", "").lower() == "public"
+PUBLIC_DIR = HERE / ".data" / "public"
+QUESTIONS = HERE / ("questions_public.jsonl" if PUBLIC else "questions.jsonl")
 RESULTS = HERE / "results"
 LABELS = HERE / "labels"
 DATA = HERE / ".data"
@@ -63,11 +67,14 @@ from app.core.config import CONTEXT_VERSION  # noqa: E402  (constants only; no s
 # database, so a variant that re-indexes (another embedding model, contextual
 # retrieval; later BM25) never overwrites another's index.
 CONTEXTUAL = os.environ.get("CONTEXTUAL_RETRIEVAL", "").lower() in ("1", "true", "yes")
+VISION = os.environ.get("VISION_PARSING", "").lower() in ("1", "true", "yes")
 DEFAULT_INDEX = {"embedding": "fastembed:BAAI/bge-small-en-v1.5"}
 INDEX_CONFIG = {
     "embedding": f"{os.environ.get('EMBEDDING_PROVIDER', 'fastembed')}:"
     f"{os.environ.get('EMBEDDING_MODEL', 'BAAI/bge-small-en-v1.5')}",
     **({"context": CONTEXT_VERSION} if CONTEXTUAL else {}),
+    # Parsing changes the index too: the public corpus, with or without vision.
+    **({"corpus": "public", "vision": VISION} if PUBLIC else {}),
 }
 INDEX_KEY = (
     ""
@@ -76,7 +83,9 @@ INDEX_KEY = (
 )
 # Readable result-name suffix for a non-default index ("ctx", "<embedding model>").
 INDEX_SUFFIX = "-".join(
-    [*(["ctx"] if CONTEXTUAL else []),
+    [*(["public"] if PUBLIC else []),
+     *(["vision"] if PUBLIC and VISION else []),
+     *(["ctx"] if CONTEXTUAL else []),
      *([INDEX_CONFIG["embedding"].rsplit("/", 1)[-1]]
        if INDEX_CONFIG["embedding"] != DEFAULT_INDEX["embedding"] else [])]
 )  # fmt: skip
@@ -121,6 +130,7 @@ ORG_INFO = {
     "northwind": ("Northwind Labs", "Real-time data pipelines for product and growth teams."),
     "halcyon": ("Halcyon Health", "A network of primary-care and telehealth clinics."),
     "meridian": ("Meridian Care", "A regional clinic group (scale test: vendor register)."),
+    "microsoft": ("Microsoft", "Public investor-relations and sustainability documents."),
 }
 
 # Named configurations. Each maps to org settings applied before a run.
@@ -164,8 +174,14 @@ def load_questions(
 
 
 def corpus_files() -> list[tuple[str, str, Path]]:
-    """(org slug, collection folder, path) for the seed corpus plus eval/corpus."""
+    """(org slug, collection folder, path) for the seed corpus plus eval/corpus, or
+    for the public files."""
     out = []
+    if PUBLIC:
+        for path in sorted(PUBLIC_DIR.glob("*/*/*")):
+            if path.is_file() and not path.name.startswith("."):
+                out.append((path.parts[-3], path.parts[-2], path))
+        return out
     for root in (SEED_DIR, EVAL_CORPUS, SCALE_CORPUS):
         if root.exists():
             for path in sorted(root.glob("*/*/*.md")):
@@ -319,6 +335,9 @@ class JudgeCache:
 CACHE = JudgeCache()
 
 
+JUDGE_ATTEMPTS = 7  # waits of 2, 4, 8, 16, 32, 60 s between them
+
+
 async def judge_call(system: str, prompt: str, parse, max_tokens: int = 4096):
     """Ask the judge and parse its reply, retrying transient and parse failures. Only
     replies that parse are cached."""
@@ -327,7 +346,7 @@ async def judge_call(system: str, prompt: str, parse, max_tokens: int = 4096):
     if cached is not None:
         with contextlib.suppress(Exception):
             return parse(cached)
-    for attempt in range(3):
+    for attempt in range(JUDGE_ATTEMPTS):
         try:
             reply = await complete_text(
                 model=JUDGE_MODEL,
@@ -340,9 +359,10 @@ async def judge_call(system: str, prompt: str, parse, max_tokens: int = 4096):
             CACHE.put(key, reply)
             return parsed
         except Exception:
-            if attempt == 2:
+            if attempt == JUDGE_ATTEMPTS - 1:
                 raise
-            await asyncio.sleep(2 + attempt * 3)
+            # Exponential: a free tier's rate limit (429) needs a minute, not seconds.
+            await asyncio.sleep(min(2 ** (attempt + 1), 60))
     raise RuntimeError("unreachable")
 
 
@@ -450,6 +470,51 @@ class AnswerResult:
     grounding: dict[str, Any] | None = None
     usage: dict[str, dict[str, Any]] = field(default_factory=dict)  # per model, as stored
     cost_usd: float | None = None  # None when no model in the run has a price
+
+
+async def parse_recall(questions: list[Question]) -> dict[str, Any]:
+    """Parsing alone, no LLM: is each question's fact in the stored text of each of
+    its gold files? Reported per file and per format (a fact found in no gold file
+    is lost at parsing, whatever retrieval does)."""
+    from app.models import Document
+
+    async with SessionLocal() as db:
+        docs = {d.title: d for d in (await db.execute(select(Document))).scalars()}
+    per_file: dict[str, list[bool]] = {}
+    found_any: list[bool] = []
+    misses = []
+    for q in questions:
+        hits_by_title = {
+            t: substring_hits(docs[t].content if t in docs else "", q.facts) for t in q.gold_docs
+        }
+        for i, fact in enumerate(q.facts):
+            # A cross-format question's facts each live in one of its files, by design.
+            where = [t for t, hits in hits_by_title.items() if hits[i]]
+            found_any.append(bool(where))
+            if not where:
+                misses.append((q.id, fact["fact"]))
+            for t in hits_by_title:
+                if where == [t] or len(q.gold_docs) == 1:
+                    per_file.setdefault(t, []).append(bool(where))
+    rows = {
+        title: {
+            "facts": len(h),
+            "found": sum(h),
+            "recall": round(sum(h) / len(h), 3) if h else None,
+            "format": PurePosixPath((docs[title].meta or {}).get("filename", "")).suffix
+            if title in docs
+            else None,
+            **((docs[title].meta or {}).get("parse", {}) if title in docs else {}),
+        }
+        for title, h in sorted(per_file.items())
+    }
+    for title, r in rows.items():
+        print(f"  {title:<50} {r['found']}/{r['facts']}")
+    for qid, fact in misses:
+        print(f"  MISSED {qid}: {fact}")
+    recall = round(sum(found_any) / len(found_any), 3) if found_any else None
+    print(f"  ALL: {sum(found_any)}/{len(found_any)} facts found in their gold files")
+    return {"ALL": {"facts": len(found_any), "recall": recall}, **rows}
 
 
 def substring_hits(answer: str, facts: list[dict[str, Any]]) -> list[bool]:
@@ -614,7 +679,12 @@ async def answer_one(
     result.cost_usd = round(sum(costs), 6) if costs else None
     result.message_id = str(msg_id)
     result.sources = [_source_row(s) for s in sources]
-    return await score_answer(q, result, with_grounding, with_judge)
+    try:
+        return await score_answer(q, result, with_grounding, with_judge)
+    except Exception as exc:  # keep the answer, unjudged: `rejudge` can score it later
+        result.passed = False
+        result.error = f"not judged: {exc!r}"[:300]
+        return result
 
 
 def _source_row(s: dict[str, Any]) -> dict[str, Any]:
@@ -853,7 +923,12 @@ async def rejudge(run: dict, source_name: str, with_grounding: bool) -> Path:
                 msg = await db.get(Message, uuid.UUID(result.message_id))
                 result.sources = [_source_row(s) for s in (msg.sources if msg else [])]
         async with sem:
-            await score_answer(q, result, with_grounding and bool(result.sources))
+            try:
+                await score_answer(q, result, with_grounding and bool(result.sources))
+            except Exception as exc:  # leave this row unjudged; the run goes on
+                print(f"  {row['id']}: not judged ({type(exc).__name__}: {exc})"[:200])
+                result.passed = False
+                return {**result.__dict__, "judge_error": repr(exc)[:300]}
         return result.__dict__
 
     rows = list(await asyncio.gather(*(one(r) for r in run["rows"])))
@@ -1015,7 +1090,7 @@ def main() -> None:
         "cmd",
         choices=[
             "retrieval", "answers", "compare", "ingest", "build-graph",
-            "rejudge", "label", "kappa",
+            "rejudge", "label", "kappa", "parse-recall",
         ],
     )  # fmt: skip
     p.add_argument("paths", nargs="*")
@@ -1065,6 +1140,10 @@ def main() -> None:
             print(f"judge: {use_judge(args.judge, question_set)}")
             saved = asyncio.run(rejudge(run, Path(path).name, not args.no_grounding))
             print("saved", saved)
+        return
+    if args.cmd == "parse-recall":
+        report = asyncio.run(parse_recall(load_questions(path=Path(args.questions))))
+        print("saved", save("parse", args.name or "recall", [], report, {}))
         return
     if args.cmd == "label":
         label(Path(args.paths[0]), args.n, args.seed)

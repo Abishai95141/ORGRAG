@@ -236,6 +236,7 @@ class Chunk(Base):
     # (weight C), never shown or cited. Empty until the contextualize job runs.
     context: Mapped[str] = mapped_column(Text, default="", server_default="", nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    page: Mapped[int | None] = mapped_column(Integer)  # where it starts, if paginated
     embedding: Mapped[list[float]] = mapped_column(
         Vector(get_settings().embedding_dim), nullable=False
     )

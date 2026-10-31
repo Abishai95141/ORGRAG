@@ -189,6 +189,8 @@ def _result_title(entry: Registered, hit: Hit) -> str:
     parts = [f"{hit.title} — {entry.org.name} / {entry.collection.name}"]
     if hit.heading:
         parts.append(f"section: {hit.heading}")
+    if hit.page:
+        parts.append(f"page {hit.page}")
     if hit.updated_at:
         parts.append(f"updated {hit.updated_at.date().isoformat()}")
     if hit.source_kind == "verified":
@@ -296,6 +298,7 @@ class ToolBox:
             section = await hit_window(self.db, hit)
             heading = f" section={quoteattr(hit.heading)}" if hit.heading else ""
             updated = f' updated="{hit.updated_at.date().isoformat()}"' if hit.updated_at else ""
+            updated += f' page="{hit.page}"' if hit.page else ""
             verified = ' verified="true"' if hit.source_kind == "verified" else ""
             blocks.append(
                 f'<source ref="{entry.ref}" org={quoteattr(entry.org.name)} '

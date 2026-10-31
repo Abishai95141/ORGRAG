@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 
 from app.connectors.base import Connector, ConnectorError, ProgressFn, RawDocument
-from app.ingestion.parsers import SUPPORTED_EXTENSIONS
+from app.ingestion.parsers import supported_extensions
 
 _REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _TEXT_EXT = {".md", ".markdown", ".txt", ".rst", ".mdx"}
@@ -72,12 +72,13 @@ class GitHubConnector(Connector):
             listing = tree.json()
             if listing.get("truncated"):
                 self.complete = False  # GitHub caps recursive trees; don't prune on a partial one
+            supported = supported_extensions()
             files = [
                 item
                 for item in listing.get("tree", [])
                 if item["type"] == "blob"
                 and item.get("size", 0) < 1_000_000
-                and _ext(item["path"]) in _TEXT_EXT | set(SUPPORTED_EXTENSIONS)
+                and _ext(item["path"]) in _TEXT_EXT | set(supported)
                 and (not cfg["paths"] or any(item["path"].startswith(p) for p in cfg["paths"]))
             ]
             if len(files) > MAX_FILES:
@@ -91,7 +92,7 @@ class GitHubConnector(Connector):
                     continue
                 data = base64.b64decode(blob.json()["content"])
                 ext = _ext(item["path"])
-                mime = SUPPORTED_EXTENSIONS.get(ext, "text/markdown")
+                mime = supported.get(ext, "text/markdown")
                 yield RawDocument(
                     external_id=item["path"],
                     title=f"{repo}: {item['path']}",
