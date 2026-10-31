@@ -25,6 +25,7 @@ dependencies = [
     "numpy>=1.26",
     "cryptography>=43",
     "json-repair>=0.59.9,<1",
+    "mcp>=2.3,<3",
 ]
 
 [project.optional-dependencies]

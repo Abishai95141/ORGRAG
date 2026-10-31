@@ -326,6 +326,32 @@ conversation (400 `attachment_in_use` otherwise).
 
 A key's role can't exceed its creator's. Only a SHA-256 of the key is stored.
 
+## MCP server
+
+`POST /api/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server
+(streamable HTTP, stateless), built on the official MCP Python SDK, so Claude Code,
+Claude Desktop, Cursor and other MCP clients can use Strata as a tool. Authenticate
+with an org API key: `Authorization: Bearer strata_sk_…`. Session cookies are not
+accepted. Each call acts exactly like the REST API with that key: its creator, in its
+org, with at most its role. A missing or invalid key gets `401` with a
+`WWW-Authenticate: Bearer` challenge.
+
+```bash
+claude mcp add --transport http strata https://strata.example.com/api/mcp \
+  --header "Authorization: Bearer strata_sk_…"
+```
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `search` | `query`, `collection_ids?`, `limit?` (1–20, default 8) | best passage per document: `ref, title, organization, collection, url, snippet, document_id` (no LLM; logged like `/search`) |
+| `read_document` | `document_id`, `page?` | `{title, organization, collection, url, page, pages, content}` in ~14k-character pages; hidden and out-of-scope documents are "No such document" |
+| `list_collections` | – | the collections the key can read, with document counts |
+| `ask` | `question`, `mode?` (`quick` \| `deep`), `collection_ids?` | `{answer, status, sources, conversation_id}`: the agent's cited answer, with only the cited sources. Uses the org's model budget and appears in the key owner's chat history |
+
+Tools return structured content (and the same JSON as text). Anticipated failures
+(bad ids, no access, model errors) come back as tool errors with a readable message.
+`search`, `read_document` and `list_collections` are annotated read-only.
+
 ## Agents
 
 | Method | Path | Body | Returns |

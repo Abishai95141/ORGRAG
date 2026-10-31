@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import re
 import uuid
@@ -22,6 +23,7 @@ from app.api import (
     documents,
     graph,
     insights,
+    mcp,
     meta,
     orgs,
     search,
@@ -54,7 +56,14 @@ def _operation_id(route: APIRoute) -> str:
     return f"{tag}-{route.name}"
 
 
+@contextlib.asynccontextmanager
+async def lifespan(_: FastAPI):
+    async with mcp.lifespan():
+        yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Strata API",
     version=meta.VERSION,
     description=DESCRIPTION,
@@ -67,8 +76,11 @@ settings = get_settings()
 _REQUEST_ID_OK = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")
 
 # Middleware order (outermost first): CORS → slash normalisation → request id →
-# body limit → app. CORS is outermost so even a 500 carries its headers.
+# MCP endpoint → body limit → app. CORS is outermost so even a 500 carries its headers.
 app.add_middleware(BodyLimit)
+# /api/mcp goes to the MCP server (its own body limit and errors), inside the request
+# id, slash normalisation and CORS layers.
+app.add_middleware(mcp.McpEndpoint)
 
 
 @app.middleware("http")

@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.agent.tools import _paginate, openai_tools, tool_definitions
+from app.agent.tools import openai_tools, paginate, tool_definitions
 from app.core.config import get_settings
 from app.core.ratelimit import RateLimiter
 from app.llm.models import LLMUnavailable, resolve_model
@@ -95,10 +95,10 @@ def test_tools_convert_to_openai_format_and_web_is_opt_in():
 
 def test_pagination_centres_on_the_found_passage():
     body = "a" * 20_000 + "NEEDLE" + "b" * 20_000
-    window, page, pages = _paginate(body, None, "NEEDLE")
+    window, page, pages = paginate(body, None, "NEEDLE")
     assert pages == 3 and page == 2 and "NEEDLE" in window
-    assert _paginate(body, 99, None)[1] == 3
-    assert _paginate("short", None, None) == ("short", 1, 1)
+    assert paginate(body, 99, None)[1] == 3
+    assert paginate("short", None, None) == ("short", 1, 1)
 
 
 def test_rate_limiter_blocks_after_the_limit_and_resets():

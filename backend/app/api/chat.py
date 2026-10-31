@@ -257,26 +257,12 @@ async def _bind_attachments(
     return [found[i] for i in dict.fromkeys(ids)]
 
 
-@router.post(
-    "/conversations/{conversation_id}/messages",
-    responses={
-        200: {
-            "description": "SSE stream (default), or `{message}` JSON with `stream=false`",
-            "content": {"text/event-stream": {}, "application/json": {}},
-        }
-    },
-)
-async def send_message(
-    conversation_id: uuid.UUID,
-    body: MessageCreate,
-    ctx: OrgContext = Depends(org_context),
-    stream: bool = Query(
-        True, description="false waits for the full answer and returns {message} as JSON"
-    ),
-):
-    """Ask a question. Streams Server-Sent Events (`start`, `step`, `reasoning`,
-    `sources`, `delta`, then `done` or `error`); see docs/API.md for each payload."""
-    conv = await _conversation(ctx, conversation_id)
+async def begin_answer(
+    ctx: OrgContext, conv: Conversation, body: MessageCreate
+) -> tuple[asyncio.Queue, dict]:
+    """Save the question, reserve the answer and start the agent run. Returns the run's
+    event queue and the `start` payload. Shared by the chat route and the MCP `ask` tool,
+    so both apply the same scoping (an API key stays in its org, under its role)."""
     if body.mode:
         conv.mode = body.mode
     if body.scope_org_slugs is not None:
@@ -350,15 +336,44 @@ async def send_message(
     # Give the request's connection back before waiting on the answer, which can take
     # minutes; the run uses its own short sessions (audit P2).
     await ctx.db.close()
+    return queue, start
 
+
+async def wait_for_answer(queue: asyncio.Queue) -> dict:
+    """Drain a run's events and return `{message}` once it's saved; provider errors
+    become ApiError with the matching status."""
+    while (item := await queue.get()) is not None:
+        event, data = item
+        if event in ("done", "stopped") and data.get("message"):
+            return data
+        if event == "error":
+            raise ApiError(ERROR_STATUS.get(data["code"], 500), data["detail"], data["code"])
+    raise ApiError(500, "The answer stream ended unexpectedly", "internal_error")
+
+
+@router.post(
+    "/conversations/{conversation_id}/messages",
+    responses={
+        200: {
+            "description": "SSE stream (default), or `{message}` JSON with `stream=false`",
+            "content": {"text/event-stream": {}, "application/json": {}},
+        }
+    },
+)
+async def send_message(
+    conversation_id: uuid.UUID,
+    body: MessageCreate,
+    ctx: OrgContext = Depends(org_context),
+    stream: bool = Query(
+        True, description="false waits for the full answer and returns {message} as JSON"
+    ),
+):
+    """Ask a question. Streams Server-Sent Events (`start`, `step`, `reasoning`,
+    `sources`, `delta`, then `done` or `error`); see docs/API.md for each payload."""
+    conv = await _conversation(ctx, conversation_id)
+    queue, start = await begin_answer(ctx, conv, body)
     if not stream:
-        while (item := await queue.get()) is not None:
-            event, data = item
-            if event in ("done", "stopped") and data.get("message"):
-                return JSONResponse(data)
-            if event == "error":
-                raise ApiError(ERROR_STATUS.get(data["code"], 500), data["detail"], data["code"])
-        raise ApiError(500, "The answer stream ended unexpectedly", "internal_error")
+        return JSONResponse(await wait_for_answer(queue))
 
     async def events():
         yield _sse("start", start)

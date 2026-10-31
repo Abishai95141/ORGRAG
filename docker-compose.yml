@@ -23,6 +23,7 @@ x-backend-env: &backend-env
   COOKIE_SECURE: ${COOKIE_SECURE:-false}
   CHAT_RUN_TIMEOUT_SECONDS: ${CHAT_RUN_TIMEOUT_SECONDS:-900}
   CORS_ORIGINS: '["http://localhost:3000"]'
+  PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
 
 services:
   db:

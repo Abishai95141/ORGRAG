@@ -48,6 +48,9 @@ what changed.
   the answer and cited, without joining the org's knowledge base.
 - **Web search** (optional, Tavily or Brave): the agent can search the public web when the
   knowledge base can't answer, and cites web pages like any other source.
+- **An MCP server** at `/api/mcp`, so Claude, Cursor and other AI assistants can
+  search, read and ask with an org API key, seeing exactly what the key's role sees.
+  Setup snippets are under *Settings → API keys*.
 - **A consistent, documented API.** Org API keys with capped roles, one error shape with
   request IDs, paginated lists, OpenAPI docs at `/api/docs`, and a non-streaming answer
   mode for scripts. See [`docs/API.md`](docs/API.md).

@@ -43,19 +43,28 @@ bearer_scheme = HTTPBearer(
 )
 
 
-async def _api_key_user(request: Request, db: AsyncSession, raw: str) -> User:
+async def find_api_key(db: AsyncSession, raw: str) -> ApiKey | None:
+    """The live key for a raw `strata_sk_…` token (None if unknown or expired); records
+    its use at most every few minutes."""
     key = (
         await db.execute(select(ApiKey).where(ApiKey.key_hash == hash_api_key(raw)))
     ).scalar_one_or_none()
     now = datetime.now(UTC)
     if key is None or (key.expires_at and key.expires_at <= now):
-        raise ApiError(401, "The API key is invalid or has expired", "invalid_api_key")
-    path, method = request.url.path, request.method
-    if not path.startswith("/api/orgs/") and (method, path) not in API_KEY_GLOBAL_ROUTES:
-        raise forbidden("API keys can only call their organization's routes")
+        return None
     if key.last_used_at is None or now - key.last_used_at > LAST_USED_RESOLUTION:
         key.last_used_at = now
         await db.commit()
+    return key
+
+
+async def _api_key_user(request: Request, db: AsyncSession, raw: str) -> User:
+    path, method = request.url.path, request.method
+    key = await find_api_key(db, raw)
+    if key is None:
+        raise ApiError(401, "The API key is invalid or has expired", "invalid_api_key")
+    if not path.startswith("/api/orgs/") and (method, path) not in API_KEY_GLOBAL_ROUTES:
+        raise forbidden("API keys can only call their organization's routes")
     request.state.api_key = key
     user = await db.get(User, key.user_id)
     if user is None:
@@ -131,9 +140,29 @@ async def org_context(
     if row is None or (key is not None and key.org_id != row[0].id):
         raise not_found("Organization")
     org, role = row
-    if key is not None and ROLE_RANK[key.role] < ROLE_RANK[role]:
-        role = key.role
-    return OrgContext(org=org, user=user, role=role, db=db, api_key=key)
+    return OrgContext(org=org, user=user, role=_capped(role, key), db=db, api_key=key)
+
+
+def _capped(role: str, key: ApiKey | None) -> str:
+    """A key acts with at most its own role."""
+    return key.role if key is not None and ROLE_RANK[key.role] < ROLE_RANK[role] else role
+
+
+async def api_key_context(db: AsyncSession, key: ApiKey) -> OrgContext | None:
+    """The org context an API key acts in outside a route (the MCP server): its creator,
+    inside its org, with at most its role. None once the creator has left the org."""
+    row = (
+        await db.execute(
+            select(Organization, Membership.role, User)
+            .join(Membership, Membership.org_id == Organization.id)
+            .join(User, User.id == Membership.user_id)
+            .where(Organization.id == key.org_id, Membership.user_id == key.user_id)
+        )
+    ).first()
+    if row is None:
+        return None
+    org, role, user = row
+    return OrgContext(org=org, user=user, role=_capped(role, key), db=db, api_key=key)
 
 
 def require_role(minimum: str):

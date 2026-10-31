@@ -447,6 +447,64 @@ function ApiKeys({ slug, role }: { slug: string; role: Role }) {
       ) : keys.isLoading ? null : (
         <p className="text-[12.5px] text-ink-3">No keys yet.</p>
       )}
+
+      <McpSetup apiKey={created} />
     </Section>
+  );
+}
+
+/** How to connect an MCP client (Claude Code, Claude Desktop, Cursor…) with a key. */
+function McpSetup({ apiKey }: { apiKey: string | null }) {
+  const [client, setClient] = useState<"claude" | "json">("claude");
+  const [copied, setCopied] = useState(false);
+  const [origin, setOrigin] = useState("");
+  useEffect(() => setOrigin(window.location.origin), []);
+  const url = `${origin}/api/mcp`;
+  const bearer = `Bearer ${apiKey ?? "<your key>"}`;
+  const snippet =
+    client === "claude"
+      ? `claude mcp add --transport http strata \\\n  ${url} \\\n  --header "Authorization: ${bearer}"`
+      : JSON.stringify({ mcpServers: { strata: { type: "http", url, headers: { Authorization: bearer } } } }, null, 2);
+
+  return (
+    <div className="rounded-[12px] border border-line bg-surface-2/40 p-3.5">
+      <div>
+        <div className="min-w-0">
+          <div className="text-[13px] font-medium">Connect an AI assistant (MCP)</div>
+          <p className="mt-0.5 text-[12.5px] text-ink-3">
+            Claude, Cursor and other MCP clients can search, read and ask with a key, seeing exactly what its role sees.
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <Segmented
+          size="sm"
+          value={client}
+          onChange={setClient}
+          options={[
+            { value: "claude", label: "Claude Code" },
+            { value: "json", label: "JSON config" },
+          ]}
+        />
+        <Button
+          size="sm"
+          onClick={async () => {
+            await navigator.clipboard.writeText(snippet).catch(() => {});
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1400);
+          }}
+        >
+          {copied ? <IconCheck size={14} /> : <IconCopy size={14} />} {copied ? "Copied" : "Copy"}
+        </Button>
+      </div>
+      <pre className="mt-2 overflow-x-auto rounded-[8px] border border-line bg-surface px-3 py-2.5 font-mono text-[11.5px] leading-relaxed whitespace-pre text-ink-2">
+        {snippet}
+      </pre>
+      <p className="mt-2 text-[11.5px] text-ink-3">
+        Tools: <code className="font-mono">search</code>, <code className="font-mono">read_document</code>,{" "}
+        <code className="font-mono">list_collections</code> and <code className="font-mono">ask</code> (uses this
+        organization&apos;s model budget).
+      </p>
+    </div>
   );
 }

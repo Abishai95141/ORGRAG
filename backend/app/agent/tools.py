@@ -187,7 +187,7 @@ class SearchOutcome:
     hits: int = 0
 
 
-def _paginate(body: str, page: int | None, anchor: str | None = None) -> tuple[str, int, int]:
+def paginate(body: str, page: int | None, anchor: str | None = None) -> tuple[str, int, int]:
     """(window, page number, page count). Without a page, centre on `anchor`."""
     pages = max(1, -(-len(body) // READ_PAGE_CHARS))
     if pages == 1:
@@ -508,7 +508,7 @@ class ToolBox:
             title, body, anchor = doc.title, doc.content, entry.hit.content
             extra = f" org={quoteattr(entry.org.name)}"
 
-        window, page_no, pages = _paginate(body, page, anchor)
+        window, page_no, pages = paginate(body, page, anchor)
         paging = f' page="{page_no}" pages="{pages}"' if pages > 1 else ""
         text = (
             f'<document ref="{ref}" title={quoteattr(title)}{extra}{paging}>\n'

@@ -50,7 +50,7 @@ The current harness covers retrieval recall, MRR, per-fact correctness, abstenti
 
 These are correctness and security bugs in what already exists. All are verified in code, and two were reproduced by me (C1, S1).
 
-**Progress (2026-10-31):** everything in this section is fixed and tested: C1, C2, S1 (with S2), S3, S4, S5, I1, I2, P2, O3/F1, O5 and F2. Details are in [AUDIT.md](AUDIT.md#fixed-since-the-audit). Next on Track B: the MCP server.
+**Progress (2026-10-31):** everything in this section is fixed and tested: C1, C2, S1 (with S2), S3, S4, S5, I1, I2, P2, O3/F1, O5 and F2. Details are in [AUDIT.md](AUDIT.md#fixed-since-the-audit). Track B's week-1 item, the MCP server, is built too (see [API.md](API.md#mcp-server)). It authenticates with org API keys, so one connection covers one org; searching *across* a user's orgs needs user-level tokens (OAuth through the MCP SDK's authorization-server support), which is the follow-up.
 
 | # | Problem | Fix | Effort |
 |---|---|---|---|

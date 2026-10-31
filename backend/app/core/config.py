@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     login_attempts_per_15_min: int = 10
 
     cors_origins: list[str] = ["http://localhost:3000"]
+    # Where people reach Strata (the web app); shown in the MCP setup instructions.
+    public_url: str = "http://localhost:3000"
 
     # LLM providers. An org's model setting picks the provider: "claude-*" models use
     # Anthropic, "vendor/model" ids use NVIDIA's OpenAI-compatible API.
