@@ -67,7 +67,13 @@ Against the Nemotron answers above (citation recall 0.337, 30.7 s mean), Haiku r
 | Docling | 27/27 |
 | Docling + vision on weak pages (27 pages, $0.0104) | 27/27 |
 
-The earnings and outlook decks are pictures of slides; parsed as pages they OCR well enough that every targeted figure was found, but stylised text garbles, which the vision pass fixes (a garbled scanned page came back as a clean transcript). Answer quality on these files is still to be judged. Details: [LOG.md](LOG.md#2026-11-01--step-2c-and-step-3-embeddings-parsing-every-format).
+The earnings and outlook decks are pictures of slides; parsed as pages they OCR well enough that every targeted figure was found, but stylised text garbles, which the vision pass fixes (a garbled scanned page came back as a clean transcript).
+
+Answers (Haiku 5.5, judged by Sonnet 5.5): Docling only 20/20 (faithfulness 0.885, citation precision 0.889), with vision 19/20 (0.886, 0.877); all three cross-format questions pass on both. Vision makes no measurable difference on these questions, so it stays off by default.
+
+### Deep mode, Haiku vs Sonnet (2026-11-01)
+
+150 questions, Sonnet judge: Haiku 5.5 148/150 (multi-hop 0.96, $0.0027 per answer); Sonnet 5.5 150/150 (multi-hop 1.00, $0.041; judging its own answers). Paired difference +0.013 (CI [0.000, +0.033]): not significant at 15× the cost, so Haiku stays the default. Details: [LOG.md](LOG.md#2026-11-01--step-2c-and-step-3-embeddings-parsing-every-format).
 
 ### Sufficient-context check (2026-10-31)
 

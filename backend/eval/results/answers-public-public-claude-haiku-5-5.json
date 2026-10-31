@@ -1,0 +1,1678 @@
+{
+ "kind": "answers",
+ "variant": "public-public-claude-haiku-5-5",
+ "corpus": "6aba956a631c66d9",
+ "index": {
+  "embedding": "fastembed:BAAI/bge-small-en-v1.5",
+  "corpus": "public",
+  "vision": false
+ },
+ "judge_model": "nvidia/nemotron-3-ultra-550b-a55b",
+ "facts_prompt": "adf439b21d",
+ "grounding_prompt": "grounding-v1:e13f1cd847",
+ "settings": {
+  "rerank": true,
+  "recency_bias": "low",
+  "model": "claude-haiku-5-5"
+ },
+ "question_set": "all",
+ "judged": false,
+ "same_family_judge": false,
+ "summary": {
+  "ALL": {
+   "n": 20,
+   "pass": 0.0,
+   "facts_judge": null,
+   "facts_substring": 0.963,
+   "gold_cited": 0.825,
+   "faithfulness": null,
+   "cite_recall": null,
+   "cite_precision": null,
+   "errors": 0,
+   "s": 6.0,
+   "p95_s": 12.3,
+   "usd": 0.00135
+  },
+  "cross_format": {
+   "n": 3,
+   "pass": 0.0,
+   "facts_judge": null,
+   "facts_substring": 1.0,
+   "gold_cited": 0.833,
+   "faithfulness": null,
+   "cite_recall": null,
+   "cite_precision": null,
+   "errors": 0,
+   "s": 5.6,
+   "p95_s": 6.1,
+   "usd": 0.00122
+  },
+  "single_fact": {
+   "n": 11,
+   "pass": 0.0,
+   "facts_judge": null,
+   "facts_substring": 0.933,
+   "gold_cited": 0.818,
+   "faithfulness": null,
+   "cite_recall": null,
+   "cite_precision": null,
+   "errors": 0,
+   "s": 5.5,
+   "p95_s": 9.2,
+   "usd": 0.00117
+  },
+  "table": {
+   "n": 5,
+   "pass": 0.0,
+   "facts_judge": null,
+   "facts_substring": 1.0,
+   "gold_cited": 1.0,
+   "faithfulness": null,
+   "cite_recall": null,
+   "cite_precision": null,
+   "errors": 0,
+   "s": 7.2,
+   "p95_s": 12.3,
+   "usd": 0.00168
+  },
+  "unanswerable": {
+   "n": 1,
+   "pass": 0.0,
+   "facts_judge": null,
+   "facts_substring": null,
+   "gold_cited": 0.0,
+   "faithfulness": null,
+   "cite_recall": null,
+   "cite_precision": null,
+   "errors": 0,
+   "s": 7.1,
+   "p95_s": 7.1,
+   "usd": 0.00213
+  }
+ },
+ "rows": [
+  {
+   "id": "p01",
+   "category": "single_fact",
+   "answer": "Microsoft's diluted earnings per share for the first quarter of fiscal 2026 (quarter ended September 30, 2025) were $3.72 on a GAAP basis and $4.13 on a non-GAAP basis [1][3].\n\nThe gap comes from losses on Microsoft's investments in OpenAI. Those losses reduced net income by $3.1 billion and diluted EPS by $0.41 in the quarter, and the non-GAAP measure excludes them [1][5].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 press release",
+    "fy26 q1 earnings slides",
+    "fy26 q1 form 10 q"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.8,
+   "error": null,
+   "message_id": "99f58c15-e5bc-441e-a0ae-0bb635865955",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 press release",
+     "chunk_id": "77e4cc86-48fb-4218-8ff8-cd8585dba4fa",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "**Microsoft Cloud and AI Strength Drives First Quarter Results** **REDMOND, Wash. \u2014 October 29, 2025 \u2014** Microsoft Corp. today announced the following results for the quarter ended September 30, 2025, as compared to the corresponding period of last fiscal year: - Revenue was\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "7cfaebfb-8b03-4a28-970b-b861a833527b",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "**Microsoft Cloud and AI Strength Drives First Quarter Results** **REDMOND, Wash. \u2014 October 29, 2025 \u2014** Microsoft Corp. today announced the following results for the quarter ended September 30, 2025, as compared to the corresponding period of last fiscal year: - Revenue was\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "bf10509a-3305-4a5b-bd73-d886f34b37b9",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "- Revenue increased 18% (up 17% CC) with growth across all segments - Cost of revenue increased 20% (up 19% CC) driven by growth in Microsoft Cloud - Gross margin increased 18% (up 16% CC) with growth across all segments. Gross margin percentage decreased slightly driven by\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "b18194b6-460c-46df-8457-0384b0378eea",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "services revenue for the quarter. We also saw a great response to the Xbox Ally launch two weeks ago. And set a new records for players on PC. In closing, our planet-scale cloud and AI factory, together with Copilots across high value domains, is driving broad diffusion and\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "ee9ad7c8-2f00-4bdd-8cc2-99f1d5ea8402",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "Adjusted net income and adjusted diluted earnings per share (\u201cEPS\u201d) are non-GAAP financial measures. These non-GAAP financial measures exclude net losses from investments in OpenAI. Refer to the Non-GAAP Financial Measures section below for a reconciliation of our financial\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 270,
+     "cost_usd": 0.001262,
+     "cache_read": 1533,
+     "cache_write": 8892
+    }
+   },
+   "cost_usd": 0.001262
+  },
+  {
+   "id": "p02",
+   "category": "table",
+   "answer": "Microsoft's investments in OpenAI reduced its FY26 Q1 net income by $3.1 billion, or $0.41 per diluted share, for the quarter ended September 30, 2025 [1][3]. The figure is $3,086 million in the reconciliation table [1].\n\nFor comparison, the OpenAI impact in FY25 Q1 was $523 million ($0.07 per share) [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 press release",
+    "fy26 q1 form 10 q"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 6.0,
+   "error": null,
+   "message_id": "bd330c91-8f9a-4f0d-8f40-83d594ad8369",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 press release",
+     "chunk_id": "1e7de4aa-a496-4a9b-9bcd-6cc0ccbffc62",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "with greater productivity, security, and differentiated value. This momentum is reflected in stories that showcase how our technology is [shaping industries and driving customer\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "683afd2c-88f3-4175-a56c-cb440e5a76e8",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "with greater productivity, security, and differentiated value. **This momentum is reflected in stories that showcase how our technology is** [**shaping industries and driving customer\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "ee9ad7c8-2f00-4bdd-8cc2-99f1d5ea8402",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "Adjusted net income and adjusted diluted earnings per share (\u201cEPS\u201d) are non-GAAP financial measures. These non-GAAP financial measures exclude net losses from investments in OpenAI. Refer to the Non-GAAP Financial Measures section below for a reconciliation of our financial\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "b18194b6-460c-46df-8457-0384b0378eea",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "services revenue for the quarter. We also saw a great response to the Xbox Ally launch two weeks ago. And set a new records for players on PC. In closing, our planet-scale cloud and AI factory, together with Copilots across high value domains, is driving broad diffusion and\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 234,
+     "cost_usd": 0.001316,
+     "cache_read": 1524,
+     "cache_write": 9465
+    }
+   },
+   "cost_usd": 0.001316
+  },
+  {
+   "id": "p03",
+   "category": "single_fact",
+   "answer": "Microsoft returned $10.7 billion to shareholders in Q1 fiscal 2026 (the quarter ended September 30, 2025). That broke down into $6.8 billion in dividends and $4.0 billion in share repurchases [1][2][6].\n\nThe 10-Q gives the same split: $4.0 billion for 8 million shares repurchased, and dividends declared totaling $6.8 billion [4]. The $0.91 per-share dividend declared September 15, 2025 totaled $6,765 million [4].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 earnings slides",
+    "fy26 q1 press release",
+    "fy26 q1 earnings call transcript",
+    "fy26 q1 form 10 q"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.9,
+   "error": null,
+   "message_id": "112ee124-d1d1-42d7-bd07-679dc6f0ed99",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "036a5c43-1a10-4d50-832c-95564ddf1e14",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "- Returned $10.7 billion to shareholders with $6.8 billion in dividends and $4.0 billion in share repurchases"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 press release",
+     "chunk_id": "a25b72ff-4d40-47dd-bd40-9a91127c7845",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "**Business Highlights** Microsoft Cloud revenue was $49.1 billion and increased 26% (up 25% in constant currency), and commercial remaining performance obligation increased 51% to $392 billion. Revenue in Productivity and Business Processes was $33.0 billion and increased 17%\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "a54be740-c11c-4a45-ac37-f1c41d216ae7",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "**Business Highlights** Microsoft Cloud revenue was $49.1 billion and increased 26% (up 25% in constant currency), and commercial remaining performance obligation increased 51% to $392 billion. Revenue in Productivity and Business Processes was $33.0 billion and increased 17%\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "87699aaa-231e-4407-ac41-c9d760f80b70",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "All repurchases were made using cash resources. Shares repurchased during the first quarter of fiscal year 2026 were under the share repurchase program approved on September 16, 2024. Shares repurchased during the first quarter of fiscal year 2025 were under the share repurchase\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "b21ca2fa-f1b3-406e-a881-89f04fa3697c",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| $2.59 | $3.29 | $2.15 | $5.11 | $5.82 | $8.12 | $9.70 | $9.72 | $11.86 | $13.70 | |---------|---------|---------|---------|---------|---------|---------|---------|----------|----------| | $2.56 | $3.25 | $2.13 | $5.06 | $5.76 | $8.05 | $9.65 | $9.68 | $11.80 | $13.64 | |\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "f4130df8-2b78-4b2b-8873-97562ce2c732",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "collections, partially offset by higher supplier payments. And free cash flow increased 33% to $25.7 billion, with minimal impact from the sequential increase in capex given the higher mix of finance leases. And finally, we returned $10.7 billion to shareholders through\u2026"
+    },
+    {
+     "ref": 7,
+     "title": "fy26 q1 income statements",
+     "chunk_id": "aafd8955-56e1-4a53-92c4-0070d6e1401c",
+     "document_id": "05d1c1ca-f914-4ccd-898a-844c50795346",
+     "origin": "knowledge",
+     "snippet": "- **Microsoft Financial Data - FY26Q1**: Segment Results - ****: Return of Cash to Shareholders"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 286,
+     "cost_usd": 0.001336,
+     "cache_read": 1528,
+     "cache_write": 9422
+    }
+   },
+   "cost_usd": 0.001336
+  },
+  {
+   "id": "p04",
+   "category": "table",
+   "answer": "Microsoft's research and development expense for the quarter ended September 30, 2025 was **$8,146 million** (about $8.1 billion) [2].\n\nIt rose $602 million, or 8%, from the prior-year quarter. The increase was driven by investments in cloud and AI engineering, including compute capacity and AI talent [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 financial statements",
+    "fy26 q1 form 10 q"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.7,
+   "error": null,
+   "message_id": "93d744ca-19f5-4b8e-babf-147fa081b094",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "faab34fa-5e8b-4f10-8a10-6eef81af849c",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "Research and development expenses include payroll, employee benefits, stock-based compensation expense, and other headcount-related expenses associated with product development. Research and development expenses also include technology development costs, including AI training\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "45cb03db-9106-4ec1-8158-0bf3b35b6ed6",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| MICROSOFT CORPORATION | |-------------------------| | Back to Main | |----------------| | INCOME STATEMENTS | INCOME STATEMENTS | INCOME STATEMENTS | INCOME STATEMENTS |\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 press release",
+     "chunk_id": "0cc3f43f-77f6-408c-af70-afcc846b3fc7",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "| **MICROSOFT CORPORATION** | | | | |-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------| | | | | | | INCOME\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "6401734a-3e1e-49dc-b30d-edd64dc7fa89",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "| **MICROSOFT CORPORATION** | | | | |-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------| | | | | | | INCOME\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "b05df82b-112b-4d57-a239-9e37f84a8e7a",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "October 29, 2025 Satya Nadella Amy Hood Jonathan Neilson T'hinrnd 'rd n ns -rn sn od sns or other statements about future events. These statements are based on current expectations and assumptions that are subject to risks and uncertainties. Actual results could materially\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "fy26 q1 income statements",
+     "chunk_id": "ae564be2-633d-40ba-ad19-2ccd81c8a755",
+     "document_id": "05d1c1ca-f914-4ccd-898a-844c50795346",
+     "origin": "knowledge",
+     "snippet": "- **Microsoft Financial Data - FY26Q1**: Comprehensive Income Statements - ****: Segment History"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 312,
+     "cost_usd": 0.000876,
+     "cache_read": 2938,
+     "cache_write": 5518
+    }
+   },
+   "cost_usd": 0.000876
+  },
+  {
+   "id": "p05",
+   "category": "table",
+   "answer": "Revenue for Productivity and Business Processes in FY26 Q1 (the quarter ended September 30, 2025) was $33,020 million, or $33.0 billion [1][2]. That was up 17% year over year, or 14% in constant currency [2][4].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 financial statements",
+    "fy26 q1 earnings slides",
+    "fy26 q1 press release"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 3.8,
+   "error": null,
+   "message_id": "71c59b53-600e-4ba1-850a-21b5a72f1591",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "8894ebcb-6dc1-4291-b62c-29716ff975bf",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| Microsoft Corporation | |-------------------------| | Segment Results | | (In millions) | | Back to Main | |----------------| | | | | | | | |-------------------------------------|---------|---------|---------|---------|------------------| | Productivity and Business Processes\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "34bcc41b-4413-4383-9be9-c879e778f79b",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "| ($ in billions, except per share amounts) | GAAP and CC results - FY26 Q1 | GAAP and CC results - Growth | GAAP and CC results - CC Growth* | As Adjusted (non-GAAP) - FY26 Q1 | As Adjusted (non-GAAP) - Growth** | As Adjusted (non-GAAP) - CC Growth*** |\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "b34c21af-5598-4d84-9d19-e74b7fe06bad",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "**Reportable Segments** ***Three Months Ended September 30, 2025 Compared with Three Months Ended September 30, 2024*** *Productivity and Business Processes* Revenue increased $4.7 billion or 17%. \u2022 Microsoft 365 Commercial products and cloud services revenue increased $3.5\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 press release",
+     "chunk_id": "a25b72ff-4d40-47dd-bd40-9a91127c7845",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "**Business Highlights** Microsoft Cloud revenue was $49.1 billion and increased 26% (up 25% in constant currency), and commercial remaining performance obligation increased 51% to $392 billion. Revenue in Productivity and Business Processes was $33.0 billion and increased 17%\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "a54be740-c11c-4a45-ac37-f1c41d216ae7",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "**Business Highlights** Microsoft Cloud revenue was $49.1 billion and increased 26% (up 25% in constant currency), and commercial remaining performance obligation increased 51% to $392 billion. Revenue in Productivity and Business Processes was $33.0 billion and increased 17%\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "f4130df8-2b78-4b2b-8873-97562ce2c732",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "collections, partially offset by higher supplier payments. And free cash flow increased 33% to $25.7 billion, with minimal impact from the sequential increase in capex given the higher mix of finance leases. And finally, we returned $10.7 billion to shareholders through\u2026"
+    },
+    {
+     "ref": 7,
+     "title": "fy26 q2 outlook",
+     "chunk_id": "cc0a6942-feb4-4cdd-a404-aaecb3a943e1",
+     "document_id": "90cac92a-432d-4223-bcc4-2a7f248d5779",
+     "origin": "knowledge",
+     "snippet": "| Microsoft 365 Commercial cloud revenue | Growth of 13% to 14% in constant currency | |-------------------------------------------|---------------------------------------------| | Microsoft 365 Commercial products revenue | Growth in low- to mid-single digits | | Microsoft 365\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 192,
+     "cost_usd": 0.001122,
+     "cache_read": 2942,
+     "cache_write": 7966
+    }
+   },
+   "cost_usd": 0.001122
+  },
+  {
+   "id": "p06",
+   "category": "single_fact",
+   "answer": "Microsoft paid $19.4 billion in cash for property and equipment in FY26 Q1 (the quarter ended September 30, 2025). That was up 30% year over year [1][3]. The prior-year figure in the cash flow statement was $14.9 billion, which matches the 30% increase [3].\n\nCash paid was well below total capital expenditures of $34.9 billion, mainly because of finance leases [1]. The company also noted that the gap reflects the normal timing of goods received but not yet paid [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 earnings slides",
+    "fy26 q1 press release",
+    "fy26 q1 earnings call transcript"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 3.9,
+   "error": null,
+   "message_id": "9f345c8c-1088-4c2a-bf12-80812b188a4c",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "14fa37b9-78b7-489d-a903-d916da1c384f",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "- Capital expenditures including assets acquired under finance leases were $34.9 billion, up 74% to support customer demand for our cloud and Al offerings. Roughly half of capital expenditures were for short-lived assets, primarily GPUs and CPUs, which support Azure platform\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "b67a208c-17a3-4a4d-a32c-0b5eeeb690ad",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "in line with guidance. Company gross margin percentage was 69%, down slightly year-over-year driven by investments in AI, including the impact of scaling our AI infrastructure and the growing usage of our AI product features. This was partially offset by ongoing efficiency\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 press release",
+     "chunk_id": "1fa99abc-a795-40f3-a764-755210ffa3e6",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "| CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS |\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "75e238fa-6d9f-485a-b541-69e04930114b",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "| CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS |\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "99c61a8a-60fd-48c3-baa8-96d3c83c2046",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| Microsoft Corporation | Back to Main | |---------------------------------------------------------------------|----------------| | Capital Expenditures Including Assets Acquired Under Capital Leases | | | (In billions) | | | | Q1-16 | Q2-16 | Q3-16 | Q4-16 | Fiscal Year 2016 |\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "43ac8df8-795f-418b-a63e-084a7e5f4343",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "NOTE 6 \u2014 PROPERTY AND EQUIPMENT The components of property and equipment were as follows:"
+    },
+    {
+     "ref": 7,
+     "title": "fy26 q1 income statements",
+     "chunk_id": "aafd8955-56e1-4a53-92c4-0070d6e1401c",
+     "document_id": "05d1c1ca-f914-4ccd-898a-844c50795346",
+     "origin": "knowledge",
+     "snippet": "- **Microsoft Financial Data - FY26Q1**: Segment Results - ****: Return of Cash to Shareholders"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 293,
+     "cost_usd": 0.000917,
+     "cache_read": 2945,
+     "cache_write": 5928
+    }
+   },
+   "cost_usd": 0.000917
+  },
+  {
+   "id": "p07",
+   "category": "single_fact",
+   "answer": "Finance leases grew **71% sequentially** in FY26 Q1, to **$11.1 billion**, driven by the timing of lease commencements for large datacenter sites [1]. The growth rate is Microsoft's own figure. The prior-quarter dollar amount isn't stated in these sources, but backing it out from 71% implies roughly $6.5 billion, which is my calculation rather than a reported number.\n\nFinance leases were part of total capital expenditures of $34.9 billion, which were up 74% [1]. Management noted that the sequential increase in capex included a higher mix of finance leases, which had a lower impact on free cash flow [1][2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 earnings slides",
+    "fy26 q1 earnings call transcript"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 6.2,
+   "error": null,
+   "message_id": "727dcb87-9d6e-4384-8331-87f4dac39c1e",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "14fa37b9-78b7-489d-a903-d916da1c384f",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "- Capital expenditures including assets acquired under finance leases were $34.9 billion, up 74% to support customer demand for our cloud and Al offerings. Roughly half of capital expenditures were for short-lived assets, primarily GPUs and CPUs, which support Azure platform\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "b67a208c-17a3-4a4d-a32c-0b5eeeb690ad",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "in line with guidance. Company gross margin percentage was 69%, down slightly year-over-year driven by investments in AI, including the impact of scaling our AI infrastructure and the growing usage of our AI product features. This was partially offset by ongoing efficiency\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "99c61a8a-60fd-48c3-baa8-96d3c83c2046",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| Microsoft Corporation | Back to Main | |---------------------------------------------------------------------|----------------| | Capital Expenditures Including Assets Acquired Under Capital Leases | | | (In billions) | | | | Q1-16 | Q2-16 | Q3-16 | Q4-16 | Fiscal Year 2016 |\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "a3b6abad-fd0f-485d-8f47-497acc48ba16",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "| **(In millions)** | | | | | | | | | |-------------------------------------------------------------------------|----|-------|-----------|----|----|----|----------|----| | | | | | | | | | | | | | | | | | | | | | **Three Months Ended September 30,** | | | **2025** | | | |\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 income statements",
+     "chunk_id": "48d69a2d-0d09-4cf7-90db-22f8cfce6219",
+     "document_id": "05d1c1ca-f914-4ccd-898a-844c50795346",
+     "origin": "knowledge",
+     "snippet": "- **Microsoft Financial Data - FY26Q1**: We adopted new accounting standards related to revenue recognition and leases effective July 1, 2017. The prior periods presented here have been restated to reflect adoption of these new standards."
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 465,
+     "cost_usd": 0.001101,
+     "cache_read": 2945,
+     "cache_write": 6715
+    }
+   },
+   "cost_usd": 0.001101
+  },
+  {
+   "id": "p08",
+   "category": "single_fact",
+   "answer": "Microsoft guided total company revenue for the second quarter of fiscal 2026 to $79.5 billion to $80.6 billion, or growth of 14% to 16% [3]. This was stated on the fiscal 2026 Q1 earnings call on October 29, 2025, and it is on a US dollar basis [3].\n\nFor context, the same call gave segment ranges: Productivity and Business Processes $33.3 to $33.6 billion, Intelligent Cloud $32.25 to $32.55 billion, and More Personal Computing $13.95 to $14.45 billion [3].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 earnings call transcript"
+   ],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 4.3,
+   "error": null,
+   "message_id": "30e426e4-1327-4a4f-a354-de74241fad61",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q2 outlook",
+     "chunk_id": "cc0a6942-feb4-4cdd-a404-aaecb3a943e1",
+     "document_id": "90cac92a-432d-4223-bcc4-2a7f248d5779",
+     "origin": "knowledge",
+     "snippet": "| Microsoft 365 Commercial cloud revenue | Growth of 13% to 14% in constant currency | |-------------------------------------------|---------------------------------------------| | Microsoft 365 Commercial products revenue | Growth in low- to mid-single digits | | Microsoft 365\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q2 outlook legacy",
+     "chunk_id": "a9e1e48c-b608-47f4-a6ba-12b73bb4187b",
+     "document_id": "d8017ba6-fe88-4e32-a522-6a589cd5931b",
+     "origin": "knowledge",
+     "snippet": "| Windows OEM and Devices revenue | Decline in mid-single digits | |----------------------------------------------|--------------------------------------| | Search and news advertising revenue (ex TAC) | Growth in low-double digits | | Xbox content and services revenue | Decline\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "154b173f-5240-49ce-a098-2af92380363f",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "FX to increase total revenue growth by 2 points. Within the segments, we expect FX to increase revenue growth by 2 points in Productivity and Business Processes and Intelligent Cloud and 1 point in More Personal Computing. We expect FX to increase COGS and operating expense\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 press release",
+     "chunk_id": "a25b72ff-4d40-47dd-bd40-9a91127c7845",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "**Business Highlights** Microsoft Cloud revenue was $49.1 billion and increased 26% (up 25% in constant currency), and commercial remaining performance obligation increased 51% to $392 billion. Revenue in Productivity and Business Processes was $33.0 billion and increased 17%\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "a54be740-c11c-4a45-ac37-f1c41d216ae7",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "**Business Highlights** Microsoft Cloud revenue was $49.1 billion and increased 26% (up 25% in constant currency), and commercial remaining performance obligation increased 51% to $392 billion. Revenue in Productivity and Business Processes was $33.0 billion and increased 17%\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 321,
+     "cost_usd": 0.00094,
+     "cache_read": 2938,
+     "cache_write": 5993
+    }
+   },
+   "cost_usd": 0.00094
+  },
+  {
+   "id": "p09",
+   "category": "single_fact",
+   "answer": "Microsoft expected its FY26 Q2 effective tax rate to be approximately 19% [1][2]. This was stated in the FY26 Q1 earnings call on October 29, 2025 [1] and repeated in the Q2 outlook slides [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 earnings call transcript",
+    "fy26 q2 outlook legacy"
+   ],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 4.5,
+   "error": null,
+   "message_id": "03d50147-060e-400c-b239-f75e786fc3ea",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "154b173f-5240-49ce-a098-2af92380363f",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "FX to increase total revenue growth by 2 points. Within the segments, we expect FX to increase revenue growth by 2 points in Productivity and Business Processes and Intelligent Cloud and 1 point in More Personal Computing. We expect FX to increase COGS and operating expense\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q2 outlook legacy",
+     "chunk_id": "1ee60b42-8ef4-465c-a1af-42546cb4f3ce",
+     "document_id": "d8017ba6-fe88-4e32-a522-6a589cd5931b",
+     "origin": "knowledge",
+     "snippet": "| Foreign currency impact | nos os p s s oss r or s st osese. and Intelligent Cloud, and 1 point in More Personal Computing \u00b7 Increase to COGS growth and Opex growth of 1 point |\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "6e77600a-40ea-4cb1-b742-f875627447f7",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "NOTE 10 \u2014 INCOME TAXES **Effective Tax Rate** Our effective tax rate was 19% for both the three months ended September 30, 2025 and 2024. Our effective tax rate for the three months ended September 30, 2025 was relatively unchanged compared to prior year as U.S. tax law changes\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "bf10509a-3305-4a5b-bd73-d886f34b37b9",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "- Revenue increased 18% (up 17% CC) with growth across all segments - Cost of revenue increased 20% (up 19% CC) driven by growth in Microsoft Cloud - Gross margin increased 18% (up 16% CC) with growth across all segments. Gross margin percentage decreased slightly driven by\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 press release",
+     "chunk_id": "43d61d8f-31b9-4f05-904d-be4937f9f6f6",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "| **MICROSOFT CORPORATION** | | | | |-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------| | General and\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "e44b8772-8344-4d86-8227-4732b32271e1",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "| **MICROSOFT CORPORATION** | | | | |-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------| | General and\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 189,
+     "cost_usd": 0.000942,
+     "cache_read": 2934,
+     "cache_write": 6542
+    }
+   },
+   "cost_usd": 0.000942
+  },
+  {
+   "id": "p10",
+   "category": "single_fact",
+   "answer": "The incremental Azure commitment from OpenAI was $250 billion. OpenAI contracted to purchase an incremental $250 billion of Azure services under a new agreement signed October 28, 2025 [3]. Microsoft's FY26 Q1 earnings call referred to the same figure as the \"incremental $250 billion Azure commitments from OpenAI announced yesterday\" [1]. The Q1 results did not include any impact from this commitment [1][2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 form 10 q",
+    "fy26 q1 earnings call transcript",
+    "fy26 q1 earnings slides"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 7.9,
+   "error": null,
+   "message_id": "ebc98fae-d888-46dc-baac-9d910f160d53",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "f4130df8-2b78-4b2b-8873-97562ce2c732",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "collections, partially offset by higher supplier payments. And free cash flow increased 33% to $25.7 billion, with minimal impact from the sequential increase in capex given the higher mix of finance leases. And finally, we returned $10.7 billion to shareholders through\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "038e4f48-20aa-403d-9e2e-fff9dc3cc9fb",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "- Commercial bookings increased 112% (up 111% CC) year-over-year driven by Azure commitments from OpenAl. Results do not include any impact from the incremental Azure commitment with OpenAl announced on October 28th, 2025. - Commercial remaining performance obligation of $392\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "cf234f55-1c77-4769-b6c1-a1e39630d613",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "Our Microsoft Cloud revenue, which includes Microsoft 365 Commercial cloud, Azure and other cloud services, the commercial portion of LinkedIn, and Dynamics 365, was $49.1 billion and $38.9 billion for the three months ended September 30, 2025 and 2024, respectively. These\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 press release",
+     "chunk_id": "77e4cc86-48fb-4218-8ff8-cd8585dba4fa",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "**Microsoft Cloud and AI Strength Drives First Quarter Results** **REDMOND, Wash. \u2014 October 29, 2025 \u2014** Microsoft Corp. today announced the following results for the quarter ended September 30, 2025, as compared to the corresponding period of last fiscal year: - Revenue was\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "683afd2c-88f3-4175-a56c-cb440e5a76e8",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "with greater productivity, security, and differentiated value. **This momentum is reflected in stories that showcase how our technology is** [**shaping industries and driving customer\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 257,
+     "cost_usd": 0.001191,
+     "cache_read": 2950,
+     "cache_write": 8259
+    }
+   },
+   "cost_usd": 0.001191
+  },
+  {
+   "id": "p11",
+   "category": "single_fact",
+   "answer": "Alice Jolla, chief accounting officer, and Keith Dolliver, corporate secretary and deputy general counsel, joined Satya Nadella and Amy Hood on the call [1]. Jonathan Neilson also hosted the call [1][2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 earnings call transcript",
+    "fy26 q1 press release"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 8.2,
+   "error": null,
+   "message_id": "a7b20427-5aed-43c8-aded-f40a9ce573de",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "928c6d13-bd3e-46b5-bd85-56c7a9d391c4",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "**JONATHAN NEILSON:** Good afternoon and thank you for joining us today. On the call with me are Satya Nadella, chairman and chief executive officer, Amy Hood, chief financial officer, Alice Jolla, chief accounting officer, and Keith Dolliver, corporate secretary and deputy\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 press release",
+     "chunk_id": "1e7de4aa-a496-4a9b-9bcd-6cc0ccbffc62",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "with greater productivity, security, and differentiated value. This momentum is reflected in stories that showcase how our technology is [shaping industries and driving customer\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "683afd2c-88f3-4175-a56c-cb440e5a76e8",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "with greater productivity, security, and differentiated value. **This momentum is reflected in stories that showcase how our technology is** [**shaping industries and driving customer\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q2 outlook",
+     "chunk_id": "20edd3c6-46cd-4317-8ec0-f0371d627c34",
+     "document_id": "90cac92a-432d-4223-bcc4-2a7f248d5779",
+     "origin": "knowledge",
+     "snippet": "October 29, 2025 Satya Nadella Amy Hood Jonathan Neilson This presentation contains forward-looking statements, which are any predictions, projections, or other statements about future events. These statements are based on current expectations and assumptions that are subject to\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q2 outlook legacy",
+     "chunk_id": "8b0b298d-68c2-4f80-80bf-a13e5a09714a",
+     "document_id": "d8017ba6-fe88-4e32-a522-6a589cd5931b",
+     "origin": "knowledge",
+     "snippet": "October 29, 2025 Satya Nadella Amy Hood Jonathan Neilson This presentation contains forward-looking statements, which are any predictions, projections, or other statements about future events. These statements are based on current expectations and assumptions that are subject to\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 317,
+     "cost_usd": 0.001139,
+     "cache_read": 2948,
+     "cache_write": 7607
+    }
+   },
+   "cost_usd": 0.001139
+  },
+  {
+   "id": "p12",
+   "category": "table",
+   "answer": "Microsoft's Scope 1 emissions in FY25 were **170,887 metric tons CO2e** [2]. The fact sheet's Table 1A breaks this down into CO2 (100,347), HFCs (70,131), N2O (333), CH4 (75) and SF6 (1) [2].\n\nThe sustainability report shows a different number. Its chart lists a Scope 1 value of 20,290,000 metric tons for FY25 [1]. That figure doesn't match the fact sheet, and the chart layout makes it unclear what it measures. I'd use the Table 1A figure, since it is the detailed, reviewed data table: Deloitte & Touche performed a review engagement on Section 1 of the fact sheet, which covers FY25 [2]. Microsoft's own report says emissions increased in FY25 [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "2026 environmental data fact sheet",
+    "2026 environmental sustainability report"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 12.3,
+   "error": null,
+   "message_id": "9c59cb1b-005d-433a-ae17-88a38fa3a22a",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "2026 environmental sustainability report",
+     "chunk_id": "4bbafc4d-8f4c-4662-abba-86380838edfa",
+     "document_id": "512f939c-f635-4ff9-b3ad-4f0f90bce59f",
+     "origin": "knowledge",
+     "snippet": "Microsoft's emissions increased in FY25, reflecting rapid cloud growth and a deliberate shift toward long-term carbon-free electricity investments that add new capacity to grids. Metric tons CO2 e Scope 2 and 3 emissions included in this chart are market-based. Scope 3 emissions\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "2026 environmental data fact sheet",
+     "chunk_id": "a8a66c0f-093b-4cfa-a0ea-f3f9bb91a625",
+     "document_id": "b23923d4-1af6-40a6-b28d-fc811718ecec",
+     "origin": "knowledge",
+     "snippet": "As part of Microsoft's goal for transparency regarding our environmental footprint, the following sections of the Environmental Data Fact Sheet 2026 (the \"Data Fact Sheet\") are a compilation of environmental metrics across greenhouse gas (GHG) emissions, energy, water, waste and\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "2026 environmental data fact sheet page 2 scan",
+     "chunk_id": "c7d54d39-1de0-4fc0-a6a1-c33cfb778e85",
+     "document_id": "e5fcef31-7f32-4db6-a4d8-34e5e943f20c",
+     "origin": "knowledge",
+     "snippet": "Ast snsg t a ng r ot o ng s f o the Environmental Data Fact Sheet 2026 (the \"Data Fact Sheet\") are a compilation of environmental metrics across greenhouse gas (GHG) emissions, energy, water, waste and circularity, and land. Section 1 presents our GHG emissions in accordance\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "72f86cc8-2117-436a-b726-9d248be6053a",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| | $77,673 | | 24043 | | | | 24043 | | 15669 | | | | 15669 | | $37,961 | | | | $37,961 | | Quarterly segment cost of revenue and operating expense data for FY25 will be provided as we progress through FY26. |\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 3,
+     "input": 8,
+     "output": 1018,
+     "cost_usd": 0.002239,
+     "cache_read": 10900,
+     "cache_write": 12965
+    }
+   },
+   "cost_usd": 0.002239
+  },
+  {
+   "id": "p13",
+   "category": "table",
+   "answer": "Microsoft's total Scope 3 emissions in FY25 were 18,243,000 metric tons CO2e (market-based), according to Table 1A of the 2026 Environmental Data Fact Sheet [2]. This is the Scope 3 subtotal, rounded to the nearest thousand, and it is up from 16,290,000 in FY24 [2].\n\nThe fact sheet also reports total Scope 1, 2 and 3 emissions of 21,121,000 mtCO2e for FY25 under Table 1A [2]. Under management's criteria in Table 1B, the figures are different: Scope 3 subtotal of 17,412,000 and a total of 20,290,000 [2]. Table 1A is the GHG Protocol view, so 18,243,000 is the figure to use for the standard answer.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "2026 environmental data fact sheet"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 9.4,
+   "error": null,
+   "message_id": "11e72ac4-3d01-497c-90b4-176ecaef44fd",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "2026 environmental sustainability report",
+     "chunk_id": "4bbafc4d-8f4c-4662-abba-86380838edfa",
+     "document_id": "512f939c-f635-4ff9-b3ad-4f0f90bce59f",
+     "origin": "knowledge",
+     "snippet": "Microsoft's emissions increased in FY25, reflecting rapid cloud growth and a deliberate shift toward long-term carbon-free electricity investments that add new capacity to grids. Metric tons CO2 e Scope 2 and 3 emissions included in this chart are market-based. Scope 3 emissions\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "2026 environmental data fact sheet",
+     "chunk_id": "bedc7564-13ec-4e9c-8935-e0345f5f0750",
+     "document_id": "b23923d4-1af6-40a6-b28d-fc811718ecec",
+     "origin": "knowledge",
+     "snippet": "Microsoft announced in January 2020 that we aim to be carbon negative by 2030 and that by 2050 we aim to remove from the atmosphere an equivalent amount of all the carbon dioxide our company has emitted either directly or by our electricity consumption since we were founded in\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "2026 environmental data fact sheet page 2 scan",
+     "chunk_id": "c7d54d39-1de0-4fc0-a6a1-c33cfb778e85",
+     "document_id": "e5fcef31-7f32-4db6-a4d8-34e5e943f20c",
+     "origin": "knowledge",
+     "snippet": "Ast snsg t a ng r ot o ng s f o the Environmental Data Fact Sheet 2026 (the \"Data Fact Sheet\") are a compilation of environmental metrics across greenhouse gas (GHG) emissions, energy, water, waste and circularity, and land. Section 1 presents our GHG emissions in accordance\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "8894ebcb-6dc1-4291-b62c-29716ff975bf",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| Microsoft Corporation | |-------------------------| | Segment Results | | (In millions) | | Back to Main | |----------------| | | | | | | | |-------------------------------------|---------|---------|---------|---------|------------------| | Productivity and Business Processes\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "493ca2ae-f215-48fc-ae18-a584f9bdc521",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "Note 3 \u2013 Other Income (Expense), Net, and Note 4 \u2013 Investments for further details on our equity method investments and other income (expense), net. **REPORT OF INDEPENDENT REGISTERED PUBLIC ACCOUNTING FIRM** To the Stockholders and the Board of Directors of Microsoft\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 4,
+     "input": 10,
+     "output": 835,
+     "cost_usd": 0.002836,
+     "cache_read": 25422,
+     "cache_write": 17298
+    }
+   },
+   "cost_usd": 0.002836
+  },
+  {
+   "id": "p14",
+   "category": "single_fact",
+   "answer": "Deloitte & Touche LLP reviewed Section 1 of Microsoft's 2026 Environmental Data Fact Sheet. The review covered management's assertion on the specified information in Section 1 for the fiscal year ended June 30, 2025, and the single-use plastic packaging percentage in Section 1, Table 11, footnote 3 for the calendar year ended December 31, 2025 [1][2]. Its review report appears in Section 1.11 [2]. The review was a limited-assurance review under AICPA attestation standards, not an examination [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "2026 environmental data fact sheet",
+    "2026 environmental data fact sheet page 2 scan"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 3.1,
+   "error": null,
+   "message_id": "1a02bf4e-5c63-44e6-a286-0f4a793c4435",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "2026 environmental data fact sheet",
+     "chunk_id": "3c9dea0b-d386-4980-a4f5-235044485d88",
+     "document_id": "b23923d4-1af6-40a6-b28d-fc811718ecec",
+     "origin": "knowledge",
+     "snippet": "We have reviewed management of Microsoft Corporation's (the \"Company\") assertion that the specified information included in Section 1 of the 2026 Environmental Data Fact Sheet (\"Fact Sheet\") as of and for the fiscal year ended June 30, 2025, and the single-use plastic packaging\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "2026 environmental data fact sheet page 2 scan",
+     "chunk_id": "c7d54d39-1de0-4fc0-a6a1-c33cfb778e85",
+     "document_id": "e5fcef31-7f32-4db6-a4d8-34e5e943f20c",
+     "origin": "knowledge",
+     "snippet": "Ast snsg t a ng r ot o ng s f o the Environmental Data Fact Sheet 2026 (the \"Data Fact Sheet\") are a compilation of environmental metrics across greenhouse gas (GHG) emissions, energy, water, waste and circularity, and land. Section 1 presents our GHG emissions in accordance\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "2026 environmental sustainability report",
+     "chunk_id": "7b4f2ee6-35fb-4832-8f3d-4bfadaa1712e",
+     "document_id": "512f939c-f635-4ff9-b3ad-4f0f90bce59f",
+     "origin": "knowledge",
+     "snippet": "A key principle of our work is transparency. This report, published annually, includes our strategy, progress against our goals, and key challenges and trends we see in this work. We also publish our environmental data, which is included in the separate Environmental Data Fact\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "6d91a674-21b5-4385-a9d6-ede506b12f68",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "the responsibility of the Company's management. We are a public accounting firm registered with the PCAOB and are required to be independent with respect to the Company in accordance with the U.S. federal securities laws and the applicable rules and regulations of the Securities\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 285,
+     "cost_usd": 0.001004,
+     "cache_read": 2944,
+     "cache_write": 6651
+    }
+   },
+   "cost_usd": 0.001004
+  },
+  {
+   "id": "p15",
+   "category": "single_fact",
+   "answer": "Yes. In FY25 Microsoft replenished about 14.3 million cubic meters, against total withdrawals of about 13.3 million, a surplus of roughly 1.0 million cubic meters. This was the first year it replenished more than it withdrew globally [1].\n\n- **Replenished:** over 14.2 million m\u00b3 [1]. The report's chart gives 14,278,782 m\u00b3 [1].\n- **Withdrawn:** 13,266 ML, which equals 13.266 million m\u00b3 (1 ML = 1,000 m\u00b3) [2].\n- **Surplus:** about 1.01 million m\u00b3. This is my calculation from the figures above, not a number Microsoft states.\n\nMicrosoft also changed its replenishment target in FY25 to measure total withdrawals rather than consumption [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "2026 environmental sustainability report",
+    "2026 environmental data fact sheet"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 9.2,
+   "error": null,
+   "message_id": "769b2215-5881-40b3-98e0-5bde34b6507e",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "2026 environmental sustainability report",
+     "chunk_id": "a7f34a48-7d54-4c93-ac42-dad658a7bfa2",
+     "document_id": "512f939c-f635-4ff9-b3ad-4f0f90bce59f",
+     "origin": "knowledge",
+     "snippet": "This year's results also made clear that progress now depends on adapting how we work. Water is one of the clearest examples. In FY25, we replenished for the first time more water globally than we withdrew-more than 14 million cubic meters-marking a major milestone on our\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "2026 environmental data fact sheet",
+     "chunk_id": "3ce90f35-5926-4f9c-b3a5-b6b80e86ed3d",
+     "document_id": "b23923d4-1af6-40a6-b28d-fc811718ecec",
+     "origin": "knowledge",
+     "snippet": "1. The unit of measure for water data is megaliters (ML), 1 ML = 1 million liters = 1,000 cubic meters. 2. Water withdrawal definition was informed by the Global Reporting Initiative (GRI) Standards, specifically disclosure 303-3, as set forth in GRI 303: Water and Effluents\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "2026 environmental data fact sheet page 2 scan",
+     "chunk_id": "1eeb83f5-3411-4f06-920f-923a331f170c",
+     "document_id": "e5fcef31-7f32-4db6-a4d8-34e5e943f20c",
+     "origin": "knowledge",
+     "snippet": "| 1.1 Greenhouse gas (GHG) emissions | 1.1 Greenhouse gas (GHG) emissions | | |-------------------------------------------------------|------------------------------------------------------------------------------|----| | Table 12 Land protection | Table 12 Land protection | 8 |\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "d575cc3d-9ad5-4fc9-a513-fabe5cc15d78",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| MICROSOFT CORPORATION | |-------------------------| | Back to Main | |----------------| | BALANCE SHEETS | BALANCE SHEETS | BALANCE SHEETS | BALANCE SHEETS | |---------------------------|---------------------------|---------------------------|---------------------------| | (In\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "a2616c19-c98b-477b-b2e1-c4d03463927d",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "- Dynamics 365 revenue grew 18% (up 16% CC) with growth across all workloads | Investor Metrics | FY25 Q1 | FY25 Q2 | FY25 Q3 | FY25 Q4 | FY26 Q1 | |-----------------------------------------------------|-----------|-----------|-----------|-----------|-----------| | Microsoft 365\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "2ca4e0aa-e715-42f1-a787-083009d221bb",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "**We may have excessive outages, data losses, and disruptions of our online services if we fail to maintain an adequate operations infrastructure.** Our increasing user traffic, growth in services, and the complexity of our products and services demand more computing power. We\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 3,
+     "input": 8,
+     "output": 727,
+     "cost_usd": 0.00228,
+     "cache_read": 11320,
+     "cache_write": 14421
+    }
+   },
+   "cost_usd": 0.00228
+  },
+  {
+   "id": "p16",
+   "category": "single_fact",
+   "answer": "Microsoft added 29 projects to its carbon dioxide removal (CDR) portfolio in 2025, its third year of signing long-term CDR credit contracts. Those projects span five continents and 10 CDR pathways, and Microsoft expects them to contribute more than 45 million metric tons toward its carbon goals over the next three decades [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "2026 environmental sustainability report"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 3.5,
+   "error": null,
+   "message_id": "0a4f90fe-3da6-4aea-b125-6bee8e4c100b",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "2026 environmental sustainability report",
+     "chunk_id": "61fbe095-37ec-4b9a-94c8-767e2a73e88c",
+     "document_id": "512f939c-f635-4ff9-b3ad-4f0f90bce59f",
+     "origin": "knowledge",
+     "snippet": "Our carbon dioxide removal portfolio includes both engineered and nature-based pathways, helping diversify risk, support innovation, and expand the range of available carbon removal solutions. Bioenergy with carbon capture and storage (BECCS) and afforestation, reforestation\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "2026 environmental data fact sheet",
+     "chunk_id": "caab69d1-8bd5-496d-804f-f1f3ed259bd0",
+     "document_id": "b23923d4-1af6-40a6-b28d-fc811718ecec",
+     "origin": "knowledge",
+     "snippet": "Microsoft procurement of renewable electricity has encompassed a range of sources including on-site generation, spot Energy Attribute Certificates (EACs), green power products, PPAs, and other long-term contracts for environmental attributes. To calculate Scope 2 emissions using\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "2cc9df8b-6d7d-47d0-8b59-9ed7e06b9ffd",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "and integrating them into Copilot. The overall number of Agent users doubled quarter over quarter. And, just yesterday, we announced App Builder, a new Copilot agent that lets anyone create and deploy task-specific apps and agents in minutes, grounded in Microsoft 365 context\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 211,
+     "cost_usd": 0.000813,
+     "cache_read": 2937,
+     "cache_write": 5420
+    }
+   },
+   "cost_usd": 0.000813
+  },
+  {
+   "id": "p17",
+   "category": "cross_format",
+   "answer": "Microsoft's FY26 Q2 revenue guidance of **$79.5 to $80.6 billion** [4] sits about **$1.8 to $2.9 billion above** the **$77.7 billion** it reported for Q1 [1][2]. That is roughly 2.4% to 3.8% sequential growth (my calculation from the figures above).\n\n- **Q1 FY26 actual:** Total revenue of $77,673 million, up 18% year over year [2].\n- **Q2 FY26 guidance (total company):** $79.5 to $80.6 billion [4].\n\nThe guidance also breaks out by segment [4]:\n\n| Segment | Q2 FY26 revenue guidance |\n|---|---|\n| Productivity and Business Processes | $33.3 to $33.6 billion |\n| Intelligent Cloud | $32.25 to $32.55 billion |\n| More Personal Computing | $13.95 to $14.45 billion |\n\nFor comparison, Q1 segment revenue was $33.0 billion, $30.9 billion, and $13.8 billion, respectively [2].\n\nThe Q2 guidance document in the knowledge base is labeled \"legacy,\" so I could not confirm it is the latest version of the outlook.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q2 outlook legacy",
+    "fy26 q1 press release legacy",
+    "fy26 q1 press release"
+   ],
+   "gold_cited": 0.5,
+   "passed": false,
+   "latency_s": 6.0,
+   "error": null,
+   "message_id": "7ecdea79-8675-4cda-8605-dc4dd8c059a1",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "7cfaebfb-8b03-4a28-970b-b861a833527b",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "**Microsoft Cloud and AI Strength Drives First Quarter Results** **REDMOND, Wash. \u2014 October 29, 2025 \u2014** Microsoft Corp. today announced the following results for the quarter ended September 30, 2025, as compared to the corresponding period of last fiscal year: - Revenue was\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 press release",
+     "chunk_id": "aa6a608a-e8c1-424c-87ab-19375a71e361",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "| **MICROSOFT CORPORATION** | | | | |-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------| | Service and other |\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "7ead468f-15b3-41fb-8563-7aec1e7c14a0",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| Revenue | $77,673 | | Cost of revenue | 24043 | | Operating expenses | 15669 | | Operating income | $37,961 | | $28,317 | |-----------| | 5294 | | 6507 | | $16,516 | | $24,092 | |-----------| | 8614 | | 4975 | | $10,503 | | $13,176 | |-----------| | 6191 | | 3452 | | $3,533 |\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q2 outlook legacy",
+     "chunk_id": "1ee60b42-8ef4-465c-a1af-42546cb4f3ce",
+     "document_id": "d8017ba6-fe88-4e32-a522-6a589cd5931b",
+     "origin": "knowledge",
+     "snippet": "| Foreign currency impact | nos os p s s oss r or s st osese. and Intelligent Cloud, and 1 point in More Personal Computing \u00b7 Increase to COGS growth and Opex growth of 1 point |\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "b18194b6-460c-46df-8457-0384b0378eea",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "services revenue for the quarter. We also saw a great response to the Xbox Ally launch two weeks ago. And set a new records for players on PC. In closing, our planet-scale cloud and AI factory, together with Copilots across high value domains, is driving broad diffusion and\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 887,
+     "cost_usd": 0.001475,
+     "cache_read": 2950,
+     "cache_write": 8010
+    }
+   },
+   "cost_usd": 0.001475
+  },
+  {
+   "id": "p18",
+   "category": "cross_format",
+   "answer": "Microsoft guided to Azure and other cloud services revenue growth of **approximately 37% in constant currency** for Q2 FY26 [2][4]. That is below the 40% (39% in constant currency) growth it reported for Q1 [1][6].\n\nThe guidance comes with a caveat. Microsoft said demand remains significantly ahead of available capacity, and it now expects to be capacity constrained through at least the end of fiscal year 2026 [4]. Management also noted that quarterly year-over-year growth can vary with the timing of capacity coming online and with in-period revenue recognition based on contract mix [4].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q2 outlook",
+    "fy26 q1 earnings call transcript",
+    "fy26 q1 earnings slides",
+    "fy26 q1 press release"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 6.1,
+   "error": null,
+   "message_id": "d04ad793-03d2-4731-9610-e8b0129dd950",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "d0e1e0b5-e564-45c4-89cc-628e802a385e",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "- Azure and other cloud services revenue grew 40% (up 39% CC) driven by strong demand for our portfolio of services with continued growth across all workloads - Server products revenue grew 1% (relatively unchanged CC) driven by an increase in transactional purchasing of Windows\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q2 outlook",
+     "chunk_id": "82bfd806-cefa-4aa8-9a84-43d2c121e1ea",
+     "document_id": "90cac92a-432d-4223-bcc4-2a7f248d5779",
+     "origin": "knowledge",
+     "snippet": "| Azure and other cloud services revenue | Growth of approximately 37% in constant currency | |------------------------------------------|----------------------------------------------------| | Server products revenue | Decline in low- to mid-single digits |"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q2 outlook legacy",
+     "chunk_id": "2c1483e8-970d-4b59-8b63-f10a1ec6c06e",
+     "document_id": "d8017ba6-fe88-4e32-a522-6a589cd5931b",
+     "origin": "knowledge",
+     "snippet": "| Azure and other cloud services revenue | Growth of approximately 37% in constant currency | |------------------------------------------|----------------------------------------------------| | Server products revenue | Decline in low- to mid-single digits |"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "4ac51a25-99a9-465e-a93d-55d0bcf46efe",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "larger long-term Azure contracts, which are more unpredictable in their timing, drive increased quarterly volatility in our bookings growth rate. Microsoft Cloud gross margin percentage should be roughly 66%, down year-over-year driven by the continued investments in AI as well\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "95463b65-5b62-48cb-b502-409ea2a91873",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "6% driven by investments in cloud and AI engineering, including compute capacity and AI talent to support product development that benefits the entire portfolio. Revenue, gross margin, and operating income included a favorable foreign currency impact of 3%, 3%, and 4%\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "fy26 q1 press release",
+     "chunk_id": "a25b72ff-4d40-47dd-bd40-9a91127c7845",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "**Business Highlights** Microsoft Cloud revenue was $49.1 billion and increased 26% (up 25% in constant currency), and commercial remaining performance obligation increased 51% to $392 billion. Revenue in Productivity and Business Processes was $33.0 billion and increased 17%\u2026"
+    },
+    {
+     "ref": 7,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "a54be740-c11c-4a45-ac37-f1c41d216ae7",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "**Business Highlights** Microsoft Cloud revenue was $49.1 billion and increased 26% (up 25% in constant currency), and commercial remaining performance obligation increased 51% to $392 billion. Revenue in Productivity and Business Processes was $33.0 billion and increased 17%\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 409,
+     "cost_usd": 0.001142,
+     "cache_read": 2946,
+     "cache_write": 7258
+    }
+   },
+   "cost_usd": 0.001142
+  },
+  {
+   "id": "p19",
+   "category": "cross_format",
+   "answer": "Microsoft's FY26 Q1 capital expenditures were $34.9 billion, but cash paid for property and equipment was $19.4 billion. The main reason for the $15.5 billion gap is finance leases. Capex includes assets acquired under finance leases, and those leases don't require upfront cash payment [1][2]. Finance leases accounted for $11.1 billion of the Q1 capex, mainly for large datacenter sites [1][2].\n\nThe CFO also noted that the normal timing of goods received but not yet paid contributes to the difference [2]. That accounts for the rest of the gap.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 earnings slides",
+    "fy26 q1 earnings call transcript"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.7,
+   "error": null,
+   "message_id": "931dc8d6-8b68-4d72-a948-717667196bab",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "14fa37b9-78b7-489d-a903-d916da1c384f",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "- Capital expenditures including assets acquired under finance leases were $34.9 billion, up 74% to support customer demand for our cloud and Al offerings. Roughly half of capital expenditures were for short-lived assets, primarily GPUs and CPUs, which support Azure platform\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 earnings call transcript",
+     "chunk_id": "b67a208c-17a3-4a4d-a32c-0b5eeeb690ad",
+     "document_id": "7c12e5d1-7b97-472f-8e27-6c435a5952cf",
+     "origin": "knowledge",
+     "snippet": "in line with guidance. Company gross margin percentage was 69%, down slightly year-over-year driven by investments in AI, including the impact of scaling our AI infrastructure and the growing usage of our AI product features. This was partially offset by ongoing efficiency\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "99c61a8a-60fd-48c3-baa8-96d3c83c2046",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| Microsoft Corporation | Back to Main | |---------------------------------------------------------------------|----------------| | Capital Expenditures Including Assets Acquired Under Capital Leases | | | (In billions) | | | | Q1-16 | Q2-16 | Q3-16 | Q4-16 | Fiscal Year 2016 |\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 income statements",
+     "chunk_id": "0d2dec89-0c72-435d-920a-e1fc936b4c82",
+     "document_id": "05d1c1ca-f914-4ccd-898a-844c50795346",
+     "origin": "knowledge",
+     "snippet": "- **Microsoft Financial Data - FY26Q1**: Cash Flows - ****: Yearly Income Statements"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "ac30af31-6f23-40c8-bb31-4b09946f39c8",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "demonstrate that the fair values used are appropriate for these investments. Our fair value processes include controls that are designed to ensure appropriate fair values are recorded. These controls include model validation, review of key model inputs, analysis of\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "fy26 q1 press release",
+     "chunk_id": "1fa99abc-a795-40f3-a764-755210ffa3e6",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "| CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS |\u2026"
+    },
+    {
+     "ref": 7,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "75e238fa-6d9f-485a-b541-69e04930114b",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "| CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS | CASH FLOWS STATEMENTS |\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 454,
+     "cost_usd": 0.00103,
+     "cache_read": 2950,
+     "cache_write": 6180
+    }
+   },
+   "cost_usd": 0.00103
+  },
+  {
+   "id": "p20",
+   "category": "unanswerable",
+   "answer": "Microsoft doesn't disclose revenue for Japan on its own. The knowledge base has no Japan-specific figure for FY26 Q1 (the quarter ended September 30, 2025).\n\nWhat it does show is the geographic split in the Form 10-Q. Microsoft reports only the United States and \"Other countries.\" For the three months ended September 30, 2025, U.S. revenue was $40,077 million and other countries were $37,596 million, out of $77,673 million total [4]. The 10-Q also states that no customer or country other than the United States accounted for more than 10% of revenue in that quarter [4]. Japan's share would be inside the $37,596 million \"Other countries\" figure, but the documents don't break it out.",
+   "status": "complete",
+   "fact_hits_substring": [],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "fy26 q1 form 10 q"
+   ],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 7.1,
+   "error": null,
+   "message_id": "8a0a817d-3841-4faf-9580-a30f29b4ea65",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "fy26 q1 press release",
+     "chunk_id": "aa6a608a-e8c1-424c-87ab-19375a71e361",
+     "document_id": "3c445780-d205-4cb9-95be-396506c143ef",
+     "origin": "knowledge",
+     "snippet": "| **MICROSOFT CORPORATION** | | | | |-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------| | Service and other |\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "fy26 q1 financial statements",
+     "chunk_id": "72f86cc8-2117-436a-b726-9d248be6053a",
+     "document_id": "53c04a2e-2c02-457a-bab9-53ab6024ff8b",
+     "origin": "knowledge",
+     "snippet": "| | $77,673 | | 24043 | | | | 24043 | | 15669 | | | | 15669 | | $37,961 | | | | $37,961 | | Quarterly segment cost of revenue and operating expense data for FY25 will be provided as we progress through FY26. |\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "fy26 q1 press release legacy",
+     "chunk_id": "549d9f86-3061-4828-beee-affb88917cc5",
+     "document_id": "10106959-147b-4165-b33f-dd212549e5be",
+     "origin": "knowledge",
+     "snippet": "| **MICROSOFT CORPORATION** | | | | |-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------| | Service and other |\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "fy26 q1 form 10 q",
+     "chunk_id": "7126711f-f449-4445-a730-e1cac634b99a",
+     "document_id": "48beccf6-ddbb-41ff-be23-8491336b41f9",
+     "origin": "knowledge",
+     "snippet": "Microsoft Corporation. MD&amp;A is provided as a supplement to, and should be read in conjunction with, our Annual Report on Form 10-K for the year ended June 30, 2025, and our consolidated financial statements and the accompanying Notes to Financial Statements (Part I, Item 1\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "fy26 q1 income statements",
+     "chunk_id": "06628420-6181-44f2-b58b-3be35334be24",
+     "document_id": "05d1c1ca-f914-4ccd-898a-844c50795346",
+     "origin": "knowledge",
+     "snippet": "- **Microsoft Financial Data - FY26Q1**: Current Financial Statements - ****: Trended Historical Financial Statements"
+    },
+    {
+     "ref": 6,
+     "title": "fy26 q1 earnings slides",
+     "chunk_id": "34bcc41b-4413-4383-9be9-c879e778f79b",
+     "document_id": "7c734e87-7481-43df-aa89-17810d0374d2",
+     "origin": "knowledge",
+     "snippet": "| ($ in billions, except per share amounts) | GAAP and CC results - FY26 Q1 | GAAP and CC results - Growth | GAAP and CC results - CC Growth* | As Adjusted (non-GAAP) - FY26 Q1 | As Adjusted (non-GAAP) - Growth** | As Adjusted (non-GAAP) - CC Growth*** |\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 3,
+     "input": 8,
+     "output": 503,
+     "cost_usd": 0.002125,
+     "cache_read": 11102,
+     "cache_write": 14092
+    }
+   },
+   "cost_usd": 0.002125
+  }
+ ]
+}

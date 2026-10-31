@@ -543,10 +543,12 @@ async def judge(q: Question, answer: str) -> dict[str, Any]:
 DOC_PASSAGE_CHARS = 12_000
 
 
-async def passages_for(sources: list[dict[str, Any]]) -> dict[int, str]:
+async def passages_for(sources: list[dict[str, Any]], answer: str = "") -> dict[int, str]:
     """The text behind each source. A ref stands for a whole document (the agent may
     have read several parts of it), so the judge gets the document; a very long one
-    is cut to the hit-centred window the search tools show, plus its opening."""
+    is cut to the hit-centred window the search tools show, plus its opening, plus
+    every passage of it that contains a figure or quote the answer uses (the answer
+    may cite a table row pages away from the first hit)."""
     out: dict[int, str] = {}
     async with SessionLocal() as db:
         for s in sources:
@@ -562,8 +564,8 @@ async def passages_for(sources: list[dict[str, Any]]) -> dict[int, str]:
                     {"id": s["chunk_id"]},
                 )
             ).first()
-            if doc is None:  # re-ingested since the answer
-                out[s["ref"]] = s.get("snippet") or s["title"]
+            if doc is None:  # re-ingested since the answer: find the document by title
+                out[s["ref"]] = await _passage_by_title(db, s)
             elif len(doc.content) <= DOC_PASSAGE_CHARS:
                 out[s["ref"]] = f"{s['title']}\n{doc.content}"
             else:
@@ -582,12 +584,61 @@ async def passages_for(sources: list[dict[str, Any]]) -> dict[int, str]:
                     parts.get(doc.ordinal - 1), parts[doc.ordinal], parts.get(doc.ordinal + 1)
                 )
                 head = doc.content[: DOC_PASSAGE_CHARS - len(window)]
-                out[s["ref"]] = f"{s['title']}\n{head}\n…\n{window}"
+                used = await _passages_with(db, doc.document_id, answer, exclude=parts)
+                more = f"\n…\n{used}" if used else ""
+                out[s["ref"]] = f"{s['title']}\n{head}\n…\n{window}{more}"
     return out
 
 
+_FIGURE = re.compile(r"\d[\d,.]*\d|\d{2,}")
+_QUOTE = re.compile(r"[\"“]([^\"”]{12,120})[\"”]")
+
+
+async def _passages_with(db, document_id, answer: str, exclude: dict) -> str:
+    """Chunks of a long document that contain a figure (2+ digits) or a quote from
+    the answer, up to DOC_PASSAGE_CHARS more."""
+    needles = {m.group() for m in _FIGURE.finditer(answer)} | set(_QUOTE.findall(answer))
+    needles = {n for n in needles if len(n) >= 3}
+    if not needles:
+        return ""
+    rows = (
+        await db.execute(
+            text("SELECT ordinal, content FROM chunks WHERE document_id = :d ORDER BY ordinal"),
+            {"d": document_id},
+        )
+    ).all()
+    picked, size = [], 0
+    for ordinal, content in rows:
+        if ordinal in exclude or not any(n in content for n in needles):
+            continue
+        if size + len(content) > DOC_PASSAGE_CHARS:
+            break
+        picked.append(content)
+        size += len(content)
+    return "\n…\n".join(picked)
+
+
+async def _passage_by_title(db, s: dict[str, Any]) -> str:
+    """After a re-ingest the chunk ids are new, but eval titles are stable: the whole
+    document if short, else a window around the snippet the answer saw, plus its head."""
+    content = await db.scalar(
+        text("SELECT content FROM documents WHERE title = :t ORDER BY length(content) LIMIT 1"),
+        {"t": s["title"]},
+    )
+    if not content:
+        return s.get("snippet") or s["title"]
+    if len(content) <= DOC_PASSAGE_CHARS:
+        return f"{s['title']}\n{content}"
+    probe = (s.get("snippet") or "").strip("…").strip()[:80]
+    at = content.find(probe) if probe else -1
+    half = DOC_PASSAGE_CHARS // 4
+    window = content[max(0, at - half) : at + 3 * half] if at >= 0 else ""
+    head = content[: DOC_PASSAGE_CHARS - len(window)]
+    return f"{s['title']}\n{head}\n…\n{window}" if window else f"{s['title']}\n{head}"
+
+
 async def grade_grounding(q: Question, answer: str, sources: list[dict]) -> dict[str, Any]:
-    passages = await passages_for(sources)
+    passages = await passages_for(sources, answer)
 
     async def complete(system: str, prompt: str) -> dict[str, Any]:
         return await judge_call(system, prompt, grounding.parse_json, max_tokens=8192)

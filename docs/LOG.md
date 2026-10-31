@@ -18,6 +18,10 @@ What was decided, why, and what was measured, newest first. Each entry links to 
 | D34 | **Picture-slide handling is general, not per document.** An earlier version OCR'd the pictures inside a deck when it looked empty; replaced by slides-as-pages plus the per-page weak signals. | The user asked for parsing that isn't tuned to particular files. | — | — |
 | D35 | **The NVIDIA judge run was stopped** (user's call). Its free tier rate-limited (HTTP 429) when two runs shared it: two deep-mode re-judges and half of the public-files answers failed. The harness now backs off exponentially on judge errors (up to 60 s), keeps an answer whose judging failed, and re-judging leaves a failed row unjudged instead of aborting. | — | 10 of 20 public answers lost to 429s in the first run. | — |
 
+| D36 | **Haiku 5.5 stays the model for deep mode too.** | Sonnet's gain isn't significant and costs 15×. | 150 questions, deep mode, Sonnet judge: Haiku 148/150 (multi-hop 0.96), Sonnet 150/150 (judging its own answers); paired +0.013, CI [0.000, +0.033], 2 questions changed. $0.0027 vs $0.0406 per answer, 16.6 vs 15.5 s. These runs predate the coverage check (now on for deep mode). | `LLM_MODEL` / org model. |
+| D37 | **The grounding judge sees every passage of a long document that holds a figure or quote the answer uses**, not only its opening and the first hit. After a re-ingest, cited documents are found by title. | On real files the judge saw 12,000 characters of a 209K-character fact sheet and marked correct table figures "unsupported" (e.g. Scope 3 FY25 = 18,243,000, which is in the file). | Public set, Docling run: faithfulness 0.759 → 0.885, citation recall 0.540 → 0.632, with the same answers. | — |
+| D38 | **Vision parsing stays off by default.** | No measurable answer gain on the public set (D33 evals), though it fixes garbled pages; a deployment with scans, charts or picture decks should turn it on (about $0.0004 per weak page). | As above. | `VISION_PARSING=true`. |
+
 ### Evals
 
 Parsing recall (no LLM: is each fact in the stored text of its source file?):
@@ -29,7 +33,16 @@ Parsing recall (no LLM: is each fact in the stored text of its source file?):
 
 Parsing times (this Mac, CPU): 10-Q (Word, 520K characters) 5.7 s; financial statements (Excel, 11 sheets) 0.2 s; fact sheet (PDF, 28 pages) 90 s; sustainability report (PDF, 66 pages) 80 s; scanned page 20 s; 22 picture slides 146 s. Whole public corpus indexed in 10 min 54 s.
 
-Answer quality on the public questions is **not measured yet**: the first run lost half its judging to the NVIDIA rate limit, and the judge run was stopped.
+Answers on the public questions (Haiku 5.5, quick mode; judged by Sonnet 5.5 after the NVIDIA judge was stopped):
+
+| Index | Pass | Faithfulness | Citation recall | Citation precision | Cross-format | Mean | $ per answer |
+|---|---|---|---|---|---|---|---|
+| Docling only | **20/20** | 0.885 | 0.632 | 0.889 | 3/3 | 6.0 s | 0.00135 |
+| Docling + vision | 19/20 | 0.886 | 0.684 | 0.877 | 3/3 | 4.9 s | 0.00134 |
+
+- Answers that combine a Word press release with picture slides, and slides with a transcript, all passed: the system is cohesive across formats.
+- Vision makes no measurable difference here: these questions target facts OCR already captured. The one difference (p12, FY25 Scope 1) is retrieval variance on a page vision didn't touch (the answer retrieved Table 1B instead of 1A).
+- The first judging of these runs scored faithfulness 0.76; see D37.
 
 Quick mode, 150 questions, Nemotron judge (judged overnight):
 
