@@ -10,7 +10,7 @@ from xml.sax.saxutils import escape, quoteattr
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agent.citations import CitationRegistry, Registered
+from app.agent.citations import CitationRegistry, Registered, search_result
 from app.graph import query as graph
 from app.graph.extract import ENTITY_TYPES
 from app.models import ChatAttachment, Document
@@ -179,6 +179,21 @@ class SearchOutcome:
     refs: list[int]
     new_sources: list[Registered] = field(default_factory=list)
     hits: int = 0
+    # The same passages as citable search_result blocks, for Claude's native citations.
+    results: list[dict[str, Any]] = field(default_factory=list)
+
+
+def _result_title(entry: Registered, hit: Hit) -> str:
+    """A search result's title: the document plus what the XML attributes say (titles
+    aren't citable, so metadata here can't be cited as evidence)."""
+    parts = [f"{hit.title} — {entry.org.name} / {entry.collection.name}"]
+    if hit.heading:
+        parts.append(f"section: {hit.heading}")
+    if hit.updated_at:
+        parts.append(f"updated {hit.updated_at.date().isoformat()}")
+    if hit.source_kind == "verified":
+        parts.append('verified="true"')
+    return "; ".join(parts)
 
 
 def paginate(body: str, page: int | None, anchor: str | None = None) -> tuple[str, int, int]:
@@ -269,7 +284,7 @@ class ToolBox:
                 queries=queries,
                 refs=[],
             )
-        blocks, refs, new = [], [], []
+        blocks, refs, new, results = [], [], [], []
         for hit in hits:
             entry, is_new = self.registry.register(
                 hit, self.scope.orgs[hit.org_id], self.scope.collections[hit.collection_id]
@@ -288,12 +303,17 @@ class ToolBox:
                 f"title={quoteattr(hit.title)}{heading}{updated}{verified}>\n"
                 f"{escape(section)}\n</source>"
             )
+            results.append(search_result(entry.ref, _result_title(entry, hit), section))
+        note = self._capped_note(len(hits))
+        if note and results:  # a tool result of search results holds only search results
+            results[-1]["content"].append({"type": "text", "text": note.strip()})
         return SearchOutcome(
-            text="\n\n".join(blocks) + self._capped_note(len(hits)),
+            text="\n\n".join(blocks) + note,
             queries=queries,
             refs=refs,
             new_sources=new,
             hits=len(hits),
+            results=results,
         )
 
     async def list_collections(self) -> str:
@@ -471,7 +491,9 @@ class ToolBox:
         return SearchOutcome(text=text, queries=queries, refs=refs, new_sources=new, hits=len(refs))
 
     # ── reading ───────────────────────────────────────────────────────────
-    async def read(self, args: dict[str, Any]) -> tuple[str, Registered]:
+    async def read(self, args: dict[str, Any]) -> tuple[str, Registered, dict[str, Any]]:
+        """The source's text (one page of it if long): as XML-tagged text, and as a
+        citable search_result block for Claude."""
         ref = self._int(args.get("ref"), "ref", required=True)
         page = self._int(args.get("page"), "page")
         entry = self.registry.get(ref)
@@ -509,4 +531,6 @@ class ToolBox:
             f'<document ref="{ref}" title={quoteattr(title)}{extra}{paging}>\n'
             f"{escape(window)}\n</document>"
         )
-        return text, entry
+        label = title + (f" — {entry.org.name}" if entry.origin == "knowledge" else "")
+        label += f" (page {page_no} of {pages})" if pages > 1 else ""
+        return text, entry, search_result(ref, label, window)

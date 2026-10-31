@@ -58,6 +58,16 @@ Quick mode, 15 questions. The Haiku baseline is the native Anthropic API with no
 
 Against the Nemotron answers above (citation recall 0.337, 30.7 s mean), Haiku roughly doubles citation recall and answers 4–6× faster. Step 1 changed no question's outcome. The only failure is q100, the multi-hop rota question. The full 150-question Haiku run and the Sonnet comparison runs are in [LOG.md](LOG.md#evals-and-metrics) until they're judged.
 
+### Citations: native vs typed (2026-10-31)
+
+Smoke set, Haiku 5.5, Sonnet judge. Claude's native citations (search_result blocks) cite only near-quotes, so synthesized claims went uncited; a typed-[n] prompt that requires a citation on every list item and table row is what ships. Details in [LOG.md](LOG.md#2026-10-31-later--step-4a-citations).
+
+| | Citation recall | Citation precision | Faithfulness | Pass |
+|---|---|---|---|---|
+| Typed [n] (step 1) | 0.763 | 0.973 | 0.982 | 14/15 |
+| Native citations | 0.375 | 0.887 | 0.963 | 14/15 |
+| Typed [n] + per-item rule | **0.791** | **0.990** | 0.982 | 14/15 |
+
 ### Retrieval: Contextual Retrieval and BM25 (2026-10-31)
 
 135 answerable questions, reranked unless noted. Neither change is statistically significant here; see [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md#2a-bm25-with-pg_textsearch) for why BM25 is on and Contextual Retrieval is off.

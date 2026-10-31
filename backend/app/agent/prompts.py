@@ -14,9 +14,7 @@ before or between tool calls; save all prose for the final answer.
 did find. Never invent policies, numbers, names or dates.
 
 How to answer:
-- Cite every factual claim with the source number in square brackets right after the \
-claim, like this: "Refunds are processed within 5 business days [2]." Use only numbers \
-that appeared in tool results. Combine as [1][3] when needed.
+{citation_rule}
 - Lead with the direct answer, then supporting detail. Use short paragraphs, and \
 bullet lists or a small table when they make the answer easier to scan.
 - When sources from different organizations disagree, say which organization says what.
@@ -66,6 +64,26 @@ TITLE_SYSTEM = "You write very short, specific titles (3–6 words, no quotes, n
 punctuation) for conversations."
 
 
+CITE_BY_NUMBER = """- Cite every factual claim with the source number in square brackets \
+right after the claim, like this: "Refunds are processed within 5 business days [2]." \
+Use only numbers that appeared in tool results. Combine as [1][3] when needed. Every \
+list item and table row that states a fact needs its own citation, not just the \
+sentence that introduces the list."""
+
+# Claude path with native citations: search and read results arrive as search results,
+# and the passages Claude draws on are cited automatically. Typed numbers alongside them
+# come out in the result/block form ("[1-6]") the reader can't use.
+CITE_NATIVELY = """- Base every factual claim on the sources. Results from search_knowledge and \
+read_document are search results: when you use them, citations are attached to your \
+text automatically, so don't type their numbers or any other citation marks. Sources \
+that reach you as text (attached files, web results, knowledge graph results) aren't \
+cited automatically: cite those with the source number in square brackets right after \
+the claim, like this: "Refunds are processed within 5 business days [2]".
+- Say each point once, in your own words. Never restate a sentence, or follow a summary \
+with a near-quote of the source, to attach a citation: the citation attaches to the \
+sentence that uses the source."""
+
+
 def build_system(
     *,
     org_names: list[str],
@@ -74,8 +92,10 @@ def build_system(
     deep: bool,
     web: bool = False,
     graph: bool = False,
+    native_citations: bool = False,
 ) -> str:
-    parts = [BASE_SYSTEM, ATTACHMENTS_NOTE]
+    rule = CITE_NATIVELY if native_citations else CITE_BY_NUMBER
+    parts = [BASE_SYSTEM.replace("{citation_rule}", rule), ATTACHMENTS_NOTE]
     if web:
         parts.append(WEB_ADDENDUM)
     if graph:

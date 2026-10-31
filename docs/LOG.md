@@ -2,6 +2,31 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
 
+## 2026-10-31 (later) — Step 4a: citations
+
+### Decisions
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D19 | **Claude's native citations (search_result blocks) are built but off by default.** | On Haiku 5.5 they attach only where the answer near-quotes a source; synthesized content (tables joining two sources, comparisons, summaries) gets no citation. With the prompt telling it not to type numbers, 75 of 136 claims went uncited. The prose also degraded: a point in the model's words, then a near-quote of the source repeating it so the quote carries the citation. | Smoke, Sonnet judge: citation recall 0.375 vs 0.763 (paired −0.39, 95% CI [−0.50, −0.27]); precision 0.887 vs 0.973; 6.3 vs 5.2 s; $0.0016 vs $0.0011 per answer. | `CLAUDE_CITATIONS=true`. |
+| D20 | **The typed-[n] prompt now requires a citation on every list item and table row.** | Lists and tables were the weakest spots for citation recall (0.06 and 0.29 on Nemotron). | Smoke: citation recall 0.763 → 0.791 (paired +0.033, CI [−0.006, +0.075], p 0.05), precision 0.973 → 0.990, faithfulness 0.982 both, pass 14/15 both. Live: every step of a 6-item list cited. | `CITE_BY_NUMBER` in `app/agent/prompts.py`. |
+| D21 | **Native mode keeps the work that makes it viable**: passages split into one block per sentence, list item or table row (abbreviation-aware); the ref carried in `source` (`strata://source/<n>`); markers appended when a cited block finishes streaming; model-typed `[1-6]` (result-block) markers mapped to `[1]`; repeated markers collapsed. | So the switch can be re-tested on other models (Sonnet/Opus 5.5) or after prompt work without rebuilding it. | Tests: `test_claude_citations_become_markers`, `test_markers_the_model_also_wrote_are_not_doubled`. | — |
+| D22 | **A `[n]` that matches no source is shown, struck through, instead of hidden** (audit C3), and each answer's trace records `strata.unknown_refs`. | Hiding it made an unsupported claim look like an uncited one. | `test_a_chat_answer_is_one_trace_with_turns_tools_and_usage`. | — |
+
+### Evals
+
+Smoke set, quick mode, Haiku 5.5, judged by Sonnet 5.5, one question at a time:
+
+| Run | Pass | Faithfulness | Citation recall | Citation precision | Mean / p95 | $ per answer | File |
+|---|---|---|---|---|---|---|---|
+| Step 1 (typed [n]) | 14/15 | 0.982 | 0.763 | 0.973 | 5.2 / 9.7 s | 0.00111 | `answers-step1-…-smoke-rejudged.json` |
+| Native citations | 14/15 | 0.963 | 0.375 | 0.887 | 6.3 / 9.6 s | 0.00160 | `answers-step4-native-…-smoke.json` |
+| Typed [n] + per-item rule (shipped) | 14/15 | 0.982 | 0.791 | 0.990 | 5.7 / 13.2 s | 0.00117 | `answers-step4-text-…-smoke.json` |
+
+Still below the 0.85 citation-recall target: the next lever is the per-sentence grounding check (HHEM), which can also find the supporting source for an uncited sentence.
+
+Cost of this step: about $1.5 (Haiku answers, Sonnet judging).
+
 ## 2026-10-31 — Weeks 3–5 start: Claude Haiku 5.5, latency, BM25, Contextual Retrieval
 
 Plan steps covered: 0 (foundations), 1 (latency), 2a (BM25) and 2b (Contextual Retrieval). Steps 2c (embedding A/B), 3 (Docling), 4 (citations), 5 (knowledge gaps) and 6 (LangExtract) haven't started.

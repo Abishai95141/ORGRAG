@@ -54,7 +54,7 @@ def test_exporter_config_prefers_langfuse(monkeypatch):
 
 
 async def test_a_chat_answer_is_one_trace_with_turns_tools_and_usage(app, monkeypatch, spans):
-    answer = "Staff get sixteen weeks of leave under the policy [1]."
+    answer = "Staff get sixteen weeks of leave under the policy [1]. Partners get four [7]."
     turns = [
         _with_usage(_tool_turn("search_knowledge", '{"queries": ["leave policy"]}'), 900, 40),
         _with_usage(_answer_turn(answer), 1500, 25),
@@ -84,6 +84,8 @@ async def test_a_chat_answer_is_one_trace_with_turns_tools_and_usage(app, monkey
     assert a["strata.org_id"] == a["langfuse.trace.metadata.org_id"]
     assert a["langfuse.trace.metadata.org"] == slug
     assert a["strata.status"] == "complete" and a["strata.sources"] == 1
+    assert a["strata.unknown_refs"] == 1  # [7] isn't a source (audit C3)
+    assert a["strata.native_citations"] is False  # NVIDIA path
     assert (a["gen_ai.usage.input_tokens"], a["gen_ai.usage.output_tokens"]) == (2400, 65)
     assert [t.attributes["gen_ai.usage.input_tokens"] for t in turns_] == [900, 1500]
     assert all(t.attributes["langfuse.observation.type"] == "generation" for t in turns_)

@@ -151,3 +151,124 @@ def cited_refs(text: str) -> list[int]:
 
 def strip_citations(text: str) -> str:
     return _CITE.sub("", text)
+
+
+# ── Claude's native citations (search_result blocks) ──────────────────────
+# A source's ref travels in the search result's `source`, so each citation Claude
+# returns maps straight back to a [n] marker.
+SOURCE_PREFIX = "strata://source/"
+_SENTENCE_END = re.compile(r"(?<=[.!?])[\"')\]]?\s+(?=[\"'(\[]?[A-Z0-9])")
+_LIST_ITEM = re.compile(r"^\s*(?:[-*+•]|\d{1,3}[.)])\s+")
+_TABLE_RULE = re.compile(r"^\s*\|?\s*:?-{3,}")
+_MIN_PROSE_CHARS = 12  # shorter prose ("Note:") joins the next block
+# A "sentence" ending in one of these was split at an abbreviation, not a full stop.
+_ABBREVIATION = re.compile(
+    r"\b(?:Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|Mon|Tue|Wed|Thu|Fri|Sat|Sun"
+    r"|Mr|Mrs|Ms|Dr|St|No|vs|etc|Inc|Ltd|Co|approx|e\.g|i\.e)\.$"
+)
+
+
+def citable_blocks(text: str) -> list[str]:
+    """Split a passage into the units Claude cites: a sentence, a list item or a table
+    row. Claude cites whole blocks, so smaller blocks mean citations that point at the
+    claim itself. A heading, or a prose fragment too short to be a claim, joins the
+    block after it (unless that's a table row); table header rules are dropped."""
+    units: list[tuple[str, str]] = []  # (kind, text)
+    paragraph: list[str] = []
+
+    def flush() -> None:
+        if paragraph:
+            prose = " ".join(paragraph)
+            for sentence in (s.strip() for s in _SENTENCE_END.split(prose)):
+                if not sentence:
+                    continue
+                if units and units[-1][0] == "prose" and _ABBREVIATION.search(units[-1][1]):
+                    units[-1] = ("prose", f"{units[-1][1]} {sentence}")
+                else:
+                    units.append(("prose", sentence))
+            paragraph.clear()
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            flush()
+        elif _TABLE_RULE.match(stripped):
+            continue
+        elif stripped.startswith("|"):
+            flush()
+            units.append(("row", stripped))
+        elif stripped.startswith("#"):
+            flush()
+            units.append(("heading", stripped))
+        elif _LIST_ITEM.match(stripped):
+            flush()
+            units.append(("item", stripped))
+        else:
+            paragraph.append(stripped)
+    flush()
+
+    blocks: list[str] = []
+    carry = ""
+    for kind, unit in units:
+        if carry and kind == "row":
+            blocks.append(carry)
+            carry = ""
+        unit = f"{carry} {unit}" if carry else unit
+        carry = ""
+        if kind == "heading" or (kind == "prose" and len(unit) < _MIN_PROSE_CHARS):
+            carry = unit
+        else:
+            blocks.append(unit)
+    if carry:
+        blocks.append(carry)
+    return blocks
+
+
+def search_result(ref: int, title: str, text: str, note: str = "") -> dict[str, Any]:
+    """One source as a citable search_result block for Claude. `title` carries the
+    metadata the XML attributes carried (org, collection, section, dates): titles
+    aren't citable, so it can't end up cited as evidence."""
+    blocks = citable_blocks(text) or [text.strip() or "(empty)"]
+    if note:
+        blocks.append(note)
+    return {
+        "type": "search_result",
+        "source": f"{SOURCE_PREFIX}{ref}",
+        "title": f"[{ref}] {title}",
+        "content": [{"type": "text", "text": b} for b in blocks],
+        "citations": {"enabled": True},
+    }
+
+
+def ref_of(source: str | None) -> int | None:
+    """The ref a cited search result stands for (None if it isn't one of ours)."""
+    if source and source.startswith(SOURCE_PREFIX):
+        tail = source[len(SOURCE_PREFIX) :]
+        return int(tail) if tail.isdigit() else None
+    return None
+
+
+def citation_markers(text: str, citations: list[Any] | None) -> str:
+    """The [n] markers to append after a text block Claude cited, skipping refs the
+    block already names (the model sometimes writes [n] itself too)."""
+    refs: list[int] = []
+    for c in citations or []:
+        source = c.get("source") if isinstance(c, dict) else getattr(c, "source", None)
+        ref = ref_of(source)
+        if ref is not None and ref not in refs and f"[{ref}]" not in text:
+            refs.append(ref)
+    if not refs:
+        return ""
+    lead = "" if not text or text[-1].isspace() else " "
+    return lead + "".join(f"[{r}]" for r in refs)
+
+
+_REPEATED = re.compile(r"\[(\d{1,3})\](?:\s*\[\1\])+")
+# "[1-6]": search result 1, block 6, the model's own notation for a search-result cite.
+_RESULT_BLOCK = re.compile(r"\[(\d{1,3})-\d{1,3}\]")
+
+
+def collapse_repeated_markers(text: str) -> str:
+    """Tidy markers the model typed beside native citations: '[1-6]' → '[1]' (a block
+    of source 1), then '[2] [2]' → '[2]'."""
+    return _REPEATED.sub(r"[\1]", _RESULT_BLOCK.sub(r"[\1]", text))

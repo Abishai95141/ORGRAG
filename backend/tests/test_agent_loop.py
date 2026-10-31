@@ -201,3 +201,65 @@ async def test_tool_calls_in_one_turn_run_concurrently(app, monkeypatch):
     results = fake.calls[1]["messages"][-1]["content"]
     assert [r["tool_use_id"] for r in results] == ["toolu_0", "toolu_1"]  # call order kept
     assert all('<source ref="' in r["content"] for r in results)
+
+
+def _cited_answer_turn():
+    """Claude's answer as text blocks, the middle one cited (as the API returns them)."""
+    cited = NS(
+        type="text",
+        text="Friday deploys need manager approval",
+        citations=[NS(type="search_result_location", source="strata://source/1")],
+    )
+    blocks = [NS(type="text", text="Yes: ", citations=None), cited, NS(type="text", text=".")]
+    events = []
+    for b in blocks:
+        events.append(NS(type="text", text=b.text))
+        events.append(NS(type="content_block_stop", content_block=b))
+    return events, NS(stop_reason="end_turn", content=blocks)
+
+
+async def test_claude_citations_become_markers(app, monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "claude_citations", True)
+    fake, events = await _run(
+        app, monkeypatch, "quick", [_tool_turn("friday deploy policy"), _cited_answer_turn()]
+    )
+    assert events[-1][0] == "done", events[-1]
+    message = events[-1][1]["message"]
+    assert message["content"] == "Yes: Friday deploys need manager approval [1]."
+    assert message["sources"][0]["ref"] == 1
+    # The passages went back as citable search_result blocks, one per sentence.
+    (found,) = fake.calls[1]["messages"][-1]["content"][0]["content"]
+    assert found["type"] == "search_result" and found["source"] == "strata://source/1"
+    assert found["title"].startswith("[1] Deploy policy") and found["citations"]["enabled"]
+    assert any("Friday deploys" in b["text"] for b in found["content"])
+    assert "don't type their numbers" in fake.calls[0]["system"][0]["text"]
+
+
+async def test_markers_the_model_also_wrote_are_not_doubled(app, monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "claude_citations", True)
+    cited = NS(
+        type="text",
+        text="Friday deploys need manager approval",
+        citations=[NS(type="search_result_location", source="strata://source/1")],
+    )
+    tail = NS(type="text", text=" [1].", citations=None)
+    events = [
+        NS(type="text", text=cited.text),
+        NS(type="content_block_stop", content_block=cited),
+        NS(type="text", text=tail.text),
+    ]
+    turn = (events, NS(stop_reason="end_turn", content=[cited, tail]))
+    _, events = await _run(app, monkeypatch, "quick", [_tool_turn("friday deploy"), turn])
+    assert events[-1][1]["message"]["content"] == "Friday deploys need manager approval [1]."
+
+
+async def test_without_native_citations_results_are_tagged_text(app, monkeypatch):
+    answer = "Friday deploys need manager approval [1]."
+    fake, _ = await _run(app, monkeypatch, "quick", [_tool_turn("friday"), _answer_turn(answer)])
+    result = fake.calls[1]["messages"][-1]["content"][0]
+    assert isinstance(result["content"], str) and '<source ref="1"' in result["content"]
+    assert "list item and table row" in fake.calls[0]["system"][0]["text"]  # default rule

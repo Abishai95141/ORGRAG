@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     # Claude prompt caching in the agent loop (tools + system, then the growing tool
     # loop; 5-minute TTL). Off only to measure what it saves.
     prompt_caching: bool = True
+    # Claude's native citations: search and read results go to Claude as search_result
+    # blocks, and the passages it cites become [n] markers. Off (default): the model
+    # writes [n]. Measured on Haiku 5.5 it cites only near-quotes, so synthesized
+    # claims (tables, comparisons) went uncited: citation recall 0.38 vs 0.79 typed.
+    claude_citations: bool = False
 
     embedding_provider: Literal["fastembed", "voyage", "hash"] = "fastembed"
     embedding_model: str = "BAAI/bge-small-en-v1.5"

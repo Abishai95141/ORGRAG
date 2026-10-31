@@ -27,7 +27,13 @@ from xml.sax.saxutils import escape, quoteattr
 from sqlalchemy import select
 
 from app.agent import runs
-from app.agent.citations import CitationRegistry, cited_refs, strip_citations
+from app.agent.citations import (
+    CitationRegistry,
+    citation_markers,
+    cited_refs,
+    collapse_repeated_markers,
+    strip_citations,
+)
 from app.agent.prompts import PLAN_SYSTEM, build_system
 from app.agent.sanitize import strip_images
 from app.agent.tools import (
@@ -62,6 +68,8 @@ log = logging.getLogger("strata.agent")
 MAX_TURNS = {"quick": 4, "deep": 10}
 HISTORY_MESSAGES = 12
 PREAMBLE_CHARS = 160  # text shorter than this before a tool call is treated as reasoning
+# A tool result: text, or (Claude path) a list of search_result blocks.
+ToolContent = str | list[dict[str, Any]]
 MAX_PARALLEL_TOOLS = 4  # tool calls from one turn running at once (each holds a DB session)
 
 # The toolbox (with its DB session) of the tool call running in the current task.
@@ -187,6 +195,9 @@ class AgentRun:
         self.registry = CitationRegistry()
         self.retrieval_ms = 0
         self.usage: dict[str, dict[str, int]] = {}  # per model: input/output tokens, calls
+        # Claude path: search and read results go back as citable search_result blocks,
+        # and Claude's citations become [n] markers (CLAUDE_CITATIONS).
+        self.native_citations = False
         self.status = "streaming"
 
     def _add_usage(self, model: str, usage: dict[str, int] | None) -> None:
@@ -219,6 +230,11 @@ class AgentRun:
             "strata.sources": len(self.registry),
             "strata.retrieval_ms": self.retrieval_ms,
             "strata.answer_chars": len(self.em.answer),
+            # [n] markers that match no source: an unsupported claim (audit C3).
+            "strata.unknown_refs": sum(
+                1 for r in cited_refs(self.em.answer) if self.registry.get(r) is None
+            ),
+            "strata.native_citations": self.native_citations,
             "gen_ai.usage.input_tokens": sum(u["input"] for u in self.usage.values()),
             "gen_ai.usage.output_tokens": sum(u["output"] for u in self.usage.values()),
         }
@@ -432,14 +448,16 @@ class AgentRun:
             finally:
                 _bound_tools.reset(token)
 
-    async def _run_tools(self, calls: list[tuple[str, dict[str, Any]]]) -> list[tuple[str, bool]]:
+    async def _run_tools(
+        self, calls: list[tuple[str, dict[str, Any]]]
+    ) -> list[tuple[ToolContent, bool]]:
         """Run one turn's tool calls concurrently (at most MAX_PARALLEL_TOOLS at once);
         results come back in call order."""
         if len(calls) == 1:
             return [await self._run_tool(*calls[0])]
         sem = asyncio.Semaphore(MAX_PARALLEL_TOOLS)
 
-        async def one(name: str, args: dict[str, Any]) -> tuple[str, bool]:
+        async def one(name: str, args: dict[str, Any]) -> tuple[ToolContent, bool]:
             async with sem:
                 return await self._run_tool(name, args)
 
@@ -575,6 +593,9 @@ class AgentRun:
     async def _run_llm(self, history: list[dict[str, Any]]) -> None:
         deep = self.req.mode == "deep"
         provider, model = resolve_model(self.settings.model)
+        self.native_citations = (
+            provider not in nvidia.OPENAI_COMPATIBLE and get_settings().claude_citations
+        )
         system = build_system(
             org_names=[o.name for o in self.scope.orgs.values()],
             collections_note=self._collections_note(),
@@ -582,6 +603,7 @@ class AgentRun:
             deep=deep,
             web=self.web_enabled,
             graph=self.graph_enabled,
+            native_citations=self.native_citations,
         )
         user_content = self.req.question
         attachment_context = self._attachment_context()
@@ -650,6 +672,19 @@ class AgentRun:
                 "generation",
                 **{"gen_ai.request.model": model, "gen_ai.system": "anthropic"},
             )
+
+            async def emit(text: str) -> None:
+                # Answer text, held back while it's short enough to be a preamble.
+                nonlocal pending_text, streaming_answer
+                if streaming_answer:
+                    await self.em.delta(text)
+                    return
+                pending_text += text
+                if len(pending_text) > PREAMBLE_CHARS:
+                    streaming_answer = True
+                    await self.em.delta(pending_text)
+                    pending_text = ""
+
             try:
                 async with client.beta.messages.stream(**kwargs) as stream:
                     async for event in stream:
@@ -658,14 +693,16 @@ class AgentRun:
                                 reflect_step = await self.em.step_start("reflect", "Thinking")
                             await self.em.reasoning(reflect_step, event.thinking)
                         elif event.type == "text":
-                            if streaming_answer:
-                                await self.em.delta(event.text)
-                            else:
-                                pending_text += event.text
-                                if len(pending_text) > PREAMBLE_CHARS:
-                                    streaming_answer = True
-                                    await self.em.delta(pending_text)
-                                    pending_text = ""
+                            await emit(event.text)
+                        elif (
+                            event.type == "content_block_stop"
+                            and event.content_block.type == "text"
+                            and getattr(event.content_block, "citations", None)
+                        ):
+                            # Claude cited this block: mark it with the sources' [n].
+                            block = event.content_block
+                            if markers := citation_markers(block.text, block.citations):
+                                await emit(markers)
                         elif (
                             event.type == "content_block_start"
                             and event.content_block.type == "tool_use"
@@ -870,7 +907,7 @@ class AgentRun:
         if reflect_step:
             await self.em.step_update(reflect_step, label="Reasoned", status="done")
 
-    async def _run_tool(self, name: str, args: dict[str, Any]) -> tuple[str, bool]:
+    async def _run_tool(self, name: str, args: dict[str, Any]) -> tuple[ToolContent, bool]:
         """Run one tool call. Returns (content, is_error); input problems are reported
         back to the model so it can correct itself."""
         attrs: dict[str, Any] = {"gen_ai.tool.name": name}
@@ -879,19 +916,18 @@ class AgentRun:
         with telemetry.span(f"tool {name}", "tool", **attrs) as span:
             async with self._tool_session():
                 content, is_error = await self._dispatch_tool(name, args)
+            flat = content if isinstance(content, str) else json.dumps(content)
             telemetry.set_attrs(
                 span,
                 **{
                     "strata.tool.error": is_error,
-                    "strata.tool.result_chars": len(content),
-                    "gen_ai.tool.call.result": content[:8000]
-                    if telemetry.capture_content()
-                    else None,
+                    "strata.tool.result_chars": len(flat),
+                    "gen_ai.tool.call.result": flat[:8000] if telemetry.capture_content() else None,
                 },
             )
             return content, is_error
 
-    async def _dispatch_tool(self, name: str, args: dict[str, Any]) -> tuple[str, bool]:
+    async def _dispatch_tool(self, name: str, args: dict[str, Any]) -> tuple[ToolContent, bool]:
         try:
             if name == "search_knowledge":
                 step = await self.em.step_start(
@@ -902,6 +938,8 @@ class AgentRun:
                 except ToolInputError:
                     await self.em.step_update(step, label="Search failed", status="error")
                     raise
+                if self.native_citations and outcome.results:
+                    return outcome.results, False
                 return outcome.text, False
             if name == "search_web" and self.web_enabled:
                 step = await self.em.step_start(
@@ -927,7 +965,7 @@ class AgentRun:
             if name == "read_document":
                 step = await self.em.step_start("read", "Reading document")
                 try:
-                    content, entry = await self.tools.read(args)
+                    content, entry, result = await self.tools.read(args)
                 except ToolInputError:
                     await self.em.step_update(step, label="Couldn't read document", status="error")
                     raise
@@ -938,7 +976,7 @@ class AgentRun:
                     document_title=entry.title,
                     refs=[entry.ref],
                 )
-                return content, False
+                return (result if self.native_citations else content), False
             if name in ("list_entities", "explore_entity") and self.graph_enabled:
                 listing = name == "list_entities"
                 step = await self.em.step_start(
@@ -981,7 +1019,7 @@ class AgentRun:
     # ── persistence ───────────────────────────────────────────────────────
     async def _persist(self, db, *, status: str, error: str | None = None) -> Message:
         message = await db.get(Message, self.req.assistant_message_id)
-        content = strip_images(self.em.answer)
+        content = collapse_repeated_markers(strip_images(self.em.answer))
         if error and not content.strip():
             content = error
         message.content = content

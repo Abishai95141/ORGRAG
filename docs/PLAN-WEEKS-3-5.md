@@ -14,7 +14,9 @@ This is the build plan for [ROADMAP.md](ROADMAP.md) §3 (quality and speed upgra
 | 2a. BM25 | Done; on where the index exists. |
 | 2b. Contextual Retrieval | Built; off until long documents (step 3) can show a significant gain. |
 | 2c. Embedding A/B | Not started. |
-| 3–6 | Not started. |
+| 3 | Not started. |
+| 4. Citations | 4a done: native citations built and measured (off: they cite only near-quotes); per-item [n] rule shipped (citation recall 0.79); unknown [n] flagged. Next: per-sentence grounding (HHEM), sufficiency check. |
+| 5–6 | Not started. |
 
 Every decision, with its evidence and how to reverse it, is in [LOG.md](LOG.md#2026-10-31--weeks-35-start-claude-haiku-55-latency-bm25-contextual-retrieval).
 

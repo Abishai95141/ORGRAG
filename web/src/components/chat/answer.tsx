@@ -50,8 +50,9 @@ export const Answer = memo(function Answer({
         if (href?.startsWith("#cite-")) {
           const ref = Number(href.slice(6));
           const source = byRef.get(ref);
-          // Unknown refs render as nothing rather than a dangling number.
-          return source ? <CitationChip source={source} onOpen={onOpenSource} /> : null;
+          // A number that matches no source is shown as such, not hidden: hiding it would
+          // make an unsupported claim look like an uncited one.
+          return source ? <CitationChip source={source} onOpen={onOpenSource} /> : <UnknownCitation n={ref} />;
         }
         return <ExternalLink href={href}>{children}</ExternalLink>;
       },
@@ -68,6 +69,18 @@ export const Answer = memo(function Answer({
     </div>
   );
 });
+
+function UnknownCitation({ n }: { n: number }) {
+  return (
+    <span
+      title={`[${n}] doesn't match any source of this answer`}
+      aria-label={`Citation ${n} matches no source`}
+      className="mx-[1px] inline-flex h-[18px] min-w-[18px] -translate-y-[1px] items-center justify-center rounded-[5px] border border-dashed border-line px-1 align-middle font-mono text-[10.5px] tabular-nums text-ink-3 line-through"
+    >
+      {n}
+    </span>
+  );
+}
 
 export function CitationChip({ source, onOpen }: { source: SourceRef; onOpen: (s: SourceRef) => void }) {
   const [open, setOpen] = useState(false);
