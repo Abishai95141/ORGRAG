@@ -2,6 +2,27 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
 
+## 2026-11-01 (later) — Weeks 5–8 Track A: structured records (and step 6, LangExtract)
+
+### Decisions
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D39 | **Structured records with a `query_records` tool** (roadmap §4.1): registers, inventories and logs kept as typed rows per collection; the agent queries them exactly (filters, counts, group-bys) and cites each row's document. Also `POST /records/query`, MCP `query_records`, and a Records page. | Search returns the top few passages, so "which / how many / list every" answers were partial however good retrieval got. | Scale questions (60-vendor register): items found **26/50 → 50/50**, mean 9.5 s → 4.2 s, $0.00128 → $0.00078 per answer. List questions: 71/71 → 70/71 (q33 dropped the date "September 12" from its wording; the records tool wasn't involved). | Archive the schemas; the tool is only offered when one is active. |
+| D40 | **Record types are suggested deterministically and an admin activates them**; nothing becomes "exact" data unreviewed. Suggestions come from field/value tables recurring in ≥ 2 documents, tables whose header recurs, and repeated `Label: value` lines; field types are inferred from the values. | Suggestion costs nothing and is reproducible; an admin decides what the agent may treat as complete. | Eval corpora: 39 schemas, 331 records found. Vendor register: key, types and the 3 risk tiers right; 60 records extracted in 0.11 s; 10 High-risk, 27 executed BAAs among PHI vendors and 8 Q1 2027 renewals all match the files. | — |
+| D41 | **LangExtract (step 6) is the prose path of records**, not a separate feature: a schema an admin writes (`origin: llm`) is extracted by LangExtract 1.7.1 through a Claude provider (`RECORD_MODEL`, Haiku 5.5). Every value must be words of the document aligned to offsets; a normalised reading (yes/no, an option, a date) types those words, and a text value narrows to the reading only when it's written inside the span. | Prose rarely states "Yes" or an option verbatim ("handles protected health information"), and verbatim-only extraction dropped those values; a reading that isn't grounded in the span never becomes a value. | Same 60 vendors. Original table files: **420/420** values right, 420/420 with offsets, $0.020. Rewritten as review-note prose (6 documents, 3 phrasings, 3 date formats): verbatim only **342/420**, with readings **411/420**, offsets 420/420, $0.014. The 9 left are services with a trailing word ("translation vendor"). Through the API and worker: 60 records in 111 s. | `origin: llm` schemas only. |
+| D42 | **The records tool returns exact tallies of its choice and yes/no fields, and the prompt says to take totals from them and to cite each record on its own row.** | Live, the agent listed all 16 PHI vendors without an executed BAA correctly but summarised "nine pending, seven expired" (truth: 10 and 6), with all 16 citations stacked on that sentence. | After: "ten pending signature and six expired", one citation per row. | — |
+| D43 | **Records lookups are their own trace step kind** (`records`), shown as "N records lookups" in the summary line. | They were counted as searches. | — | — |
+
+### Evals
+
+Records A/B (Haiku 5.5, quick mode, substring fact check, no judge): `eval/results/answers-{scale,list}-{off,records}-claude-haiku-5-5.json`; `python -m eval.harness --records` suggests, activates and extracts every collection's record types first.
+
+| Set | Questions | Without records | With records |
+|---|---|---|---|
+| Scale (60-vendor register) | 4 | 26/50 items, 9.5 s | **50/50**, 4.2 s |
+| List and aggregate | 18 | 71/71, 5.7 s | 70/71, 4.6 s |
+
 ## 2026-11-01 — Step 2c and step 3: embeddings, parsing every format
 
 ### Decisions

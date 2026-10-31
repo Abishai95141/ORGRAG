@@ -87,6 +87,8 @@ class Settings(BaseSettings):
     vision_parsing: bool = False
     vision_model: str = "claude-haiku-5-5"
     vision_max_pages: int = 200  # per document, a cost ceiling
+    # Structured records: the model LangExtract uses for prose ("llm" schemas).
+    record_model: str = "claude-haiku-5-5"
 
     # Keyword ranking: "auto" uses BM25 (pg_textsearch) when its index exists, else
     # ts_rank_cd; "ts_rank" forces the fallback (to compare); "bm25" warns if missing.

@@ -78,7 +78,10 @@ retrieval/              hybrid.py (vector + keyword + RRF + scoring), rerank.py,
                         access.py (scope resolution)
 llm/                    client.py (Anthropic client, provider-neutral structured calls, error mapping),
                         nvidia.py (OpenAI-compatible streaming + reranker), models.py (catalogue)
-agent/                  engine.py, tools.py, prompts.py, events.py, citations.py
+agent/                  engine.py, tools.py, prompts.py, events.py, citations.py,
+                        records_tool.py (query_records)
+records/                tables.py (tables and field lines with offsets), values.py (typing),
+                        suggest.py, extract.py (deterministic + LangExtract), query.py, jobs.py
 worker/                 __main__.py (job loop + scheduler), jobs.py
 alembic/                migrations
 ```
@@ -92,6 +95,8 @@ users ──< memberships >── organizations ──< invitations
      collections ──< sources ──< documents ──< chunks  agents   conversations ──< messages
           │
    collection_access (restricted collections → users)
+   record_schemas ──< records (values JSONB, provenance offsets; per document)
+                  └─< record_runs (schema, document → content hash, cost, error)
 jobs (org_id, kind, payload, status, progress)
 search_events (org_id, user_id, query, latency_ms, hits) — powers Insights
 ```
@@ -130,6 +135,7 @@ user question
                        ▼
                 tool loop (≤8 steps, effort=high, adaptive thinking summarized)
                   search_knowledge(queries[], collections?, orgs?, after?)
+                  query_records(record_type, filters, mode) — when record types are active
                   read_document(ref)          — expand to neighbour chunks
                   list_collections()
                        │  model decides when evidence suffices
@@ -151,6 +157,34 @@ user question
   `server-side-fallback-2026-07-01`); a `refusal` stop reason is reported cleanly.
 * With no `ANTHROPIC_API_KEY`, chat degrades to "retrieval only": the trace and
   sources still render and the answer explains how to configure a key.
+
+## Structured records
+
+Search returns the top few passages, so "which vendors…", "how many incidents…" and
+"list every…" came back partial however good retrieval got (on a 60-vendor register,
+26 of 50 items). Records keep those registers as typed rows the agent queries exactly.
+
+* **Finding record types** (`records/suggest.py`, no LLM): Markdown tables and
+  `Label: value` lines are read with their character offsets (`records/tables.py`). A
+  field/value table that recurs in ≥ 2 documents (`fields_table`), a table whose header
+  recurs (`rows_table`) or repeated labelled lines (`field_lines`) become a suggested
+  schema; each field's type is inferred from its values (`records/values.py`: dates
+  only with a stated or document year, identifiers like INC-2264 aren't numbers, few
+  distinct values make a choice). An admin reviews, edits and activates it.
+* **Extraction** (`records/extract.py`, worker job `extract_records`): table and
+  labelled-line schemas are read deterministically. Schemas an admin writes for prose
+  (`llm`) go through LangExtract with a Claude provider (`langextract_claude.py`): every
+  extraction must be words from the document, aligned to offsets, plus a normalised
+  reading (yes/no, an option, a date) used only to type those words. Unaligned
+  extractions are dropped. A run per (schema, document) records the content hash, so a
+  sync re-extracts only changed documents.
+* **Querying** (`records/query.py`): filters by type (ranges on numbers and dates,
+  case-insensitive text), counts and group-bys in SQL over JSONB, scoped to the
+  caller's readable collections and skipping hidden documents. `latest_only` keeps one
+  record per key from the newest document. The agent's `query_records` tool returns a
+  table with a `[n]` source per row (the chunk where the key is written) and exact
+  tallies of choice fields, so breakdowns aren't counted by the model. The same query
+  is `POST /records/query` and the MCP `query_records` tool.
 
 ## Tracing
 

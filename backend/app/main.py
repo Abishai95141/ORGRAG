@@ -26,6 +26,7 @@ from app.api import (
     mcp,
     meta,
     orgs,
+    records,
     search,
     sharing,
     sources,
@@ -210,6 +211,7 @@ for module in (
     api_keys,
     verified,
     sharing,
+    records,
     meta,
 ):
     app.include_router(

@@ -22,6 +22,7 @@ import {
   IconVerified,
   IconSources,
   IconSun,
+  IconTable,
   IconTrash,
 } from "@/components/icons";
 import { Avatar, OrgMark, StrataMark } from "@/components/illustrations";
@@ -43,6 +44,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     { href: `${base}/sources`, label: "Sources", icon: IconSources, match: `${base}/sources` },
     { href: `${base}/collections`, label: "Collections", icon: IconLayers, match: `${base}/collections` },
     { href: `${base}/agents`, label: "Agents", icon: IconAgent, match: `${base}/agents` },
+    { href: `${base}/records`, label: "Records", icon: IconTable, match: `${base}/records` },
     { href: `${base}/verified`, label: "Verified answers", icon: IconVerified, match: `${base}/verified` },
     { href: `${base}/members`, label: "Members", icon: IconPeople, match: `${base}/members` },
     ...(isAdmin

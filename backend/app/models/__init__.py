@@ -51,3 +51,6 @@ __all__ = [
     "User",
     "VerifiedAnswer",
 ]
+from app.models.records import Record, RecordRun, RecordSchema  # noqa: E402
+
+__all__ += ["Record", "RecordRun", "RecordSchema"]

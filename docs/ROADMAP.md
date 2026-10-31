@@ -15,7 +15,7 @@ plus our own measurements in [EVALUATION.md](EVALUATION.md). Effort: **S** ≈ �
 | | Today |
 |---|---|
 | Answers (45 questions) | 42–44/45 correct; 100% honest abstention on unanswerable questions |
-| Exhaustive lists (60 records) | 34/50 facts at best; it now says when it may be incomplete |
+| Exhaustive lists (60 records) | 50/50 items with structured records (26/50 from search alone) |
 | Speed | ~8 s per answer on Claude Haiku 5.5 (gateway); 20–30 s on Nemotron |
 | Retrieval | recall@5 0.94 with reranking |
 | Connectors | Upload and Tavily web search verified live; Drive, Slack and Notion only against simulated APIs |
@@ -165,6 +165,8 @@ Deprioritised: expert finding (identities don't align across orgs), actions with
 - **BM25:** pg_textsearch on Postgres 17, read top-k from its index; on where installed. Equal quality within noise here, chosen for scale.
 - **Contextual Retrieval:** built, off by default (+0.006 recall@5, not significant on this short-document corpus).
 - **Eval:** cost per answer recorded; smoke runs judged by Sonnet 5.5, full runs by the free Nemotron; answer-only runs judged later.
+
+**Progress, weeks 5–8 (2026-11-01):** structured records are built (Track A's main item, with step 6's LangExtract as their prose path): suggested from recurring tables and labelled lines, activated by an admin, queried exactly by the agent, the API, MCP and a Records page. Item recall on the 60-vendor register 26/50 → 50/50 (LOG D39–D43).
 
 
 | When | Track A: quality and platform | Track B: product |

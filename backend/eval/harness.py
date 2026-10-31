@@ -387,6 +387,34 @@ async def apply_variant(variant: str, chat_model: str | None = None) -> dict[str
     return overrides
 
 
+async def apply_records(enabled: bool) -> dict[str, Any] | bool:
+    """Structured records on: suggest every collection's schemas, activate them all and
+    extract (deterministic, seconds). Off: archive them, so the agent has no records
+    tool. Returns what was active, recorded with the run."""
+    from app.models import Collection, RecordSchema
+    from app.records import extract as records_extract
+    from app.records import suggest as records_suggest
+
+    async with SessionLocal() as db:
+        if not enabled:
+            for schema in (await db.execute(select(RecordSchema))).scalars():
+                schema.status = "archived"
+            await db.commit()
+            return False
+        for collection in (await db.execute(select(Collection))).scalars():
+            for schema in await records_suggest.suggest(db, collection):
+                schema.status = "active"
+        await db.commit()
+        active = {}
+        for schema in (
+            await db.execute(select(RecordSchema).where(RecordSchema.status == "active"))
+        ).scalars():
+            stats = await records_extract.extract_schema(db, schema)
+            active[schema.name] = stats["records"]
+    print(f"Records: {len(active)} schemas, {sum(active.values())} records", flush=True)
+    return active
+
+
 async def _context():
     async with SessionLocal() as db:
         user = (await db.execute(select(User).where(User.email == EVAL_EMAIL))).scalar_one()
@@ -1106,6 +1134,7 @@ async def main_async(args) -> None:
         args.limit, args.ids.split(",") if args.ids else None, Path(args.questions), args.set
     )
     overrides = await apply_variant(args.variant, args.chat_model)
+    overrides["records"] = await apply_records(args.records)
     if args.cmd == "retrieval":
         rows = [r.__dict__ for r in await run_retrieval(questions)]
         summary = summarize_retrieval(rows)
@@ -1159,6 +1188,11 @@ def main() -> None:
     p.add_argument(
         "--judge",
         help=f"judge model (default: {SMOKE_JUDGE} for --set smoke, else {FULL_JUDGE})",
+    )
+    p.add_argument(
+        "--records",
+        action="store_true",
+        help="answers/retrieval: structured records on (all suggested schemas active)",
     )
     p.add_argument(
         "--no-judge",

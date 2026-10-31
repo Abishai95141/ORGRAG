@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { IconAnswer, IconChevronDown, IconGlobe, IconPlan, IconRead, IconReflect, IconSearch, IconWarning, Spinner } from "@/components/icons";
+import { IconAnswer, IconChevronDown, IconGlobe, IconPlan, IconRead, IconReflect, IconSearch, IconTable, IconWarning, Spinner } from "@/components/icons";
 import type { SourceRef, StepKind, TraceStep } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const STEP_ICON: Record<StepKind, typeof IconPlan> = {
   plan: IconPlan,
   search: IconSearch,
+  records: IconTable,
   web: IconGlobe,
   read: IconRead,
   reflect: IconReflect,
@@ -47,6 +48,7 @@ export function Trace({
   if (!steps.length) return null;
 
   const searches = steps.filter((s) => s.kind === "search").reduce((n, s) => n + (s.detail.queries?.length ?? 1), 0);
+  const lookups = steps.filter((s) => s.kind === "records").length;
   const webSearches = steps.filter((s) => s.kind === "web").reduce((n, s) => n + (s.detail.queries?.length ?? 1), 0);
   const reads = steps.filter((s) => s.kind === "read").length;
   const failed = steps.some((s) => s.status === "error");
@@ -70,6 +72,7 @@ export function Trace({
             <>
               <span className="font-medium text-ink-2">Researched</span>
               {searches ? ` · ${searches} ${searches === 1 ? "search" : "searches"}` : ""}
+              {lookups ? ` · ${lookups} records ${lookups === 1 ? "lookup" : "lookups"}` : ""}
               {webSearches ? ` · ${webSearches} web` : ""}
               {reads ? ` · ${reads} ${reads === 1 ? "read" : "reads"}` : ""}
               {sources.length ? ` · ${sources.length} sources` : ""}

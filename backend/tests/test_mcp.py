@@ -86,7 +86,10 @@ async def test_tools_are_listed_with_annotations(app):
     _, _, admin_key, _ = await _setup(app)
     async with mcp_session(app, admin_key["key"]) as s:
         tools = {t.name: t for t in (await s.list_tools()).tools}
-    assert set(tools) == {"search", "read_document", "list_collections", "ask"}
+    assert set(tools) == {
+        "search", "read_document", "list_collections", "ask", "list_record_types", "query_records",
+    }  # fmt: skip
+    assert tools["query_records"].annotations.read_only_hint is True
     assert tools["search"].annotations.read_only_hint is True
     assert tools["ask"].annotations.read_only_hint is False
     assert "query" in tools["search"].input_schema["properties"]
@@ -157,3 +160,38 @@ async def test_ask_runs_the_agent_and_returns_cited_sources(app, monkeypatch):
     assert out["sources"][0]["organization"] == "MCP Co"
     convs = (await admin.get(f"/api/orgs/{slug}/conversations")).json()["items"]
     assert out["conversation_id"] in {c["id"] for c in convs}
+
+
+async def test_records_through_mcp_follow_the_key_role(app):
+    from tests.test_records import VENDOR, VENDORS, _run_jobs
+
+    admin, slug, admin_key, member_key = await _setup(app)
+    collections = (await admin.get(f"/api/orgs/{slug}/collections")).json()
+    board = next(c["id"] for c in collections if c["name"] == "Board")
+    files = {
+        f"v{i}.md": VENDOR.format(name=n, risk=r, baa=b, cost=c, renewal=d)
+        for i, (n, r, b, c, d) in enumerate(VENDORS)
+    }
+    await _ingest(admin, slug, board, files)
+    suggested = (
+        await admin.post(f"/api/orgs/{slug}/collections/{board}/record-schemas/suggest")
+    ).json()
+    vendor = next(x for x in suggested if x["name"] == "vendor_record")
+    await admin.patch(f"/api/orgs/{slug}/record-schemas/{vendor['id']}", json={"status": "active"})
+    await _run_jobs()
+
+    async with mcp_session(app, admin_key["key"]) as s:
+        types = _data(await s.call_tool("list_record_types", {}))["record_types"]
+        assert [t["name"] for t in types] == ["vendor_record"] and types[0]["records"] == 4
+        high = {"field": "risk_tier", "op": "eq", "value": "High"}
+        found = _data(await s.call_tool("query_records", {"record_type": "vendor_record",
+                                                          "filters": [high]}))  # fmt: skip
+        assert found["total"] == 2 and found["rows"][0]["document_title"].startswith("Vendor")
+        bad = await s.call_tool("query_records", {"record_type": "vendor_record",
+                                                  "filters": [{"field": "nope"}]})  # fmt: skip
+        assert bad.is_error and "No field" in bad.content[0].text
+    # The member key can't read Board, so the record type doesn't exist for it.
+    async with mcp_session(app, member_key["key"]) as s:
+        assert _data(await s.call_tool("list_record_types", {}))["record_types"] == []
+        denied = await s.call_tool("query_records", {"record_type": "vendor_record"})
+        assert denied.is_error and "No record type" in denied.content[0].text

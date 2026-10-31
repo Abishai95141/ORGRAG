@@ -238,6 +238,7 @@ Cross-org vocabulary recall@5 rose 0.828 → 0.883 and table MRR 0.967 → 1.0; 
   - Docling tables become rows deterministically (no LLM), and LangExtract handles prose.
   - Offsets are stored against the Docling text hash.
 - The full structured-records feature and `query_records` stay in weeks 5–8.
+- **Status (2026-11-01): done, and folded into structured records** (LOG D41). The provider is `app/records/langextract_claude.py`; on the 60 vendors it reads the table files 420/420 and prose rewrites 411/420, every value with offsets.
 
 ## Order and dependencies
 

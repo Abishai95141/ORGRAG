@@ -1,0 +1,1300 @@
+{
+ "kind": "answers",
+ "variant": "list-records-claude-haiku-5-5",
+ "corpus": "55fb424818e93128",
+ "index": {
+  "embedding": "fastembed:BAAI/bge-small-en-v1.5"
+ },
+ "judge_model": "nvidia/nemotron-3-ultra-550b-a55b",
+ "facts_prompt": "adf439b21d",
+ "grounding_prompt": "grounding-v1:e13f1cd847",
+ "settings": {
+  "rerank": true,
+  "recency_bias": "low",
+  "model": "claude-haiku-5-5",
+  "records": {
+   "halcyon_emergency_equipment_inventory_check": 14,
+   "juniper_steering_committee_notes_october": 3,
+   "cscab_minutes_october_28": 8,
+   "sentinel_and_adverse_event_reporting_policy": 4,
+   "clinical_and_business_systems_inventory_systems_": 9,
+   "halcyon_clinic_directory_and_hours_october": 9,
+   "rfc_031": 3,
+   "halcyon_medical_records_and_forms_fee_schedule": 10,
+   "information_security_policy": 4,
+   "halcyon_clinic_staffing_standard": 13,
+   "business_associate_record": 6,
+   "clinical_and_business_systems_inventory_systems__2": 4,
+   "service_catalog_shared_infrastructure": 4,
+   "pricing_and_discount_policy_plans": 3,
+   "pricing_and_discount_policy_discount_authority": 4,
+   "halcyon_digital_projects_register": 7,
+   "halcyon_language_access_report": 12,
+   "halcyon_on_call_medical_director_rota_november": 6,
+   "halcyon_in_clinic_vaccine_and_injectable_formula": 14,
+   "approved_ai_tools_for_halcyon_staff": 3,
+   "hydrant_launch_notes": 5,
+   "northwind_project_codename_register": 8,
+   "northwind_pipelines_api_rate_limits_by_plan": 9,
+   "vendor_record": 60,
+   "people_and_policy": 3,
+   "clinical_systems_change_control": 6,
+   "halcyon_vendor_support_and_escalation_matrix": 8,
+   "northwind_offices_and_workplace_guide": 4,
+   "northwind_support_sla_tiers_edition": 20,
+   "vendor_register": 4,
+   "customer_data_retention_standard": 11,
+   "sales_desk_memo": 6,
+   "service_catalog_production_services": 9,
+   "northwind_incident_log": 10,
+   "northwind_on_call_rota": 8,
+   "on_call_runbook": 3,
+   "northwind_production_cell_inventory": 7,
+   "identity_billing_weekly_status": 4,
+   "engineering_team_directory_and_change_approvers": 6
+  }
+ },
+ "question_set": "all",
+ "judged": false,
+ "same_family_judge": false,
+ "summary": {
+  "ALL": {
+   "n": 18,
+   "pass": 0.0,
+   "facts_judge": null,
+   "facts_substring": 0.986,
+   "gold_cited": 0.986,
+   "faithfulness": null,
+   "cite_recall": null,
+   "cite_precision": null,
+   "errors": 0,
+   "s": 4.6,
+   "p95_s": 6.9,
+   "usd": 0.00087
+  },
+  "list_aggregate": {
+   "n": 18,
+   "pass": 0.0,
+   "facts_judge": null,
+   "facts_substring": 0.986,
+   "gold_cited": 0.986,
+   "faithfulness": null,
+   "cite_recall": null,
+   "cite_precision": null,
+   "errors": 0,
+   "s": 4.6,
+   "p95_s": 6.9,
+   "usd": 0.00087
+  }
+ },
+ "rows": [
+  {
+   "id": "q28",
+   "category": "list_aggregate",
+   "answer": "Three of the four vendors in the register have a signed DPA. Hollowpine does not.\n\n**Signed:**\n- **Cobaltline, Inc.** (VEN-014): signed April 2, 2025 [1]\n- **Parcelwise Ltd.** (VEN-022): signed November 20, 2023, amended September 2025 for EU standard contractual clauses [3]\n- **Saltmarsh Analytics GmbH** (VEN-027): signed June 12, 2025 [4]\n\n**Not signed:**\n- **Hollowpine Software Co.** (VEN-031): the DPA is not signed. The draft arrived in July 2026, and redlines with legal have been open since August. The main open point is Hollowpine's right to use ticket content to train its reply-suggestion model [2]. Hollowpine is running under security exception SEC-EX-117, approved August 24, 2026 [2]. The security review is a conditional pass, which requires AI reply suggestions to stay disabled until the DPA is signed [2]. If the DPA is still unsigned when the exception lapses, Support Operations must either renew the exception or move ticket intake back to email [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor register: Cobaltline",
+    "Vendor register: Parcelwise",
+    "Vendor register: Saltmarsh Analytics",
+    "Vendor register: Hollowpine Helpdesk"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.6,
+   "error": null,
+   "message_id": "0ee874e2-e7b4-459c-8d8f-0a08c21396a9",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Vendor register: Cobaltline",
+     "chunk_id": "cef42653-e2c0-44a0-890d-98b6d950902c",
+     "document_id": "5ca17ae1-5709-4a0d-9959-39a3dcf4cfca",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Cobaltline, Inc. | | Service | Hosted log search and retention for application and infrastructure logs | | Register ID | VEN-014 | | Business owner | Observability team (OBS) | | Status | Active | | Data processed | Application logs from\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Vendor register: Hollowpine Helpdesk",
+     "chunk_id": "9bdba67d-fda3-43b7-b367-efc0ada38170",
+     "document_id": "f8f0b6da-5079-42b5-955f-a4551380419a",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Hollowpine Software Co. | | Service | Customer support ticketing and help center | | Register ID | VEN-031 | | Business owner | Support Operations (Gwen Talbot) | | Status | Active \u2014 **operating under a security exception** | | Data\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Vendor register: Parcelwise",
+     "chunk_id": "92abd985-6ca9-4b27-8a95-4c59c37f8a00",
+     "document_id": "a36fb1f0-8344-49c8-87e4-b16c1de70fed",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Parcelwise Ltd. | | Service | Transactional email delivery (password resets, invites, billing emails, alert notifications) | | Register ID | VEN-022 | | Status | Active | | Source system | Atlas sends recipient name, email address and\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "Vendor register: Saltmarsh Analytics",
+     "chunk_id": "232b59ab-ce41-408e-8043-c39713dbc908",
+     "document_id": "801ccabd-ca33-4ff5-a2db-f6730150c772",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Saltmarsh Analytics GmbH | | Service | Product analytics for the Northwind web app (funnels, feature adoption) | | Register ID | VEN-027 | | Business owner | Product (Mateo Alvarez) | | Status | Active | | Data processed | Pseudonymous\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 693,
+     "cost_usd": 0.001603,
+     "cache_read": 4282,
+     "cache_write": 9709
+    }
+   },
+   "cost_usd": 0.001603
+  },
+  {
+   "id": "q29",
+   "category": "list_aggregate",
+   "answer": "Three vendor contracts have renewal dates on or before March 31, 2027:\n\n- **Parcelwise Ltd.** (transactional email delivery): renews 2026-12-15 [1]\n- **Hollowpine Software Co.** (customer support ticketing and help center): renews 2027-01-31 [2]\n- **Cobaltline, Inc.** (hosted log search and retention): renews 2027-03-31 [3]\n\nParcelwise's business owner is blank in the register [1]. Hollowpine's owner is Support Operations (Gwen Talbot) [2], and Cobaltline's is the Observability team (OBS) [3].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor register: Parcelwise",
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Cobaltline"
+   ],
+   "gold_cited": 0.75,
+   "passed": false,
+   "latency_s": 2.7,
+   "error": null,
+   "message_id": "47a65218-9275-4bd1-ad09-4246e04c56ef",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Vendor register: Parcelwise",
+     "chunk_id": "92abd985-6ca9-4b27-8a95-4c59c37f8a00",
+     "document_id": "a36fb1f0-8344-49c8-87e4-b16c1de70fed",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Parcelwise Ltd. | | Service | Transactional email delivery (password resets, invites, billing emails, alert notifications) | | Register ID | VEN-022 | | Status | Active | | Source system | Atlas sends recipient name, email address and\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Vendor register: Hollowpine Helpdesk",
+     "chunk_id": "9bdba67d-fda3-43b7-b367-efc0ada38170",
+     "document_id": "f8f0b6da-5079-42b5-955f-a4551380419a",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Hollowpine Software Co. | | Service | Customer support ticketing and help center | | Register ID | VEN-031 | | Business owner | Support Operations (Gwen Talbot) | | Status | Active \u2014 **operating under a security exception** | | Data\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Vendor register: Cobaltline",
+     "chunk_id": "cef42653-e2c0-44a0-890d-98b6d950902c",
+     "document_id": "5ca17ae1-5709-4a0d-9959-39a3dcf4cfca",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Cobaltline, Inc. | | Service | Hosted log search and retention for application and infrastructure logs | | Register ID | VEN-014 | | Business owner | Observability team (OBS) | | Status | Active | | Data processed | Application logs from\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 343,
+     "cost_usd": 0.000823,
+     "cache_read": 4290,
+     "cache_write": 4861
+    }
+   },
+   "cost_usd": 0.000823
+  },
+  {
+   "id": "q30",
+   "category": "list_aggregate",
+   "answer": "Five of the six business associates have a BAA date on record. Brightwater Billing Services is the only one with no BAA date.\n\n**Dated BAA on record:**\n- Coriander Media, Inc. (BA-020): 2026-08-18 [2]\n- Larkspur Telehealth Corp. (BA-005): 2022-02-14 [3]\n- Polyglen Interpreting, LLC (BA-007): 2025-03-03 [4]\n- Quillon Ambient, Inc. (BA-019): 2026-07-30 [5]\n- Tallgrass Survey Co. (BA-021, marked \"proposed\"): 2026-08-05 [6]\n\n**No BAA date on record:**\n- Brightwater Billing Services, Inc. (BA-003) [1]\n\nThe records show a date in the BAA field, but they don't say whether that date is the signing date or a planned date. I'd confirm the signed copies for these before relying on them. Tallgrass is the one to check first, since its record is still marked as proposed.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Business associate record: Coriander Media",
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Quillon Ambient",
+    "Business associate record: Tallgrass Survey Co.",
+    "Business associate record: Brightwater Billing Services"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.5,
+   "error": null,
+   "message_id": "c05b5bae-211f-4dda-929f-16f6b524b23e",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Business associate record: Brightwater Billing Services",
+     "chunk_id": "420286b8-a206-4801-82e2-59148028843c",
+     "document_id": "b0010ae2-d4a7-43f3-93a0-0c8bacc7de5a",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Brightwater Billing Services, Inc. | | Services | Claims scrubbing, patient statement printing and mailing, payment plan administration | | Record ID | BA-003 | | Internal owner | Revenue Cycle Management (Tom\u00e1s Herrera) | | PHI\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Business associate record: Coriander Media",
+     "chunk_id": "6ef0cf0d-2186-481c-9581-12d21a4e642b",
+     "document_id": "3ed07cbf-4e26-4365-bcda-e9a2ffd31989",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Coriander Media, Inc. | | Services | Real-time video and audio SDK and hosted media servers | | Record ID | BA-020 | | Internal owner | Virtual Care (Dana Okafor) | | PHI involved | Live encrypted audio and video streams\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Business associate record: Larkspur Telehealth",
+     "chunk_id": "ececa335-50de-4410-bdad-e636cbb43fbc",
+     "document_id": "01cceca9-539f-4263-9347-c7c28ee47780",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Larkspur Telehealth Corp. | | Services | Current telehealth video platform for all virtual visits | | Record ID | BA-005 | | Internal owner | Virtual Care (Dana Okafor) | | PHI involved | Visit metadata, patient name, in-call\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "Business associate record: Polyglen Interpreting",
+     "chunk_id": "ced5374f-ff93-4d10-8a24-a80c3b77fe92",
+     "document_id": "83ba4267-3070-4918-a253-695d76f06865",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Polyglen Interpreting, LLC | | Services | Video and phone medical interpreting in more than 200 languages, in clinics and in telehealth visits | | Record ID | BA-007 | | Internal owner | Clinical Operations (Rosa Delgado) | |\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "Business associate record: Quillon Ambient",
+     "chunk_id": "dbb9e715-3260-4dcb-a7e8-2ff33b6847a9",
+     "document_id": "ed7fca47-e919-4d77-a73a-5e94482c5127",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Quillon Ambient, Inc. | | Services | AI scribe: listens to the visit (with patient consent) and drafts the clinical note in Meridian EHR | | Record ID | BA-019 | | Internal owner | Clinical Informatics (Grace Oyelaran) | |\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "Business associate record: Tallgrass Survey Co.",
+     "chunk_id": "06939db4-4471-4aec-aa3c-cf1c0b5d09f3",
+     "document_id": "8465f38c-8583-4757-9e86-1eb605f936e9",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Tallgrass Survey Co. | | Services | Post-visit patient satisfaction surveys by SMS and email, with benchmarking against other primary care groups | | Record ID | BA-021 (proposed) | | Internal owner | Quality & Patient Safety\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 588,
+     "cost_usd": 0.000981,
+     "cache_read": 4148,
+     "cache_write": 5164
+    }
+   },
+   "cost_usd": 0.000981
+  },
+  {
+   "id": "q31",
+   "category": "list_aggregate",
+   "answer": "Two business associate contracts renew between now and the end of January 2027:\n\n- **Brightwater Billing Services, Inc.** (BA-003): renews **November 30, 2026**. It auto-renews for one year unless 60 days' notice is given [1]. That notice deadline fell around October 1, 2026, so the contract will likely roll over for another year unless notice was already given. The record doesn't say whether it was.\n- **Larkspur Telehealth Corp.** (BA-005): contract ends **December 31, 2026**, and it is \"not renewing on a full term\" [3]. This is the current telehealth video platform for all virtual visits, so a replacement or transition plan is needed before that date.\n\nThe other four contracts fall outside this window: Polyglen Interpreting is due February 28, 2027 [4], Quillon Ambient July 31, 2027 [5], and Coriander Media August 31, 2028 [2]. Tallgrass Survey Co. is a proposed vendor with no renewal date yet [6].\n\nThe Brightwater record also has no BAA date listed [1], so its BAA status should be checked.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Business associate record: Brightwater Billing Services",
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Quillon Ambient",
+    "Business associate record: Coriander Media",
+    "Business associate record: Tallgrass Survey Co."
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.5,
+   "error": null,
+   "message_id": "ada4769a-3901-4e3b-8c34-600b43cae21f",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Business associate record: Brightwater Billing Services",
+     "chunk_id": "420286b8-a206-4801-82e2-59148028843c",
+     "document_id": "b0010ae2-d4a7-43f3-93a0-0c8bacc7de5a",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Brightwater Billing Services, Inc. | | Services | Claims scrubbing, patient statement printing and mailing, payment plan administration | | Record ID | BA-003 | | Internal owner | Revenue Cycle Management (Tom\u00e1s Herrera) | | PHI\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Business associate record: Coriander Media",
+     "chunk_id": "6ef0cf0d-2186-481c-9581-12d21a4e642b",
+     "document_id": "3ed07cbf-4e26-4365-bcda-e9a2ffd31989",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Coriander Media, Inc. | | Services | Real-time video and audio SDK and hosted media servers | | Record ID | BA-020 | | Internal owner | Virtual Care (Dana Okafor) | | PHI involved | Live encrypted audio and video streams\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Business associate record: Larkspur Telehealth",
+     "chunk_id": "ececa335-50de-4410-bdad-e636cbb43fbc",
+     "document_id": "01cceca9-539f-4263-9347-c7c28ee47780",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Larkspur Telehealth Corp. | | Services | Current telehealth video platform for all virtual visits | | Record ID | BA-005 | | Internal owner | Virtual Care (Dana Okafor) | | PHI involved | Visit metadata, patient name, in-call\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "Business associate record: Polyglen Interpreting",
+     "chunk_id": "ced5374f-ff93-4d10-8a24-a80c3b77fe92",
+     "document_id": "83ba4267-3070-4918-a253-695d76f06865",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Polyglen Interpreting, LLC | | Services | Video and phone medical interpreting in more than 200 languages, in clinics and in telehealth visits | | Record ID | BA-007 | | Internal owner | Clinical Operations (Rosa Delgado) | |\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "Business associate record: Quillon Ambient",
+     "chunk_id": "dbb9e715-3260-4dcb-a7e8-2ff33b6847a9",
+     "document_id": "ed7fca47-e919-4d77-a73a-5e94482c5127",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Quillon Ambient, Inc. | | Services | AI scribe: listens to the visit (with patient consent) and drafts the clinical note in Meridian EHR | | Record ID | BA-019 | | Internal owner | Clinical Informatics (Grace Oyelaran) | |\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "Business associate record: Tallgrass Survey Co.",
+     "chunk_id": "06939db4-4471-4aec-aa3c-cf1c0b5d09f3",
+     "document_id": "8465f38c-8583-4757-9e86-1eb605f936e9",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Business associate | Tallgrass Survey Co. | | Services | Post-visit patient satisfaction surveys by SMS and email, with benchmarking against other primary care groups | | Record ID | BA-021 (proposed) | | Internal owner | Quality & Patient Safety\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 664,
+     "cost_usd": 0.000548,
+     "cache_read": 8215,
+     "cache_write": 1064
+    }
+   },
+   "cost_usd": 0.000548
+  },
+  {
+   "id": "q32",
+   "category": "list_aggregate",
+   "answer": "The three big bets picked at the cycle 5 pitch review on September 8, 2026 were Tributary, Lantern and Hydrant. The handbook allows at most three per cycle, and seven pitches came in [1][2].\n\n- **Tributary:** streaming joins (the Enrich step), pitched by Mateo and LZ. Its GA target is January 2027 [1]. It has been in private beta since October 1 [4][5].\n- **Lantern:** a self-serve billing portal, pitched by NH and HV. The original plan was beta in December and GA in January 2027 [1]. That has since moved. The October leadership notes say GA slips to March 2027 and beta moves to February [5], and the codename register agrees [4].\n- **Hydrant:** automatic scaling of ingest gateways per cell, pitched by OA. It shipped to all production cells on October 22, 2026 [3][4].\n\nNot every pitch was picked. Tidepool (Postgres CDC v2) was not picked in cycle 5 and needs a re-pitch with smaller scope [4].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Cycle 5 pitch review notes",
+    "Northwind Engineering Handbook",
+    "Northwind project codename register",
+    "Leadership offsite notes (October 2026)",
+    "Hydrant launch notes: ingest gateway autoscaling"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.8,
+   "error": null,
+   "message_id": "63ec0d32-0e17-4e7d-904c-b77f2aa6a6f0",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Cycle 5 pitch review notes",
+     "chunk_id": "9b42f0b1-cafc-45ad-bbe3-f349486cf2f1",
+     "document_id": "3d03aa2b-7b6e-4e6c-81ea-cf97f2b8eba0",
+     "origin": "knowledge",
+     "snippet": "Cycle 5 runs September 14 to October 23, cool-down October 26 to November 6. Per the handbook we pick at most three big bets. Seven pitches came in."
+    },
+    {
+     "ref": 2,
+     "title": "Northwind Engineering Handbook",
+     "chunk_id": "a07c9db5-a225-4981-8baf-9673846598b7",
+     "document_id": "84ea80f3-302a-4caf-82e1-0c10e9d53e0e",
+     "origin": "knowledge",
+     "snippet": "Work is planned in six-week cycles followed by a two-week cool-down. Each cycle starts with a pitch review on the first Monday, where product and engineering leads agree on at most three \"big bets\" and a handful of small batch items. Anything not picked is dropped, not carried\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Hydrant launch notes: ingest gateway autoscaling",
+     "chunk_id": "ba6da4cd-c919-4e6e-ac15-5d19435bb657",
+     "document_id": "06d56d01-2044-474d-b303-847c2148725b",
+     "origin": "knowledge",
+     "snippet": "**Author:** Oluwaseun Adeyemi (PLAT) \u00b7 **Date:** October 22, 2026 \u00b7 **Status:** Shipped to all production cells Hydrant, one of the cycle 5 big bets, is live. It scales `ingest-gateway` replicas in each cell automatically, so nobody has to scale gateways by hand in the middle of\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "Northwind project codename register",
+     "chunk_id": "8a94ac5f-0c55-4a8e-8512-ae838f1d96a5",
+     "document_id": "22388a4c-cfda-48a1-a9fe-8b98d8826c72",
+     "origin": "knowledge",
+     "snippet": "| Codename | What it is | Owning team | Lead | Status (Oct 28) | |---|---|---|---|---| | Tributary | Streaming joins (the Enrich step in the pipeline editor) | DP | Lin Zhou (LZ) | Private beta since October 1; GA January 2027 | | Lantern | Self-serve billing portal | IDB | Noor\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "Leadership offsite notes (October 2026)",
+     "chunk_id": "43135577-3780-483f-9051-7eff1657cc79",
+     "document_id": "cbd7c9f6-7738-4a74-afc5-8225a102bd55",
+     "origin": "knowledge",
+     "snippet": "- **Tributary:** private beta started October 1 with eight design partners. GA stays January 2027. Dmitri noted security sign-off on persisted snapshots is still outstanding and is the main risk. - **Lantern:** GA **slips from January to March 2027**. The payment-provider\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "Product spec: Streaming joins",
+     "chunk_id": "d8f73b32-98c6-468a-81c3-409e437da707",
+     "document_id": "185deda3-7442-4893-8e7e-80437d36262c",
+     "origin": "knowledge",
+     "snippet": "**Status:** Approved for the Q4 cycle **Owner:** Mateo Alvarez (PM), Lin Zhou (tech lead)"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 519,
+     "cost_usd": 0.000829,
+     "cache_read": 8483,
+     "cache_write": 3875
+    }
+   },
+   "cost_usd": 0.000829
+  },
+  {
+   "id": "q33",
+   "category": "list_aggregate",
+   "answer": "Three of the four INC-2291 action items are confirmed shipped. The fourth is marked done in the postmortem, but I couldn't confirm it from a later source.\n\n- **Certificate chain validation in the rotation job** (platform team, due Aug 28): marked done [2].\n- **Canary alert for sustained handshake failures** (ingest team): marked done [2].\n- **Shorter gateway TLS session ticket lifetime**, from 4 hours to 30 minutes (ingest team, due Sep 15): shipped ahead of schedule. The September changelog lists it as shipped [4].\n- **\"TLS handshake errors\" dashboard panel** (observability): marked done [2].\n\nThe postmortem's status marks are dated August 14, the same day as the incident, so they may not reflect later progress. The Q3 board update says \"all action items are on track,\" but it doesn't say which are complete [3].\n\nA related change also shipped in October: canary bake time went from 20 to 45 minutes, and promotion now requires zero sustained TLS handshake errors between gateways and brokers. The deploy note cites INC-2291 as the reason, but it isn't one of the four listed action items [6].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Q3 2026 board update (confidential)",
+    "Northwind deploy pipeline changes (October 2026)"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 6.8,
+   "error": null,
+   "message_id": "04140a0c-cab0-475a-9e81-2581e7dfee53",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Northwind incident log: July\u2013October 2026",
+     "chunk_id": "415314b0-f8ea-4d0f-85f0-2edbeda28e8e",
+     "document_id": "c9889440-1af5-40bd-99b4-ffb985c0bbc9",
+     "origin": "knowledge",
+     "snippet": "**Maintained by:** the reliability meeting (Thursdays) \u00b7 **Exported:** October 30, 2026 from the incident tracker Every incident declared with `/incident declare` between July 1 and October 30, 2026. SEV-3 entries are listed when someone declared them; most SEV-3 issues are\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Postmortem: Ingest outage in us-east cell (INC-2291)",
+     "chunk_id": "80e37b81-8741-4001-9ae1-73acec3edd62",
+     "document_id": "8f87936e-f01d-40ad-aac5-544f6a556837",
+     "origin": "knowledge",
+     "snippet": "1. Validate certificate chains in the rotation job before publishing (owner: platform team, due Aug 28) \u2014 **done**. 2. Lower the canary handshake-failure alert to page on any sustained failures over 5 minutes (owner: ingest team) \u2014 **done**. 3. Reduce gateway TLS session ticket\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Q3 2026 board update (confidential)",
+     "chunk_id": "6d6a34d6-2388-4aaa-aa1f-bf942453be31",
+     "document_id": "b91b4454-e5b3-4040-8f76-ead411bcef42",
+     "origin": "knowledge",
+     "snippet": "Streaming joins enters private beta in October. The ingest outage in August (INC-2291) cost $58K in SLA credits; all action items are on track."
+    },
+    {
+     "ref": 4,
+     "title": "Northwind Pipelines changelog: September\u2013October 2026",
+     "chunk_id": "93994730-a016-45a7-8372-02870c9e3553",
+     "document_id": "6962b989-a85b-4f42-b006-8837e5f7bfe5",
+     "origin": "knowledge",
+     "snippet": "- *(internal)* Ingest gateways: TLS session ticket lifetime reduced from 4 hours to 30 minutes, so certificate problems surface quickly instead of hours later (INC-2291 action item 3). Shipped ahead of the September 15 due date. - *(internal)* Ingest dashboard: added panels for\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "Cycle 5 pitch review notes",
+     "chunk_id": "fa6045f8-221b-4cd4-81dc-abae31a3baf4",
+     "document_id": "3d03aa2b-7b6e-4e6c-81ea-cf97f2b8eba0",
+     "origin": "knowledge",
+     "snippet": "- Reduce gateway TLS session ticket lifetime to 30 minutes (INC-2291 action item 3). Owner: ingest folks on DP. - Snowflake key-pair auth in Conduit. - Flag cleanup: 23 flags over 90 days old."
+    },
+    {
+     "ref": 6,
+     "title": "Northwind deploy pipeline changes (October 2026)",
+     "chunk_id": "a9629c2d-8c13-4126-90de-133c15b969b3",
+     "document_id": "7cc58017-e150-46ab-baf5-9f5b608b1661",
+     "origin": "knowledge",
+     "snippet": "1. **Canary bake time goes from 20 minutes to 45 minutes.** A deploy now sits in the canary cell for 45 minutes before it can be promoted automatically. INC-2291 showed that some failures only show up after caches or sessions expire, and 20 minutes was too short to catch them\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 1013,
+     "cost_usd": 0.001302,
+     "cache_read": 8484,
+     "cache_write": 5680
+    }
+   },
+   "cost_usd": 0.001302
+  },
+  {
+   "id": "q064",
+   "category": "list_aggregate",
+   "answer": "Six incidents in the window were SEV-1 or SEV-2. They touched six services, owned by four engineering teams: Data Plane, Identity & Billing, Observability, and Platform.\n\n| Team (code) | Services hit | Incidents |\n|---|---|---|\n| Data Plane (DP) | Conduit [1]; ingest-gateway [1] | INC-2351 (SEV-2, Oct 14) [2]; INC-2291 (SEV-1, Aug 14) [2] |\n| Identity & Billing (IDB) | Keystone [1]; Ledger [1] | INC-2302 (SEV-2, Aug 27) [2]; INC-2340 (SEV-2, Oct 6) [2] |\n| Observability (OBS) | Beacon [1] | INC-2327 (SEV-2, Sep 29) [2] |\n| Platform (PLAT) | Driftwood [1] | INC-2278 (SEV-2, Jul 28) [2] |\n\nTeam names come from the engineering directory, which maps the codes to Data Plane, Identity & Billing, Observability, and Platform [3]. The Workspace Experience (WX) and Security (SEC) teams had no services hit in this period.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Service catalog",
+    "Northwind incident log: July\u2013October 2026",
+    "Engineering team directory and change approvers"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 6.2,
+   "error": null,
+   "message_id": "2e3d8eb8-92ce-43b6-b5d9-0a401cefd11d",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Service catalog",
+     "chunk_id": "a7cb4540-0e53-4820-8cb4-50b955aa92ef",
+     "document_id": "7a677272-3454-4107-bd67-33073aa65e1f",
+     "origin": "knowledge",
+     "snippet": "| Service | What it does | Data it stores | Data class | Owner | |---|---|---|---|---| | `ingest-gateway` | Accepts events from customer SDKs and the HTTP API, authenticates them and writes them to Kafka | In-flight event payloads only; nothing persisted beyond the Kafka hot\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Northwind incident log: July\u2013October 2026",
+     "chunk_id": "0d708409-0c0b-4e0f-83b2-13780a681b70",
+     "document_id": "c9889440-1af5-40bd-99b4-ffb985c0bbc9",
+     "origin": "knowledge",
+     "snippet": "| Incident | Date | Severity | What happened | Service | Cell | Incident commander | Duration | Postmortem | |---|---|---|---|---|---|---|---|---| | INC-2264 | Jul 9 | SEV-3 | One workspace's Snowflake destination failing auth after the customer rotated credentials | Conduit |\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Engineering team directory and change approvers",
+     "chunk_id": "e94eaca4-bd54-4f30-9249-3c3a77453c65",
+     "document_id": "348e655a-766b-4379-a723-91b9c227261f",
+     "origin": "knowledge",
+     "snippet": "| Code | Team | Engineering manager | Change approver | Delegate | Slack | |---|---|---|---|---|---| | PLAT | Platform | Oluwaseun Adeyemi | Oluwaseun Adeyemi | Kofi Mensah | `#team-platform` | | DP | Data Plane | Priya Raman | Priya Raman | Lin Zhou | `#team-dataplane` | | IDB\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 3,
+     "input": 8,
+     "output": 1028,
+     "cost_usd": 0.000949,
+     "cache_read": 14475,
+     "cache_write": 2319
+    }
+   },
+   "cost_usd": 0.000949
+  },
+  {
+   "id": "q065",
+   "category": "list_aggregate",
+   "answer": "Per the vendor register, the four active vendors cost you a combined $198,500 a year:\n\n- **Cobaltline, Inc.** (hosted log search): $96,000 a year [1]\n- **Hollowpine Software Co.** (support ticketing): $44,000 a year [2]\n- **Parcelwise Ltd.** (transactional email): $31,500 a year [3]\n- **Saltmarsh Analytics GmbH** (product analytics): $27,000 a year [4]\n\nHollowpine is operating under a security exception because its data processing agreement is not yet signed [2]. Its renewal date is January 31, 2027 [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor register: Cobaltline",
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Parcelwise",
+    "Vendor register: Saltmarsh Analytics"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.9,
+   "error": null,
+   "message_id": "1c2a5972-384f-4412-b50e-6076e0e7c597",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Vendor register: Cobaltline",
+     "chunk_id": "cef42653-e2c0-44a0-890d-98b6d950902c",
+     "document_id": "5ca17ae1-5709-4a0d-9959-39a3dcf4cfca",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Cobaltline, Inc. | | Service | Hosted log search and retention for application and infrastructure logs | | Register ID | VEN-014 | | Business owner | Observability team (OBS) | | Status | Active | | Data processed | Application logs from\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Vendor register: Hollowpine Helpdesk",
+     "chunk_id": "9bdba67d-fda3-43b7-b367-efc0ada38170",
+     "document_id": "f8f0b6da-5079-42b5-955f-a4551380419a",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Hollowpine Software Co. | | Service | Customer support ticketing and help center | | Register ID | VEN-031 | | Business owner | Support Operations (Gwen Talbot) | | Status | Active \u2014 **operating under a security exception** | | Data\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Vendor register: Parcelwise",
+     "chunk_id": "92abd985-6ca9-4b27-8a95-4c59c37f8a00",
+     "document_id": "a36fb1f0-8344-49c8-87e4-b16c1de70fed",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Parcelwise Ltd. | | Service | Transactional email delivery (password resets, invites, billing emails, alert notifications) | | Register ID | VEN-022 | | Status | Active | | Source system | Atlas sends recipient name, email address and\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "Vendor register: Saltmarsh Analytics",
+     "chunk_id": "232b59ab-ce41-408e-8043-c39713dbc908",
+     "document_id": "801ccabd-ca33-4ff5-a2db-f6730150c772",
+     "origin": "knowledge",
+     "snippet": "| Field | Value | |---|---| | Vendor | Saltmarsh Analytics GmbH | | Service | Product analytics for the Northwind web app (funnels, feature adoption) | | Register ID | VEN-027 | | Business owner | Product (Mateo Alvarez) | | Status | Active | | Data processed | Pseudonymous\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 3,
+     "input": 8,
+     "output": 469,
+     "cost_usd": 0.001059,
+     "cache_read": 13381,
+     "cache_write": 5518
+    }
+   },
+   "cost_usd": 0.001059
+  },
+  {
+   "id": "q066",
+   "category": "list_aggregate",
+   "answer": "Platform on-call is covered by a primary and a secondary engineer each week. For the four weekly shifts starting in November 2026:\n\n| Week starting (Tue) | Platform primary | Platform secondary |\n|---|---|---|\n| 3 Nov 2026 | Bea Okafor | Jonas Feld [1] |\n| 10 Nov 2026 | Sanjay Iyer | Bea Okafor [1] |\n| 17 Nov 2026 | Jonas Feld | Sanjay Iyer [1] |\n| 24 Nov 2026 | Kofi Mensah | Jonas Feld [1] |\n\nThe rota lists these as the Platform primary and secondary for each week, and it was checked in full [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Northwind on-call rota: November\u2013December 2026"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 2.9,
+   "error": null,
+   "message_id": "32d453fd-0789-4594-b3e7-dcb78b2d8fb1",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Northwind on-call rota: November\u2013December 2026",
+     "chunk_id": "5ded47f8-62ba-4324-9361-dbbe6d48b508",
+     "document_id": "196a6fdf-0ae4-42ab-84d0-6054f4945b9f",
+     "origin": "knowledge",
+     "snippet": "| Week starting (Tue) | Platform primary | Platform secondary | Data Plane primary | Data Plane secondary | Incident commander | |---|---|---|---|---|---| | November 3 | Bea Okafor | Jonas Feld | Ines Duarte | Tom Whitfield | Harriet Vance | | November 10 | Sanjay Iyer | Bea\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 460,
+     "cost_usd": 0.000423,
+     "cache_read": 8493,
+     "cache_write": 858
+    }
+   },
+   "cost_usd": 0.000423
+  },
+  {
+   "id": "q067",
+   "category": "list_aggregate",
+   "answer": "Four endpoints are marked \"Not available\" for Starter workspaces:\n\n- **/v2/scim/** (SCIM user provisioning) [1]\n- **GET /v2/audit-log/export** (audit log CSV export) [1]\n- **POST /v2/events/batch** (bulk backfill and replays) [1]\n- **POST /v2/reference-tables/{id}/refresh** (force an Enrich snapshot rebuild) [1]\n\nThe other five endpoints have a Starter rate limit, from 1 to 100 requests per second [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Northwind Pipelines API rate limits by plan"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 3.9,
+   "error": null,
+   "message_id": "8f7f2d1c-47ce-4065-8256-a3423e78e49a",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Northwind Pipelines API rate limits by plan",
+     "chunk_id": "8d0c8a50-d9a3-4b29-a6d1-601e3cbce3e0",
+     "document_id": "0051fdf8-5863-4cbd-a66d-a1b4f3162d23",
+     "origin": "knowledge",
+     "snippet": "| Endpoint | Used for | Starter | Growth | Enterprise (default) | Max per request | |---|---|---|---|---|---| | `POST /v2/events` | Event ingest from SDKs and the HTTP API | 100 req/s | 2,000 req/s | 10,000 req/s | 500 events or 1 MB | | `POST /v2/events/batch` | Bulk backfill\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 434,
+     "cost_usd": 0.000404,
+     "cache_read": 8482,
+     "cache_write": 816
+    }
+   },
+   "cost_usd": 0.000404
+  },
+  {
+   "id": "q068",
+   "category": "list_aggregate",
+   "answer": "Five production services are classed as Restricted [1]:\n\n- **Conduit** (owner DP): source and destination connectors. Stores encrypted connector credentials and sync cursors [1].\n- **Driftwood** (owner PLAT): long-term object archive behind the hot buffer. Stores archived event payloads, partitioned by workspace and day [1].\n- **ingest-gateway** (owner DP): accepts events from customer SDKs and the HTTP API. Stores in-flight event payloads only, with nothing persisted beyond the Kafka hot buffer [1].\n- **Keystone** (owner IDB): authentication and authorization. Stores hashed API keys, SSO/SAML configuration, and session tokens [1].\n- **runner** (owner DP): executes customer pipelines. Stores partition state in local RocksDB and reference-table snapshots [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Service catalog"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 2.5,
+   "error": null,
+   "message_id": "464b0b64-81d3-4c31-95b4-e841367c28ea",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Service catalog",
+     "chunk_id": "a7cb4540-0e53-4820-8cb4-50b955aa92ef",
+     "document_id": "7a677272-3454-4107-bd67-33073aa65e1f",
+     "origin": "knowledge",
+     "snippet": "| Service | What it does | Data it stores | Data class | Owner | |---|---|---|---|---| | `ingest-gateway` | Accepts events from customer SDKs and the HTTP API, authenticates them and writes them to Kafka | In-flight event payloads only; nothing persisted beyond the Kafka hot\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 414,
+     "cost_usd": 0.000374,
+     "cache_read": 8477,
+     "cache_write": 653
+    }
+   },
+   "cost_usd": 0.000374
+  },
+  {
+   "id": "q069",
+   "category": "list_aggregate",
+   "answer": "Four incidents were declared in October 2026 [1]:\n\n| Incident | Date | Severity | Service |\n|---|---|---|---|\n| INC-2340 | 2026-10-06 | SEV-2 | Ledger [1] |\n| INC-2351 | 2026-10-14 | SEV-2 | Conduit [1] |\n| INC-2358 | 2026-10-22 | SEV-3 | Hydrant [1] |\n| INC-2366 | 2026-10-27 | SEV-3 | Atlas [1] |\n\nINC-2340 affected all cells and involved duplicate September invoices, with 201 card charges refunded [1]. INC-2351 hit Snowflake destinations failing to load for 63 workspaces, in the us-east and us-west cells [1]. INC-2358 was a gateway replica count oscillation on Hydrant launch day, with no customer impact, in the eu-central cell [1]. INC-2366 delayed invite and password-reset emails by about two hours because of a webhook backlog [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Northwind incident log: July\u2013October 2026"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 3.0,
+   "error": null,
+   "message_id": "9a59297a-cc24-4455-803a-797afc37cc5f",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Northwind incident log: July\u2013October 2026",
+     "chunk_id": "0d708409-0c0b-4e0f-83b2-13780a681b70",
+     "document_id": "c9889440-1af5-40bd-99b4-ffb985c0bbc9",
+     "origin": "knowledge",
+     "snippet": "| Incident | Date | Severity | What happened | Service | Cell | Incident commander | Duration | Postmortem | |---|---|---|---|---|---|---|---|---| | INC-2264 | Jul 9 | SEV-3 | One workspace's Snowflake destination failing auth after the customer rotated credentials | Conduit |\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 512,
+     "cost_usd": 0.000428,
+     "cache_read": 8484,
+     "cache_write": 687
+    }
+   },
+   "cost_usd": 0.000428
+  },
+  {
+   "id": "q109",
+   "category": "list_aggregate",
+   "answer": "Four languages missed their connect-time target in Q3 2026 (July 1 to September 30). Vietnamese and Arabic missed the 2-minute target, and Somali and Karen missed the 5-minute target [1].\n\n| Language | Tier | Target | Avg connect | Result |\n|---|---|---|---|---|\n| Vietnamese | 2-minute | 2:00 | 2:26 | Missed [1] |\n| Arabic | 2-minute | 2:00 | 2:12 | Missed [1] |\n| Somali | 5-minute | 5:00 | 5:40 | Missed [1] |\n| Karen | 5-minute | 5:00 | 6:18 | Missed [1] |\n\nEvery other language met its target. Spanish averaged 0:48, and Haitian Creole (3:54) and \"all other languages\" (3:31) were within the 5-minute target [1]. Cantonese (1:51) and American Sign Language (1:58) were just inside the 2-minute target [1].\n\nClinical Operations says it will raise every language that missed its target at the Polyglen renewal discussion in November 2026 [1]. The contract renews February 28, 2027 [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Halcyon language access report \u2014 Q3 2026",
+    "Business associate record: Polyglen Interpreting"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 6.5,
+   "error": null,
+   "message_id": "249ba7bc-0f15-4b7a-a938-e23a8941d7f1",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Halcyon language access report \u2014 Q3 2026",
+     "chunk_id": "2c812975-1e14-4599-b355-594b78a2e3aa",
+     "document_id": "7b488bab-b74c-4067-973d-86e1c9a2271a",
+     "origin": "knowledge",
+     "snippet": "| Language | Tier | Sessions | Interpreted minutes | Avg connect (m:ss) | Dropped calls | |---|---|---|---|---|---| | Spanish | 2-minute | 9,412 | 168,300 | 0:48 | 0.9% | | Mandarin | 2-minute | 1,206 | 21,950 | 1:22 | 1.4% | | Cantonese | 2-minute | 644 | 11,870 | 1:51 | 1.8% |\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Business associate record: Polyglen Interpreting",
+     "chunk_id": "3462e0af-4e4b-4e26-b589-c10a49929ca1",
+     "document_id": "83ba4267-3070-4918-a253-695d76f06865",
+     "origin": "knowledge",
+     "snippet": "- Video interpreter connected within 2 minutes for the top 20 languages, within 5 minutes for all others. - American Sign Language available by video 24/7. - Monthly quality report to Clinical Operations: connect times, dropped calls, and patient complaints."
+    },
+    {
+     "ref": 3,
+     "title": "Patient intake procedure",
+     "chunk_id": "e117dd05-855c-4ce2-a7a8-01b926029475",
+     "document_id": "36044d56-2e8f-4daa-b5ce-0624a7538a31",
+     "origin": "knowledge",
+     "snippet": "Interpreter services are available in more than 200 languages by video within 2 minutes. Family members should not interpret for clinical conversations except in emergencies. Every clinic has at least one exam room accessible to wheelchair users and a height-adjustable exam\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "Telehealth platform: requirements v3",
+     "chunk_id": "e92790bd-6eb9-4546-aefe-8ce860d04af7",
+     "document_id": "90756c50-046e-4211-b384-d1ee6d30f647",
+     "origin": "knowledge",
+     "snippet": "1. Visit join success above 98% across devices, measured as patients who reach the clinician within 3 minutes of their start time. 2. Built-in three-way calls so interpreters and caregivers can join with a single link. 3. Waiting room with a live queue position and estimated\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "Halcyon vendor support and escalation matrix",
+     "chunk_id": "a384ab7f-5486-4a78-9d86-5b8d3ca2bd30",
+     "document_id": "4a81c81b-dea5-4b36-9d8c-802c7254338d",
+     "origin": "knowledge",
+     "snippet": "- **Meridian upgrades:** for any scheduled Meridian EHR upgrade, Meridian Clinical Systems staffs a live bridge line with its own engineers for the whole cutover window, in addition to the 24/7 support above. - **Larkspur** support continues through the month-to-month extension\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 907,
+     "cost_usd": 0.001131,
+     "cache_read": 8211,
+     "cache_write": 4758
+    }
+   },
+   "cost_usd": 0.001131
+  },
+  {
+   "id": "q110",
+   "category": "list_aggregate",
+   "answer": "Five in-person clinics are open on Saturdays, according to the October 2026 clinic directory [1]:\n\n| Clinic (code) | Saturday hours |\n|---|---|\n| Harbor Point (HBP) | 08:00\u201316:00 |\n| Northgate (NGT) | 08:00\u201314:00 |\n| Riverside (RVS) | 08:00\u201312:00 |\n| Elmhurst (ELH) | 09:00\u201312:00 |\n| Elm Park (ELP) | 09:00\u201312:00 |\n\n[1]\n\nNorthgate's extended Saturday hours to 14:00 took effect September 5, 2026 [1]. The telehealth front desk is also open on Saturdays (08:00\u201316:00), but it isn't an in-person clinic, so I've left it out [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Halcyon clinic directory and hours (October 2026)"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.4,
+   "error": null,
+   "message_id": "8e7d4979-01d7-4b7f-bf21-ac3936b33330",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Halcyon clinic directory and hours (October 2026)",
+     "chunk_id": "19299428-7b8a-4cf8-863f-84e32a4bc1ae",
+     "document_id": "fc92d5cb-66f3-4de4-baa4-f1361549b7f3",
+     "origin": "knowledge",
+     "snippet": "| Code | Site | Mon\u2013Fri | Saturday | Sunday | Clinic manager | Hub clinic | Avg visits per day (Q3 2026) | |---|---|---|---|---|---|---|---| | RVS | Riverside | 07:30\u201319:00 | 08:00\u201312:00 | Closed | Nadia Ferreira | Yes | 94 | | RVB | Riverbend | 08:00\u201317:00 | Closed | Closed |\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "CSCAB minutes \u2014 October 28, 2026",
+     "chunk_id": "2260ed30-f3a1-4f57-a3bb-696a1b770fab",
+     "document_id": "339c921d-b962-4ffe-bd9f-cec403fa3370",
+     "origin": "knowledge",
+     "snippet": "GO presented the cutover plan. The cutover will run on **Saturday, February 6, 2027, starting at 22:00 Eastern**, with **6 hours of planned downtime**. All clinics will use paper downtime procedures; Harbor Point's Sunday clinic opens at 10:00, so the cutover must be finished by\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Halcyon clinic staffing standard (effective September 1, 2026)",
+     "chunk_id": "b08f9885-b13c-4971-be8c-45a85649eaf2",
+     "document_id": "64d80ead-33fc-43a9-8254-2319649b9734",
+     "origin": "knowledge",
+     "snippet": "- Band thresholds are lower: small is now under 40 visits a day, large is over 80. - More medical assistants per clinician in medium and large clinics. - Every clinic, including small clinics, must now have at least one RN on site during open hours. Saturday sessions also need\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "PTO and clinic scheduling policy",
+     "chunk_id": "b43de89e-9a86-4686-979b-25d7dceb41c6",
+     "document_id": "5d9edede-d671-4de5-91ff-b7410a8c1d31",
+     "origin": "knowledge",
+     "snippet": "Every clinic must have at least one physician or nurse practitioner on site during open hours. If coverage drops below that, the clinic manager contacts the float pool first, then converts in-person visits to telehealth where clinically appropriate."
+    },
+    {
+     "ref": 5,
+     "title": "Halcyon clinic staffing standard (2025)",
+     "chunk_id": "e8089436-dc2c-4f6b-9050-7b16d366651f",
+     "document_id": "559cb7b6-6822-4dce-8dee-f4a71f6839a2",
+     "origin": "knowledge",
+     "snippet": "Each clinic is placed in a band by its average in-person visits per day over the previous quarter, from ClearPath PM. | Band | Avg visits per day | Physicians / NPs on site (min) | MAs per clinician | RNs on site (min) | Front desk staff (min) | |---|---|---|---|---|---| | Small\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 659,
+     "cost_usd": 0.001072,
+     "cache_read": 8209,
+     "cache_write": 5283
+    }
+   },
+   "cost_usd": 0.001072
+  },
+  {
+   "id": "q111",
+   "category": "list_aggregate",
+   "answer": "Four items are flagged as needing action. All four come from the same inventory record set [1]:\n\n- **AED-CDH-01** (CDH, Vantor A3): out of service. It failed its self-test on Oct 3, 2026 and was sent to Vantor for repair [1]. AED-LOAN-02 is covering CDH in the meantime [1].\n- **AED-ELH-01** (ELH, Vantor A3): pads expired Sept 30, 2026. Replacement pads were ordered Oct 9, due by Nov 6. A spare pad set borrowed from ELP is in use meanwhile [1].\n- **CART-HBP-01** (HBP, emergency cart): monthly seal check overdue. The next check was due Oct 22, 2026 [1].\n- **OXY-NBR-01** (NBR, oxygen cylinder): 450 psi, below the 500 psi minimum. A replacement cylinder has been requested [1].\n\nThe other ten items are marked in service. Several have upcoming dates, such as HBP's AED-HBP-02 pads expiring Nov 30, 2026 with new pads already on order [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Halcyon emergency equipment inventory (Q4 2026 check)"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.3,
+   "error": null,
+   "message_id": "a4a18f53-3e9b-4a4e-bf02-2f80fb4b8727",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Halcyon emergency equipment inventory (Q4 2026 check)",
+     "chunk_id": "abfde439-2e32-4c4c-8fcc-e5c30d14dafb",
+     "document_id": "93ef11c4-487e-45fa-94ba-b6481eae3fd1",
+     "origin": "knowledge",
+     "snippet": "| Asset tag | Site | Item | Model | Last check | Next check due | Pads / battery expiry | Status | |---|---|---|---|---|---|---|---| | AED-RVS-01 | RVS | AED | Vantor A5 | Oct 5, 2026 | Nov 5, 2026 | Pads Mar 2027 / battery Aug 2028 | In service | | CART-RVS-01 | RVS | Emergency\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 725,
+     "cost_usd": 0.000626,
+     "cache_read": 8215,
+     "cache_write": 1445
+    }
+   },
+   "cost_usd": 0.000626
+  },
+  {
+   "id": "q112",
+   "category": "list_aggregate",
+   "answer": "Four items are Tier 3 and not stocked in any clinic. Each must be ordered from the wholesaler for a named patient, which takes about 5 business days [1]:\n\n- **Td** (0.5 mL prefilled syringe), self-pay $46. Tdap is preferred; Td is given only on request [1].\n- **HPV vaccine, 9-valent** (0.5 mL prefilled syringe), self-pay $295. Ages 9\u201345 [1].\n- **Meningococcal B vaccine** (0.5 mL prefilled syringe), self-pay $190. Ages 16\u201323 or on specialist advice [1].\n- **Pneumococcal conjugate, PCV21** (0.5 mL prefilled syringe), self-pay $280. Only when the clinician specifies PCV21 [1].\n\nNamed-patient orders go to the clinical pharmacist [1].\n\nTier 2 items (Hepatitis B, recombinant zoster, ceftriaxone) are not in every clinic. They are stocked only at hub clinics, and other clinics request a transfer from the nearest hub, which arrives within 2 business days [1]. The hub clinics are Riverside, Northgate and Harbor Point [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+    "Halcyon clinic directory and hours (October 2026)"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 5.0,
+   "error": null,
+   "message_id": "68803bcf-c86b-4818-99c0-27380c884941",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Halcyon in-clinic vaccine and injectable formulary (2026\u201327)",
+     "chunk_id": "d6e3841d-25bc-4c6f-8b74-6d964b76dcb6",
+     "document_id": "781fd980-6caf-461b-a46c-3439522a5ea1",
+     "origin": "knowledge",
+     "snippet": "| Item | Presentation | Tier | May be given by | Self-pay price | Notes | |---|---|---|---|---|---| | Influenza vaccine, standard-dose (2026\u201327) | 0.5 mL prefilled syringe | 1 | MA, RN, clinician | $35 | Ages 6 months to 64 years | | Influenza vaccine, high-dose (2026\u201327) | 0.7\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Halcyon clinic directory and hours (October 2026)",
+     "chunk_id": "fc26915f-2346-4192-89d0-58fbaa362ad1",
+     "document_id": "fc92d5cb-66f3-4de4-baa4-f1361549b7f3",
+     "origin": "knowledge",
+     "snippet": "Hub clinics hold the Tier 2 vaccine and injectable stock described in the in-clinic formulary, and act as the backup site for patients when a nearby clinic has to close unexpectedly. Non-hub clinics order from the nearest hub."
+    },
+    {
+     "ref": 3,
+     "title": "Patient intake procedure",
+     "chunk_id": "5751fe2e-7725-486a-a1d9-fdfc1e864915",
+     "document_id": "36044d56-2e8f-4daa-b5ce-0624a7538a31",
+     "origin": "knowledge",
+     "snippet": "**Applies to:** all Halcyon Health clinics and the telehealth front desk **Owner:** Director of Clinical Operations"
+    },
+    {
+     "ref": 4,
+     "title": "Incident review: duplicate medication reminders (IR-0412)",
+     "chunk_id": "b3f9e3b2-6c9f-4475-bb07-8d1aaeec0edf",
+     "document_id": "cd49a3e1-916f-41ef-882c-cf01de6afebe",
+     "origin": "knowledge",
+     "snippet": "- 09:40 \u2014 Old runner disabled; duplicates stopped. - 11:00 \u2014 Clinical pharmacy team began outreach to patients who reported extra doses. - 14:00 \u2014 Apology message sent to all affected patients with guidance on what to do if they took an extra dose."
+    },
+    {
+     "ref": 5,
+     "title": "Sentinel and adverse event reporting policy",
+     "chunk_id": "07c90ae2-79da-4c5b-8984-1dd257ee7b4e",
+     "document_id": "f1cbcc91-3ab9-4d44-8a45-df93a179198f",
+     "origin": "knowledge",
+     "snippet": "1. Make the patient safe. Follow the clinical escalation protocol (call 911 if needed). 2. Tell the **charge nurse** on shift. In clinics without a charge nurse on shift, tell the clinic manager. The charge nurse coordinates the immediate response: assigns who stays with the\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 859,
+     "cost_usd": 0.001279,
+     "cache_read": 8231,
+     "cache_write": 6132
+    }
+   },
+   "cost_usd": 0.001279
+  },
+  {
+   "id": "q113",
+   "category": "list_aggregate",
+   "answer": "Under the current standard, four clinics count as large: Harbor Point, Northgate, Riverside and Elm Park. The standard defines large as over 80 average in-person visits per day, effective September 1, 2026 [2].\n\n| Clinic | Code | Avg visits/day (Q3 2026) |\n|---|---|---|\n| Harbor Point | HBP | 118 [3] |\n| Northgate | NGT | 102 [3] |\n| Riverside | RVS | 94 [3] |\n| Elm Park | ELP | 85 [3] |\n\nThe other five clinics are medium or small. Northbridge (52), Riverbend (46) and Elmhurst (38) fall in the 40\u201380 range or below, and Cedar Hollow (31) is small [3]. Note that Elmhurst at 38 is under 40, so it is small, not medium.\n\nBands are reset every quarter from the directory's visit averages, so these placements may change [2][3]. The 2025 standard set the large threshold at over 90, which would have excluded Elm Park [1]. That standard was replaced on September 1, 2026 [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Halcyon clinic staffing standard (effective September 1, 2026)",
+    "Halcyon clinic directory and hours (October 2026)",
+    "Halcyon clinic staffing standard (2025)"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 6.9,
+   "error": null,
+   "message_id": "5fae50e2-09d3-47ca-8f87-6f7c006cc8d9",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Halcyon clinic staffing standard (2025)",
+     "chunk_id": "e8089436-dc2c-4f6b-9050-7b16d366651f",
+     "document_id": "559cb7b6-6822-4dce-8dee-f4a71f6839a2",
+     "origin": "knowledge",
+     "snippet": "Each clinic is placed in a band by its average in-person visits per day over the previous quarter, from ClearPath PM. | Band | Avg visits per day | Physicians / NPs on site (min) | MAs per clinician | RNs on site (min) | Front desk staff (min) | |---|---|---|---|---|---| | Small\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Halcyon clinic staffing standard (effective September 1, 2026)",
+     "chunk_id": "59340214-ed98-4106-ad83-4b697883d8b4",
+     "document_id": "64d80ead-33fc-43a9-8254-2319649b9734",
+     "origin": "knowledge",
+     "snippet": "Each clinic is placed in a band every quarter using the \"Avg visits per day\" column in the clinic directory. | Band | Avg visits per day | Physicians / NPs on site (min) | MAs per clinician | RNs on site (min) | Front desk staff (min) | |---|---|---|---|---|---| | Small | Under\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Halcyon clinic directory and hours (October 2026)",
+     "chunk_id": "0a713bd6-fd40-4986-9405-632ebbaa289b",
+     "document_id": "fc92d5cb-66f3-4de4-baa4-f1361549b7f3",
+     "origin": "knowledge",
+     "snippet": "\"Avg visits per day\" is the in-person average for July\u2013September 2026, taken from ClearPath PM. Each clinic's staffing band under the clinic staffing standard is set from this column every quarter, so a clinic can move bands when its volume changes. The telehealth front desk is\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "PTO and clinic scheduling policy",
+     "chunk_id": "b43de89e-9a86-4686-979b-25d7dceb41c6",
+     "document_id": "5d9edede-d671-4de5-91ff-b7410a8c1d31",
+     "origin": "knowledge",
+     "snippet": "Every clinic must have at least one physician or nurse practitioner on site during open hours. If coverage drops below that, the clinic manager contacts the float pool first, then converts in-person visits to telehealth where clinically appropriate."
+    },
+    {
+     "ref": 5,
+     "title": "Patient intake procedure",
+     "chunk_id": "e117dd05-855c-4ce2-a7a8-01b926029475",
+     "document_id": "36044d56-2e8f-4daa-b5ce-0624a7538a31",
+     "origin": "knowledge",
+     "snippet": "Interpreter services are available in more than 200 languages by video within 2 minutes. Family members should not interpret for clinical conversations except in emergencies. Every clinic has at least one exam room accessible to wheelchair users and a height-adjustable exam\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 3,
+     "input": 8,
+     "output": 957,
+     "cost_usd": 0.001378,
+     "cache_read": 17265,
+     "cache_write": 5809
+    }
+   },
+   "cost_usd": 0.001378
+  },
+  {
+   "id": "q114",
+   "category": "list_aggregate",
+   "answer": "Five vendors list 24-hour support in the vendor support matrix, so they cover P1 problems around the clock [1]:\n\n- **Bayline Reference Laboratories** (HL7 results feed into Switchyard): P1 response 30 [1]\n- **ClearPath Software** (ClearPath PM): P1 response 30 [1]\n- **Coriander Media** (video SDK and hosted media servers): P1 response 20 [1]\n- **Meridian Clinical Systems** (Meridian EHR): P1 response 15 [1]\n- **Polyglen Interpreting** (interpreter operations desk): P1 response 10 [1]\n\nThe other three have shorter coverage. Larkspur Telehealth and RotaLeaf are 7 and 8 hours, and Quillon Ambient is 6 hours [1]. The matrix doesn't state the unit for the P1 response figures, so check the source table before quoting them as minutes or hours.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Halcyon vendor support and escalation matrix"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.3,
+   "error": null,
+   "message_id": "facd3647-ca67-48cc-8028-cb68e2bcdd66",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Halcyon vendor support and escalation matrix",
+     "chunk_id": "c5d42948-513f-4c41-b3e9-442e0d86db21",
+     "document_id": "4a81c81b-dea5-4b36-9d8c-802c7254338d",
+     "origin": "knowledge",
+     "snippet": "| Vendor | System or service | Owning team | Support hours | P1 response | P2 response | P3 response | |---|---|---|---|---|---|---| | Meridian Clinical Systems | Meridian EHR | CI | 24/7 | 15 minutes | 2 hours | Next business day | | ClearPath Software | ClearPath PM | RCM |\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 599,
+     "cost_usd": 0.000483,
+     "cache_read": 8214,
+     "cache_write": 808
+    }
+   },
+   "cost_usd": 0.000483
+  }
+ ]
+}

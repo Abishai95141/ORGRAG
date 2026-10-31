@@ -12,6 +12,7 @@ from app.graph.extract import extract_document, prune_orphans
 from app.ingestion.contextual import contextualize_source
 from app.ingestion.pipeline import sync_source
 from app.models import Document, Job, Organization, Source
+from app.records.jobs import enqueue_for_collection, handle_extract_records
 from app.schemas.common import OrgSettings
 from app.worker.queue import enqueue_contextualize, enqueue_graph
 
@@ -48,6 +49,8 @@ async def handle_sync_source(db, job: Job) -> None:
     source.progress = None
     await db.commit()
     log.info("Synced source %s (%s): %s", source.name, source.id, stats)
+    if await enqueue_for_collection(db, source.collection_id):  # records follow the documents
+        await db.commit()
     settings = get_settings()
     if settings.contextual_retrieval and "anthropic" in settings.llm_providers:
         await enqueue_contextualize(db, source)
@@ -116,4 +119,5 @@ HANDLERS = {
     "sync_source": handle_sync_source,
     "extract_graph": handle_extract_graph,
     "contextualize": handle_contextualize,
+    "extract_records": handle_extract_records,
 }

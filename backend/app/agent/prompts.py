@@ -50,6 +50,17 @@ when an answer may be incomplete. Use \
 explore_entity to follow links between people, teams, systems and policies. Cite the \
 [n] numbers the graph tools return."""
 
+RECORDS_ADDENDUM = """
+Structured records are available: registers, inventories, directories and logs, read \
+into exact rows. For questions that ask which / how many / list all / every, or that \
+compare a value across many items, call query_records first: it checks every record, \
+while search returns only the top few passages. Take totals and breakdowns from the \
+tool's count and tallies (or mode=count / mode=group); don't count rows yourself. Cite \
+each record where it's listed (its row or item), not all of them on a summary sentence. \
+Use search_knowledge for anything the records don't cover (context, reasons, recent \
+changes). Record types in scope:
+{types}"""
+
 DEEP_ADDENDUM = """
 This is a deep research request. Work through the research plan: cover each \
 sub-question with its own searches, read the most important documents in full, and \
@@ -93,11 +104,14 @@ def build_system(
     web: bool = False,
     graph: bool = False,
     native_citations: bool = False,
+    records: str = "",
 ) -> str:
     rule = CITE_NATIVELY if native_citations else CITE_BY_NUMBER
     parts = [BASE_SYSTEM.replace("{citation_rule}", rule), ATTACHMENTS_NOTE]
     if web:
         parts.append(WEB_ADDENDUM)
+    if records:
+        parts.append(RECORDS_ADDENDUM.replace("{types}", records))
     if graph:
         parts.append(GRAPH_ADDENDUM)
     if deep:

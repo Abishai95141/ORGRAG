@@ -314,6 +314,80 @@ documents, or a restricted collection whose readers don't include everyone who c
 the target collection — verifying can't widen who sees restricted content. Conversation
 detail marks a verified answer with `verified_answer_id` on its `Message`.
 
+## Structured records
+
+Registers, inventories, logs and directories in a collection's documents, kept as typed
+rows so "which / how many / list every" questions are answered exactly instead of from
+the top few passages. A **record schema** (record type) belongs to one collection.
+Admins find suggested schemas (`suggest` looks for field/value tables that recur across
+documents, tables whose rows recur, and repeated `Label: value` lines; no LLM), review
+and edit the fields, and activate them. Admins can also write a schema for facts stated
+in prose; its records are extracted by the model with
+[LangExtract](https://github.com/google/langextract) (`RECORD_MODEL`, Haiku 5.5), keeping
+only values tied to the exact words they came from. Activating extracts in the worker;
+every later sync of the collection re-extracts changed documents.
+
+Members see active schemas in collections they can read and query their records. The
+agent's `query_records` tool and the MCP `query_records` tool run the same query.
+
+```ts
+type RecordField = {
+  name: string;                 // ^[a-z][a-z0-9_]{0,63}$; the key in `values`
+  label: string; description?: string;
+  type: "text" | "number" | "date" | "boolean" | "choice";
+  options?: string[] | null;    // required for "choice"
+  aliases?: string[];           // other column labels this field reads from
+};
+type RecordSchema = {
+  id: string; collection_id: string; collection_name: string;
+  name: string; label: string; description: string;
+  fields: RecordField[]; key_field: string;   // the field that names a record
+  origin: "fields_table" | "rows_table" | "field_lines" | "llm";
+  status: "suggested" | "active" | "archived";
+  stats: { records?: number; documents?: number; extracted?: number; unchanged?: number;
+           failed?: number; cost_usd?: number;
+           samples?: Record<string, string>[] };  // samples: suggested schemas only
+  extracting: boolean;          // an extraction job is queued or running
+  extracted_at: string | null; created_at: string; updated_at: string;
+};
+type RecordRow = {
+  id: string; schema_id: string; key: string;       // key: normalised key value
+  values: Record<string, string | number | boolean>; // dates as YYYY-MM-DD
+  provenance: Record<string, { text: string; start: number; end: number }>; // offsets into the document
+  document: { id: string; title: string; updated_at: string | null };
+};
+```
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/orgs/{slug}/record-schemas?collection_id=` | – | `RecordSchema[]` (members: active schemas in readable collections; admins: every status) |
+| GET | `/orgs/{slug}/record-schemas/{id}` | – | `RecordSchema & {failures: {document_id, title, error, extracted_at}[]}` |
+| POST | `/orgs/{slug}/collections/{id}/record-schemas/suggest` `[admin]` | – | `RecordSchema[]` found in the collection (saved as `suggested`; active and archived schemas are returned unchanged) |
+| POST | `/orgs/{slug}/record-schemas` `[admin]` | `{collection_id, name, label, description?, fields, key_field}` | `201 RecordSchema` (origin `llm`, status `suggested`); 409 `name_taken` |
+| PATCH | `/orgs/{slug}/record-schemas/{id}` `[admin]` | `{label?, description?, fields?, key_field?, status?}` | `RecordSchema`. Activating, or changing an active schema's fields or key, re-extracts every document; deactivating deletes its records. 400 `invalid_fields` |
+| DELETE | `/orgs/{slug}/record-schemas/{id}` `[admin]` | – | `204` (records cascade) |
+| POST | `/orgs/{slug}/record-schemas/{id}/extract?force=` `[admin]` | – | `202 {queued: true}`: changed documents only, all with `force`; 400 `schema_inactive` |
+| POST | `/orgs/{slug}/records/query` | `RecordQuery` | `{total, schemas: string[], rows: RecordRow[], groups: {value, count}[]}` |
+| GET | `/orgs/{slug}/records/{id}` | – | `RecordRow` (404 when its collection isn't readable or its document is hidden) |
+
+```ts
+type RecordQuery = {
+  schema: string;               // a schema name; the same name in several readable collections is queried together
+  filters?: { field: string; op: Op; value?: unknown }[];   // ANDed, at most 12
+  mode?: "list" | "count" | "group";                         // default list
+  group_by?: string;            // mode=group: count per value of this field
+  sort?: string; descending?: boolean;
+  limit?: number;               // 1–300, default 100 (list mode)
+  latest_only?: boolean;        // one record per key: the newest document's
+};
+// Op by type — text: eq ne contains in exists missing; choice: eq ne in exists missing;
+// number, date: eq ne lt lte gt gte exists missing; boolean: eq exists missing.
+// Text and choice compare case-insensitively; dates are YYYY-MM-DD.
+```
+
+Unknown schema → 404; a field or operator that doesn't apply → 400 `invalid_query` with
+a readable message. Records of hidden documents are never returned.
+
 ## Shared answers (permalinks)
 
 A link to one answer, `{PUBLIC_URL}/a/{token}`. Opening it requires signing in, and
@@ -426,6 +500,8 @@ claude mcp add --transport http strata https://strata.example.com/api/mcp \
 | `search` | `query`, `collection_ids?`, `limit?` (1–20, default 8) | best passage per document: `ref, title, organization, collection, url, snippet, document_id` (no LLM; logged like `/search`) |
 | `read_document` | `document_id`, `page?` | `{title, organization, collection, url, page, pages, content}` in ~14k-character pages; hidden and out-of-scope documents are "No such document" |
 | `list_collections` | – | the collections the key can read, with document counts |
+| `list_record_types` | – | the active record types the key can query: name, label, collection, fields, record count |
+| `query_records` | `record_type`, `filters?`, `mode?`, `group_by?`, `sort?`, `descending?`, `latest_only?`, `limit?` | the matching records (or count, or groups), each with its document; same query as `/records/query` |
 | `ask` | `question`, `mode?` (`quick` \| `deep`), `collection_ids?` | `{answer, status, sources, conversation_id}`: the agent's cited answer, with only the cited sources. Uses the org's model budget and appears in the key owner's chat history |
 
 Tools return structured content (and the same JSON as text). Anticipated failures

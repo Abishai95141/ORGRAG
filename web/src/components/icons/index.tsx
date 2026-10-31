@@ -304,6 +304,14 @@ export const IconAnswer = make(
 
 export const IconFilter = make("Filter", <path d="M3.5 5h13M6 10h8M8.5 15h3" />);
 
+export const IconTable = make(
+  "Table",
+  <>
+    <rect x="2.75" y="3.75" width="14.5" height="12.5" rx="1.75" />
+    <path d="M2.75 8h14.5M2.75 12.13h14.5M7.75 8v8.25" />
+  </>,
+);
+
 export const IconBuilding = make(
   "Building",
   <>

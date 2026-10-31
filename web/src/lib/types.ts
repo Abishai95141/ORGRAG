@@ -182,7 +182,7 @@ export type Attachment = {
 
 export type MessageAttachment = Pick<Attachment, "id" | "filename" | "mime" | "size_bytes" | "token_count">;
 
-export type StepKind = "plan" | "search" | "web" | "read" | "reflect" | "answer";
+export type StepKind = "plan" | "search" | "records" | "web" | "read" | "reflect" | "answer";
 
 export type TraceStep = {
   id: string;
@@ -318,4 +318,88 @@ export type ApiKey = {
   last_used_at: string | null;
   expires_at: string | null;
   created_at: string;
+};
+
+// Structured records: record types (schemas) found in a collection, and their rows.
+export type RecordFieldType = "text" | "number" | "date" | "boolean" | "choice";
+export type RecordSchemaStatus = "suggested" | "active" | "archived";
+export type RecordOrigin = "fields_table" | "rows_table" | "field_lines" | "llm";
+export type RecordOp = "eq" | "ne" | "contains" | "in" | "lt" | "lte" | "gt" | "gte" | "exists" | "missing";
+export type RecordValue = string | number | boolean | null;
+
+export type RecordField = {
+  name: string;
+  label: string;
+  type: RecordFieldType;
+  description?: string;
+  options?: string[] | null;
+  aliases?: string[];
+};
+
+export type RecordSchema = {
+  id: string;
+  collection_id: string;
+  collection_name: string;
+  name: string;
+  label: string;
+  description: string;
+  fields: RecordField[];
+  key_field: string;
+  origin: RecordOrigin;
+  status: RecordSchemaStatus;
+  stats: {
+    records?: number;
+    documents?: number;
+    extracted?: number;
+    unchanged?: number;
+    failed?: number;
+    cost_usd?: number;
+    samples?: Record<string, string>[];
+  };
+  extracting: boolean;
+  extracted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecordSchemaDetail = RecordSchema & {
+  failures: { document_id: string; title: string; error: string; extracted_at: string | null }[];
+};
+
+export type RecordSchemaInput = {
+  collection_id: string;
+  name: string;
+  label: string;
+  description?: string;
+  fields: RecordField[];
+  key_field: string;
+};
+
+export type RecordFilter = { field: string; op: RecordOp; value?: RecordValue | RecordValue[] };
+
+export type RecordQuery = {
+  schema: string;
+  filters?: RecordFilter[];
+  mode?: "list" | "count" | "group";
+  group_by?: string;
+  sort?: string;
+  descending?: boolean;
+  limit?: number;
+  latest_only?: boolean;
+};
+
+export type RecordRow = {
+  id: string;
+  schema_id: string;
+  key: string;
+  values: Record<string, RecordValue>;
+  provenance: Record<string, { text: string; start: number; end: number }>;
+  document: { id: string; title: string; updated_at: string | null };
+};
+
+export type RecordQueryResult = {
+  total: number;
+  schemas: string[];
+  rows: RecordRow[];
+  groups: { value: RecordValue; count: number }[];
 };

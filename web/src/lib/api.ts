@@ -20,6 +20,14 @@ import type {
   OrgSettings,
   OrgSummary,
   Page,
+  RecordQuery,
+  RecordQueryResult,
+  RecordRow,
+  RecordSchema,
+  RecordSchemaDetail,
+  RecordSchemaInput,
+  RecordSchemaStatus,
+  RecordField,
   Role,
   Source,
   SourceRef,
@@ -232,6 +240,26 @@ export const api = {
   createApiKey: (slug: string, body: { name: string; role: "admin" | "member" | "viewer"; expires_in_days?: number }) =>
     request<ApiKey & { key: string }>(`${o(slug)}/api-keys`, { method: "POST", json: body }),
   revokeApiKey: (slug: string, id: string) => request<void>(`${o(slug)}/api-keys/${id}`, { method: "DELETE" }),
+
+  // structured records
+  recordSchemas: (slug: string, collectionId?: string) =>
+    request<RecordSchema[]>(`${o(slug)}/record-schemas?${query({ collection_id: collectionId })}`),
+  recordSchema: (slug: string, id: string) => request<RecordSchemaDetail>(`${o(slug)}/record-schemas/${id}`),
+  suggestRecordSchemas: (slug: string, collectionId: string) =>
+    request<RecordSchema[]>(`${o(slug)}/collections/${collectionId}/record-schemas/suggest`, { method: "POST" }),
+  createRecordSchema: (slug: string, body: RecordSchemaInput) =>
+    request<RecordSchema>(`${o(slug)}/record-schemas`, { method: "POST", json: body }),
+  updateRecordSchema: (
+    slug: string,
+    id: string,
+    body: { label?: string; description?: string; fields?: RecordField[]; key_field?: string; status?: RecordSchemaStatus },
+  ) => request<RecordSchema>(`${o(slug)}/record-schemas/${id}`, { method: "PATCH", json: body }),
+  deleteRecordSchema: (slug: string, id: string) => request<void>(`${o(slug)}/record-schemas/${id}`, { method: "DELETE" }),
+  extractRecords: (slug: string, id: string, force = false) =>
+    request<{ queued: boolean }>(`${o(slug)}/record-schemas/${id}/extract?${query({ force })}`, { method: "POST" }),
+  queryRecords: (slug: string, body: RecordQuery) =>
+    request<RecordQueryResult>(`${o(slug)}/records/query`, { method: "POST", json: body }),
+  record: (slug: string, id: string) => request<RecordRow>(`${o(slug)}/records/${id}`),
 
   // verified answers
   verifiedAnswers: (slug: string, params: { status?: VerifiedStatus | "all"; q?: string } = {}) =>

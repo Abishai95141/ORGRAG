@@ -1,0 +1,801 @@
+{
+ "kind": "answers",
+ "variant": "scale-records-claude-haiku-5-5",
+ "corpus": "55fb424818e93128",
+ "index": {
+  "embedding": "fastembed:BAAI/bge-small-en-v1.5"
+ },
+ "judge_model": "nvidia/nemotron-3-ultra-550b-a55b",
+ "facts_prompt": "adf439b21d",
+ "grounding_prompt": "grounding-v1:e13f1cd847",
+ "settings": {
+  "rerank": true,
+  "recency_bias": "low",
+  "model": "claude-haiku-5-5",
+  "records": {
+   "juniper_steering_committee_notes_october": 3,
+   "vendor_record": 60,
+   "cscab_minutes_october_28": 8,
+   "halcyon_emergency_equipment_inventory_check": 14,
+   "sentinel_and_adverse_event_reporting_policy": 4,
+   "halcyon_on_call_medical_director_rota_november": 6,
+   "clinical_and_business_systems_inventory_systems_": 9,
+   "halcyon_in_clinic_vaccine_and_injectable_formula": 14,
+   "halcyon_clinic_directory_and_hours_october": 9,
+   "clinical_and_business_systems_inventory_systems__2": 4,
+   "halcyon_digital_projects_register": 7,
+   "halcyon_language_access_report": 12,
+   "approved_ai_tools_for_halcyon_staff": 3,
+   "halcyon_medical_records_and_forms_fee_schedule": 10,
+   "halcyon_clinic_staffing_standard": 13,
+   "people_and_policy": 3,
+   "clinical_systems_change_control": 6,
+   "business_associate_record": 6,
+   "halcyon_vendor_support_and_escalation_matrix": 8,
+   "northwind_offices_and_workplace_guide": 4,
+   "pricing_and_discount_policy_plans": 3,
+   "pricing_and_discount_policy_discount_authority": 4,
+   "customer_data_retention_standard": 11,
+   "sales_desk_memo": 6,
+   "information_security_policy": 4,
+   "hydrant_launch_notes": 5,
+   "northwind_project_codename_register": 8,
+   "service_catalog_production_services": 9,
+   "northwind_pipelines_api_rate_limits_by_plan": 9,
+   "northwind_incident_log": 10,
+   "on_call_runbook": 3,
+   "northwind_on_call_rota": 8,
+   "northwind_production_cell_inventory": 7,
+   "identity_billing_weekly_status": 4,
+   "rfc_031": 3,
+   "service_catalog_shared_infrastructure": 4,
+   "engineering_team_directory_and_change_approvers": 6,
+   "northwind_support_sla_tiers_edition": 20,
+   "vendor_register": 4
+  }
+ },
+ "question_set": "all",
+ "judged": false,
+ "same_family_judge": false,
+ "summary": {
+  "ALL": {
+   "n": 4,
+   "pass": 0.0,
+   "facts_judge": null,
+   "facts_substring": 1.0,
+   "gold_cited": 1.0,
+   "faithfulness": null,
+   "cite_recall": null,
+   "cite_precision": null,
+   "errors": 0,
+   "s": 4.2,
+   "p95_s": 5.4,
+   "usd": 0.00078
+  },
+  "list_aggregate": {
+   "n": 4,
+   "pass": 0.0,
+   "facts_judge": null,
+   "facts_substring": 1.0,
+   "gold_cited": 1.0,
+   "faithfulness": null,
+   "cite_recall": null,
+   "cite_precision": null,
+   "errors": 0,
+   "s": 4.2,
+   "p95_s": 5.4,
+   "usd": 0.00078
+  }
+ },
+ "rows": [
+  {
+   "id": "s1",
+   "category": "list_aggregate",
+   "answer": "**27 vendors** have an executed business associate agreement (BAA). All 27 process PHI.\n\n| Vendor | Service | Risk tier | Contract renewal |\n|---|---|---|---|\n| Basalt Analytics | Payroll processing | Low | 2026-05-15 [1] |\n| Basalt Data | Patient messaging | High | 2027-09-15 [2] |\n| Basalt Health | Translation | Low | 2027-08-28 [3] |\n| Birch Data | Translation | Medium | 2026-05-01 [4] |\n| Cinder Data | E-fax | High | 2027-03-28 [5] |\n| Cinder Health | Payroll processing | Low | 2026-10-15 [6] |\n| Cinder Labs | E-fax | Low | 2027-06-28 [7] |\n| Delta Data | Payroll processing | Low | 2027-02-28 [8] |\n| Dune Health | Patient messaging | Medium | 2026-03-15 [9] |\n| Elm Works | Translation | Medium | 2026-01-01 [10] |\n| Ember Labs | Transcription | Low | 2027-05-28 [11] |\n| Garnet Systems | Payroll processing | Low | 2027-08-28 [12] |\n| Harbor Analytics | Lab results interface | Medium | 2026-04-15 [13] |\n| Harbor Cloud | Patient messaging | High | 2026-09-01 [14] |\n| Harbor Systems | Lab results interface | Low | 2027-11-15 [15] |\n| Kestrel Labs | Payroll processing | Low | 2027-11-28 [16] |\n| Lumen Health | E-fax | High | 2026-02-01 [17] |\n| Nimbus Works | Claims clearinghouse | Low | 2026-08-28 [18] |\n| Quarry Analytics | E-fax | High | 2027-06-28 [19] |\n| Rowan Analytics | Translation | Low | 2026-12-28 [20] |\n| Rowan Health | Translation | Medium | 2027-09-01 [21] |\n| Sable Labs | Transcription | Medium | 2026-09-15 [22] |\n| Sable Systems | E-fax | Medium | 2026-12-15 [23] |\n| Sable Works | Payroll processing | High | 2027-11-01 [24] |\n| Umber Analytics | Cloud backup | High | 2027-12-01 [25] |\n| Umber Data | Translation | Low | 2026-02-28 [26] |\n| Umber Works | E-fax | Low | 2027-04-15 [27] |\n\nSeveral of these contract renewal dates (for example Elm Works, Dune Health, and Umber Data) have already passed as of today, October 31, 2026, so those contracts may need confirming.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor record: Basalt Analytics",
+    "Vendor record: Basalt Data",
+    "Vendor record: Basalt Health",
+    "Vendor record: Birch Data",
+    "Vendor record: Cinder Data",
+    "Vendor record: Cinder Health",
+    "Vendor record: Cinder Labs",
+    "Vendor record: Delta Data",
+    "Vendor record: Dune Health",
+    "Vendor record: Elm Works",
+    "Vendor record: Ember Labs",
+    "Vendor record: Garnet Systems",
+    "Vendor record: Harbor Analytics",
+    "Vendor record: Harbor Cloud",
+    "Vendor record: Harbor Systems",
+    "Vendor record: Kestrel Labs",
+    "Vendor record: Lumen Health",
+    "Vendor record: Nimbus Works",
+    "Vendor record: Quarry Analytics",
+    "Vendor record: Rowan Analytics",
+    "Vendor record: Rowan Health",
+    "Vendor record: Sable Labs",
+    "Vendor record: Sable Systems",
+    "Vendor record: Sable Works",
+    "Vendor record: Umber Analytics",
+    "Vendor record: Umber Data",
+    "Vendor record: Umber Works"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 5.4,
+   "error": null,
+   "message_id": "4cb8bd5d-e25e-4bc6-8140-ab27bfcf4d01",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Vendor record: Basalt Analytics",
+     "chunk_id": "2b43174c-bdb9-4835-acfa-841138636803",
+     "document_id": "a74e1907-8bf9-485d-b47c-30b1234e5ccd",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Basalt Analytics | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Vendor record: Basalt Data",
+     "chunk_id": "2d35a83e-1ca2-40b4-868b-b69adc3fbd24",
+     "document_id": "ff1d9bdd-dfa7-48d8-aa0f-b54dc262bebd",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Basalt Data | | Service | Patient messaging | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Vendor record: Basalt Health",
+     "chunk_id": "3d85ae0b-d1c1-49a6-88ea-6027cbea258d",
+     "document_id": "6bdb25ea-2aca-4a65-a873-7e71fdc2eb25",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Basalt Health | | Service | Translation | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "Vendor record: Birch Data",
+     "chunk_id": "a072bc97-76ec-4205-bc73-6d76ab0d1199",
+     "document_id": "65a411ee-0e3d-49e0-af2b-3573e078f070",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Birch Data | | Service | Translation | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "Vendor record: Cinder Data",
+     "chunk_id": "1e22eb20-96c1-416a-b254-85c5e01b3717",
+     "document_id": "dfc82bd0-dbb3-4d4b-a8b5-9d486d276aff",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Cinder Data | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement | **Executed** \u2014\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "Vendor record: Cinder Health",
+     "chunk_id": "d8b25fd1-d5e8-4dcf-b0cd-5f5bbf2dbf0e",
+     "document_id": "074cb857-341b-4362-864b-9964a51376ef",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Cinder Health | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 7,
+     "title": "Vendor record: Cinder Labs",
+     "chunk_id": "1a87eb57-8cca-4a1b-a2df-bfda819de526",
+     "document_id": "c24226c7-d92b-4c5f-922f-10853ad7cd82",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Cinder Labs | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement | **Executed** \u2014\u2026"
+    },
+    {
+     "ref": 8,
+     "title": "Vendor record: Delta Data",
+     "chunk_id": "941ec69c-78d9-4566-8215-c67ec8e28999",
+     "document_id": "8e3584ca-7fbf-4390-9fa5-db13b34d87d3",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Delta Data | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 9,
+     "title": "Vendor record: Dune Health",
+     "chunk_id": "3271d9e1-9d6f-4ef3-986c-5fb0cd0c99b4",
+     "document_id": "1f8335be-01c1-4d80-8e50-7109ff4db54f",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Dune Health | | Service | Patient messaging | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 10,
+     "title": "Vendor record: Elm Works",
+     "chunk_id": "eebb26bb-a9e1-46c5-b22a-ab99601c69b2",
+     "document_id": "71981b26-0ee1-415e-8d2f-3645f1d4c268",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Elm Works | | Service | Translation | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 11,
+     "title": "Vendor record: Ember Labs",
+     "chunk_id": "ad4594ce-5d86-4d2d-86d9-8247be9adaf4",
+     "document_id": "ff5f1bd5-8565-4c5a-9462-2c04e08417a6",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Ember Labs | | Service | Transcription | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 12,
+     "title": "Vendor record: Garnet Systems",
+     "chunk_id": "e06bf3ed-2aba-4645-9d74-ed52faf9d9f2",
+     "document_id": "acd11132-d5f9-4125-b298-5c3fcdb1afa6",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Garnet Systems | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 13,
+     "title": "Vendor record: Harbor Analytics",
+     "chunk_id": "86511b3b-4519-42f3-b76f-ba5bc4d9e475",
+     "document_id": "736beb89-adee-42ac-8f2d-91c43875a867",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Harbor Analytics | | Service | Lab results interface | | Processes PHI | Yes \u2014 handles protected health information | | Business associate\u2026"
+    },
+    {
+     "ref": 14,
+     "title": "Vendor record: Harbor Cloud",
+     "chunk_id": "5b926cb9-76fe-41e8-8718-7b31bdfc1b24",
+     "document_id": "bf90c168-5ac8-4592-b2eb-f8bb0dda5621",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Harbor Cloud | | Service | Patient messaging | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 15,
+     "title": "Vendor record: Harbor Systems",
+     "chunk_id": "f53be05f-0179-426c-bb1a-f9fc3fb03bcd",
+     "document_id": "bccecee0-f6a0-4433-baec-5ba9a49d2d6a",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Harbor Systems | | Service | Lab results interface | | Processes PHI | Yes \u2014 handles protected health information | | Business associate\u2026"
+    },
+    {
+     "ref": 16,
+     "title": "Vendor record: Kestrel Labs",
+     "chunk_id": "96fb9a35-3e2c-44c1-b80f-6995df9b1bf8",
+     "document_id": "fc604777-b066-48d9-8215-51b58eb1c46b",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Kestrel Labs | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 17,
+     "title": "Vendor record: Lumen Health",
+     "chunk_id": "8fb559e8-eadf-4393-be2b-87fe33bc7b00",
+     "document_id": "e7d68d7b-9712-405d-8edc-32de3e5a48ad",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Lumen Health | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement | **Executed** \u2014\u2026"
+    },
+    {
+     "ref": 18,
+     "title": "Vendor record: Nimbus Works",
+     "chunk_id": "c6318fbc-50b9-407d-aa7a-4e9b09dacb19",
+     "document_id": "77f1e751-df60-4b03-bead-abfdb815f402",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Nimbus Works | | Service | Claims clearinghouse | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 19,
+     "title": "Vendor record: Quarry Analytics",
+     "chunk_id": "689a9d25-2b16-4be7-abac-9739df747875",
+     "document_id": "ca238a4f-e535-41f6-9edd-0f6971a20280",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Quarry Analytics | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 20,
+     "title": "Vendor record: Rowan Analytics",
+     "chunk_id": "e9c3609c-1bda-4dec-9edd-a0f1fabedd09",
+     "document_id": "8935134e-6242-4171-a318-713afa8c9c34",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Rowan Analytics | | Service | Translation | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 21,
+     "title": "Vendor record: Rowan Health",
+     "chunk_id": "ed5464c4-6394-4d54-bf1c-694b3121a126",
+     "document_id": "ecf9dcdb-d22c-44d2-af4d-26f0c70c5594",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Rowan Health | | Service | Translation | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 22,
+     "title": "Vendor record: Sable Labs",
+     "chunk_id": "92193af8-6832-4150-9025-608c55ef31bf",
+     "document_id": "e0679f95-5bdf-486d-8efc-dd879d1df11d",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Sable Labs | | Service | Transcription | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 23,
+     "title": "Vendor record: Sable Systems",
+     "chunk_id": "8084d3a3-2082-4357-8e67-634529082137",
+     "document_id": "f48a32ae-e064-4df0-9d86-55f97cbb22f2",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Sable Systems | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement | **Executed**\u2026"
+    },
+    {
+     "ref": 24,
+     "title": "Vendor record: Sable Works",
+     "chunk_id": "0cb8a2e7-a902-4edf-8cbe-5b9d39876341",
+     "document_id": "41295c4a-40bb-49dc-996c-feb9386ba21a",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Sable Works | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 25,
+     "title": "Vendor record: Umber Analytics",
+     "chunk_id": "53359e20-b916-4800-85a9-38e59d5761dc",
+     "document_id": "3f5109f4-9e4d-478b-b5ed-b88414ce8447",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Umber Analytics | | Service | Cloud backup | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 26,
+     "title": "Vendor record: Umber Data",
+     "chunk_id": "c091d418-c4d1-44c9-b79e-4facd210a98b",
+     "document_id": "fab1e145-9729-4c90-95a0-a627a0d95b03",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Umber Data | | Service | Translation | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 27,
+     "title": "Vendor record: Umber Works",
+     "chunk_id": "ae34c9d5-5c83-4ee3-9cbe-976245331e7b",
+     "document_id": "eaebe93c-6e5d-4e8a-ab4c-c4600e0239f6",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Umber Works | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement | **Executed** \u2014\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 1205,
+     "cost_usd": 0.001125,
+     "cache_read": 2450,
+     "cache_write": 3976
+    }
+   },
+   "cost_usd": 0.001125
+  },
+  {
+   "id": "s2",
+   "category": "list_aggregate",
+   "answer": "Eight vendor contracts come up for renewal in Q1 2027 (January 1 to March 31, 2027), listed here by renewal date:\n\n| Vendor | Renewal | Service | Processes PHI | BAA status | Risk tier | Owner |\n|---|---|---|---|---|---|---|\n| Birch Labs | 2027-02-01 | Staff scheduling | No | Not required | High | Tom Okafor [1] |\n| Delta Data | 2027-02-28 | Payroll processing | Yes | Executed | Low | Marcus Hale [2] |\n| Fjord Data | 2027-02-28 | Courier delivery | No | Not required | Low | Priya Nair [3] |\n| Cinder Analytics | 2027-03-01 | Patient messaging | Yes | Expired | Low | Priya Nair [4] |\n| Sable Partners | 2027-03-15 | Document shredding | No | Not required | Low | Priya Nair [5] |\n| Birch Works | 2027-03-28 | Cloud backup | Yes | Expired | Medium | Priya Nair [6] |\n| Cinder Data | 2027-03-28 | E-fax | Yes | Executed | High | Grace Lindqvist [7] |\n| Lumen Cloud | 2027-03-28 | Payroll processing | Yes | Expired | Low | Priya Nair [8] |\n\nFour of these handle PHI, and three of those four have an expired BAA: Cinder Analytics, Birch Works and Lumen Cloud [4][6][8]. Those BAAs should be renewed before the contracts roll over.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor record: Birch Labs",
+    "Vendor record: Delta Data",
+    "Vendor record: Fjord Data",
+    "Vendor record: Cinder Analytics",
+    "Vendor record: Sable Partners",
+    "Vendor record: Birch Works",
+    "Vendor record: Cinder Data",
+    "Vendor record: Lumen Cloud"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.0,
+   "error": null,
+   "message_id": "e55324c7-8c09-4cd1-80a1-eaf50e37486d",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Vendor record: Birch Labs",
+     "chunk_id": "8db085c5-dfe3-489a-b5d0-79e0a82d36d8",
+     "document_id": "43faa55f-bb9b-4ae3-ac4f-99c00ed82b04",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Birch Labs | | Service | Staff scheduling | | Processes PHI | No | | Business associate agreement | Not required (no patient data) | | Risk tier\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Vendor record: Delta Data",
+     "chunk_id": "941ec69c-78d9-4566-8215-c67ec8e28999",
+     "document_id": "8e3584ca-7fbf-4390-9fa5-db13b34d87d3",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Delta Data | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Vendor record: Fjord Data",
+     "chunk_id": "0464ec8a-1283-4226-8635-c40a055ac58a",
+     "document_id": "68b7b1d4-c79d-430a-8841-e7fec165c646",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Fjord Data | | Service | Courier delivery | | Processes PHI | No | | Business associate agreement | Not required (no patient data) | | Risk tier\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "Vendor record: Cinder Analytics",
+     "chunk_id": "dd992f2c-c073-4f59-a4cf-f71f710a1694",
+     "document_id": "2cd51656-765f-47b0-b9a0-aa37c766c8b4",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Cinder Analytics | | Service | Patient messaging | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "Vendor record: Sable Partners",
+     "chunk_id": "f069f36e-a293-48e0-9eeb-2fefb48eddb7",
+     "document_id": "071bf17e-bff7-4e50-bb31-79121b60b411",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Sable Partners | | Service | Document shredding | | Processes PHI | No | | Business associate agreement | Not required (no patient data) | | Risk\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "Vendor record: Birch Works",
+     "chunk_id": "b1981818-0019-43c7-a606-231e5d89ed54",
+     "document_id": "0189510d-93c6-4f52-a2e3-b3f17bd47432",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Birch Works | | Service | Cloud backup | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 7,
+     "title": "Vendor record: Cinder Data",
+     "chunk_id": "1e22eb20-96c1-416a-b254-85c5e01b3717",
+     "document_id": "dfc82bd0-dbb3-4d4b-a8b5-9d486d276aff",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Cinder Data | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement | **Executed** \u2014\u2026"
+    },
+    {
+     "ref": 8,
+     "title": "Vendor record: Lumen Cloud",
+     "chunk_id": "6947128c-f27c-4417-9325-564b8bb4f521",
+     "document_id": "c5596ed0-5852-4343-a760-9f1a5109ff5a",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Lumen Cloud | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 725,
+     "cost_usd": 0.000783,
+     "cache_read": 2457,
+     "cache_write": 3164
+    }
+   },
+   "cost_usd": 0.000783
+  },
+  {
+   "id": "s3",
+   "category": "list_aggregate",
+   "answer": "Priya Nair owns 14 vendor records in the Vendor Register [1][2][3][4][5][6][7][8][9][10][11][12][13][14].\n\n| Vendor | Service | Processes PHI | BAA status | Risk tier | Contract renewal |\n|---|---|---|---|---|---|\n| Basalt Health | Translation | Yes | Executed | Low | 2027-08-28 [1] |\n| Basalt Partners | Document shredding | No | Not required | High | 2027-07-01 [2] |\n| Birch Works | Cloud backup | Yes | Expired | Medium | 2027-03-28 [3] |\n| Cinder Analytics | Patient messaging | Yes | Expired | Low | 2027-03-01 [4] |\n| Cinder Systems | Staff scheduling | No | Not required | Low | 2027-12-15 [5] |\n| Cobalt Data | Claims clearinghouse | Yes | Pending signature | Medium | 2026-09-01 [6] |\n| Elm Cloud | Patient messaging | Yes | Pending signature | Medium | 2027-08-15 [7] |\n| Fjord Data | Courier delivery | No | Not required | Low | 2027-02-28 [8] |\n| Lumen Cloud | Payroll processing | Yes | Expired | Low | 2027-03-28 [9] |\n| Lumen Health | E-fax | Yes | Executed | High | 2026-02-01 [10] |\n| Nimbus Partners | Courier delivery | No | Not required | Low | 2027-08-15 [11] |\n| Sable Labs | Transcription | Yes | Executed | Medium | 2026-09-15 [12] |\n| Sable Partners | Document shredding | No | Not required | Low | 2027-03-15 [13] |\n| Sable Works | Payroll processing | Yes | Executed | High | 2027-11-01 [14] |\n\nItems needing attention:\n- Lumen Health's contract renewal date (2026-02-01) has already passed [10].\n- Cobalt Data's renewal (2026-09-01) has passed as of today, October 31, 2026 [6].\n- Sable Labs's renewal (2026-09-15) has also passed [12].\n- Birch Works, Cinder Analytics, and Lumen Cloud have expired BAAs while processing PHI [3][4][9].\n- Cobalt Data and Elm Cloud have BAAs still pending signature while processing PHI [6][7].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor record: Basalt Health",
+    "Vendor record: Basalt Partners",
+    "Vendor record: Birch Works",
+    "Vendor record: Cinder Analytics",
+    "Vendor record: Cinder Systems",
+    "Vendor record: Cobalt Data",
+    "Vendor record: Elm Cloud",
+    "Vendor record: Fjord Data",
+    "Vendor record: Lumen Cloud",
+    "Vendor record: Lumen Health",
+    "Vendor record: Nimbus Partners",
+    "Vendor record: Sable Labs",
+    "Vendor record: Sable Partners",
+    "Vendor record: Sable Works"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 4.7,
+   "error": null,
+   "message_id": "9a31bd59-3bfe-40cb-8121-c0b0f439ac81",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Vendor record: Basalt Health",
+     "chunk_id": "3d85ae0b-d1c1-49a6-88ea-6027cbea258d",
+     "document_id": "6bdb25ea-2aca-4a65-a873-7e71fdc2eb25",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Basalt Health | | Service | Translation | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Vendor record: Basalt Partners",
+     "chunk_id": "efb98d40-322a-4f86-bb0f-356192b49b1b",
+     "document_id": "272c81dc-8435-4664-b93e-f850c5a77339",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Basalt Partners | | Service | Document shredding | | Processes PHI | No | | Business associate agreement | Not required (no patient data) | |\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Vendor record: Birch Works",
+     "chunk_id": "b1981818-0019-43c7-a606-231e5d89ed54",
+     "document_id": "0189510d-93c6-4f52-a2e3-b3f17bd47432",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Birch Works | | Service | Cloud backup | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "Vendor record: Cinder Analytics",
+     "chunk_id": "dd992f2c-c073-4f59-a4cf-f71f710a1694",
+     "document_id": "2cd51656-765f-47b0-b9a0-aa37c766c8b4",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Cinder Analytics | | Service | Patient messaging | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "Vendor record: Cinder Systems",
+     "chunk_id": "55f79831-ad7b-4df1-bb32-1af5c51fbae6",
+     "document_id": "f19a0939-7ad8-4d7d-bbdd-4e8dee028f82",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Cinder Systems | | Service | Staff scheduling | | Processes PHI | No | | Business associate agreement | Not required (no patient data) | | Risk\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "Vendor record: Cobalt Data",
+     "chunk_id": "b0591c09-48cc-4fe0-9273-b1f2123a1869",
+     "document_id": "79de11eb-fa2d-47bb-98a6-34f8318d37ae",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Cobalt Data | | Service | Claims clearinghouse | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 7,
+     "title": "Vendor record: Elm Cloud",
+     "chunk_id": "d038d674-8dd7-4c5e-a14b-b616a8b2f4e1",
+     "document_id": "29560a25-0640-467f-b57b-9f7802b400c5",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Elm Cloud | | Service | Patient messaging | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 8,
+     "title": "Vendor record: Fjord Data",
+     "chunk_id": "0464ec8a-1283-4226-8635-c40a055ac58a",
+     "document_id": "68b7b1d4-c79d-430a-8841-e7fec165c646",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Fjord Data | | Service | Courier delivery | | Processes PHI | No | | Business associate agreement | Not required (no patient data) | | Risk tier\u2026"
+    },
+    {
+     "ref": 9,
+     "title": "Vendor record: Lumen Cloud",
+     "chunk_id": "6947128c-f27c-4417-9325-564b8bb4f521",
+     "document_id": "c5596ed0-5852-4343-a760-9f1a5109ff5a",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Lumen Cloud | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 10,
+     "title": "Vendor record: Lumen Health",
+     "chunk_id": "8fb559e8-eadf-4393-be2b-87fe33bc7b00",
+     "document_id": "e7d68d7b-9712-405d-8edc-32de3e5a48ad",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Lumen Health | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement | **Executed** \u2014\u2026"
+    },
+    {
+     "ref": 11,
+     "title": "Vendor record: Nimbus Partners",
+     "chunk_id": "158ca393-6ab8-4b8a-9169-8a86922039f0",
+     "document_id": "0f43edec-0fa0-4956-9059-426526c896f4",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Nimbus Partners | | Service | Courier delivery | | Processes PHI | No | | Business associate agreement | Not required (no patient data) | | Risk\u2026"
+    },
+    {
+     "ref": 12,
+     "title": "Vendor record: Sable Labs",
+     "chunk_id": "92193af8-6832-4150-9025-608c55ef31bf",
+     "document_id": "e0679f95-5bdf-486d-8efc-dd879d1df11d",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Sable Labs | | Service | Transcription | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 13,
+     "title": "Vendor record: Sable Partners",
+     "chunk_id": "f069f36e-a293-48e0-9eeb-2fefb48eddb7",
+     "document_id": "071bf17e-bff7-4e50-bb31-79121b60b411",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Sable Partners | | Service | Document shredding | | Processes PHI | No | | Business associate agreement | Not required (no patient data) | | Risk\u2026"
+    },
+    {
+     "ref": 14,
+     "title": "Vendor record: Sable Works",
+     "chunk_id": "0cb8a2e7-a902-4edf-8cbe-5b9d39876341",
+     "document_id": "41295c4a-40bb-49dc-996c-feb9386ba21a",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Sable Works | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 982,
+     "cost_usd": 0.000939,
+     "cache_read": 2447,
+     "cache_write": 3378
+    }
+   },
+   "cost_usd": 0.000939
+  },
+  {
+   "id": "s4",
+   "category": "list_aggregate",
+   "answer": "There are 10 vendors in the High risk tier [1][2][3][4][5][6][7][8][9][10].\n\nOf those, 8 process PHI. Delta Systems has a business associate agreement that is still pending signature [5], which is worth chasing given it handles lab results. Two High-tier vendors do not process PHI: Basalt Partners and Birch Labs [2][3].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor record: Basalt Data",
+    "Vendor record: Basalt Partners",
+    "Vendor record: Birch Labs",
+    "Vendor record: Cinder Data",
+    "Vendor record: Delta Systems",
+    "Vendor record: Harbor Cloud",
+    "Vendor record: Lumen Health",
+    "Vendor record: Quarry Analytics",
+    "Vendor record: Sable Works",
+    "Vendor record: Umber Analytics"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 2.5,
+   "error": null,
+   "message_id": "a3e31f93-cf9d-4fe0-8802-1a1d2a644f23",
+   "sources": [
+    {
+     "ref": 1,
+     "title": "Vendor record: Basalt Data",
+     "chunk_id": "2d35a83e-1ca2-40b4-868b-b69adc3fbd24",
+     "document_id": "ff1d9bdd-dfa7-48d8-aa0f-b54dc262bebd",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Basalt Data | | Service | Patient messaging | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 2,
+     "title": "Vendor record: Basalt Partners",
+     "chunk_id": "efb98d40-322a-4f86-bb0f-356192b49b1b",
+     "document_id": "272c81dc-8435-4664-b93e-f850c5a77339",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Basalt Partners | | Service | Document shredding | | Processes PHI | No | | Business associate agreement | Not required (no patient data) | |\u2026"
+    },
+    {
+     "ref": 3,
+     "title": "Vendor record: Birch Labs",
+     "chunk_id": "8db085c5-dfe3-489a-b5d0-79e0a82d36d8",
+     "document_id": "43faa55f-bb9b-4ae3-ac4f-99c00ed82b04",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Birch Labs | | Service | Staff scheduling | | Processes PHI | No | | Business associate agreement | Not required (no patient data) | | Risk tier\u2026"
+    },
+    {
+     "ref": 4,
+     "title": "Vendor record: Cinder Data",
+     "chunk_id": "1e22eb20-96c1-416a-b254-85c5e01b3717",
+     "document_id": "dfc82bd0-dbb3-4d4b-a8b5-9d486d276aff",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Cinder Data | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement | **Executed** \u2014\u2026"
+    },
+    {
+     "ref": 5,
+     "title": "Vendor record: Delta Systems",
+     "chunk_id": "554c8550-eda9-43b6-bccc-db366d871ae1",
+     "document_id": "22e2d3b0-d808-4b4c-b7d7-6337e001ff40",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Delta Systems | | Service | Lab results interface | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement\u2026"
+    },
+    {
+     "ref": 6,
+     "title": "Vendor record: Harbor Cloud",
+     "chunk_id": "5b926cb9-76fe-41e8-8718-7b31bdfc1b24",
+     "document_id": "bf90c168-5ac8-4592-b2eb-f8bb0dda5621",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Harbor Cloud | | Service | Patient messaging | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 7,
+     "title": "Vendor record: Lumen Health",
+     "chunk_id": "8fb559e8-eadf-4393-be2b-87fe33bc7b00",
+     "document_id": "e7d68d7b-9712-405d-8edc-32de3e5a48ad",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Lumen Health | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement | **Executed** \u2014\u2026"
+    },
+    {
+     "ref": 8,
+     "title": "Vendor record: Quarry Analytics",
+     "chunk_id": "689a9d25-2b16-4be7-abac-9739df747875",
+     "document_id": "ca238a4f-e535-41f6-9edd-0f6971a20280",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Quarry Analytics | | Service | E-fax | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 9,
+     "title": "Vendor record: Sable Works",
+     "chunk_id": "0cb8a2e7-a902-4edf-8cbe-5b9d39876341",
+     "document_id": "41295c4a-40bb-49dc-996c-feb9386ba21a",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Sable Works | | Service | Payroll processing | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    },
+    {
+     "ref": 10,
+     "title": "Vendor record: Umber Analytics",
+     "chunk_id": "53359e20-b916-4800-85a9-38e59d5761dc",
+     "document_id": "3f5109f4-9e4d-478b-b5ed-b88414ce8447",
+     "origin": "knowledge",
+     "snippet": "Meridian Care vendor register entry. Maintained by Procurement; questions to the record owner. | Field | Value | |---|---| | Vendor | Umber Analytics | | Service | Cloud backup | | Processes PHI | Yes \u2014 handles protected health information | | Business associate agreement |\u2026"
+    }
+   ],
+   "grounding": null,
+   "usage": {
+    "claude-haiku-5-5": {
+     "calls": 2,
+     "input": 6,
+     "output": 248,
+     "cost_usd": 0.000273,
+     "cache_read": 4808,
+     "cache_write": 799
+    }
+   },
+   "cost_usd": 0.000273
+  }
+ ]
+}

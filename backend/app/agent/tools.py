@@ -10,7 +10,9 @@ from xml.sax.saxutils import escape, quoteattr
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agent import records_tool
 from app.agent.citations import CitationRegistry, Registered, search_result
+from app.agent.records_tool import QUERY_RECORDS
 from app.graph import query as graph
 from app.graph.extract import ENTITY_TYPES
 from app.models import ChatAttachment, Document
@@ -144,8 +146,12 @@ EXPLORE_ENTITY = {
 TOOL_DEFINITIONS: list[dict[str, Any]] = [SEARCH_KNOWLEDGE, READ_DOCUMENT, LIST_COLLECTIONS]
 
 
-def tool_definitions(*, web: bool, graph: bool = False) -> list[dict[str, Any]]:
+def tool_definitions(
+    *, web: bool, graph: bool = False, records: bool = False
+) -> list[dict[str, Any]]:
     out = list(TOOL_DEFINITIONS)
+    if records:
+        out.append(QUERY_RECORDS)
     if graph:
         out += [LIST_ENTITIES, EXPLORE_ENTITY]
     if web:
@@ -221,6 +227,8 @@ class ToolBox:
     ranking: RankingOptions = field(default_factory=RankingOptions)
     attachments: dict[uuid.UUID, ChatAttachment] = field(default_factory=dict)
     graph: bool = False
+    # Active record schemas in scope, for query_records (app/agent/records_tool.py).
+    record_schemas: list[Any] = field(default_factory=list)
     _web_pages: dict[int, tuple[str | None, str]] = field(default_factory=dict)
 
     # ── validation ────────────────────────────────────────────────────────
@@ -318,6 +326,9 @@ class ToolBox:
             hits=len(hits),
             results=results,
         )
+
+    async def query_records(self, args: dict[str, Any]) -> SearchOutcome:
+        return await records_tool.run(self, self.record_schemas, args)
 
     async def list_collections(self) -> str:
         if not self.scope.collections:

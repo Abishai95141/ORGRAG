@@ -26,7 +26,7 @@ from xml.sax.saxutils import escape, quoteattr
 
 from sqlalchemy import select
 
-from app.agent import runs, sufficiency
+from app.agent import records_tool, runs, sufficiency
 from app.agent.citations import (
     CitationRegistry,
     citation_markers,
@@ -59,6 +59,7 @@ from app.models import (
     Organization,
     SearchEvent,
 )
+from app.records import query as records_query
 from app.retrieval.access import RetrievalScope, resolve_scope
 from app.retrieval.hybrid import RankingOptions, hybrid_search
 from app.schemas.common import MessageOut, OrgSettings
@@ -305,6 +306,8 @@ class AgentRun:
                 )
             ).first()
         )
+        # Structured records: query_records when an active schema covers the scope.
+        self.record_schemas = await records_query.schemas_in_scope(db, self.scope.collection_ids)
         self._toolbox = ToolBox(
             None,  # bound per tool call by _tool_session
             scope,
@@ -315,6 +318,7 @@ class AgentRun:
             ),
             attachments=self.attachments,
             graph=self.graph_enabled,
+            record_schemas=self.record_schemas,
         )
 
     async def _history(self, db) -> list[dict[str, Any]]:
@@ -608,6 +612,9 @@ class AgentRun:
             web=self.web_enabled,
             graph=self.graph_enabled,
             native_citations=self.native_citations,
+            records=records_tool.describe(
+                self.record_schemas, self.scope.collections, self.scope.orgs
+            ),
         )
         user_content = self.req.question
         attachment_context = self._attachment_context()
@@ -618,7 +625,9 @@ class AgentRun:
             user_content = f"{self.req.question}\n\n<research_plan>\n{bullets}\n</research_plan>"
         if attachment_context:
             user_content = f"{attachment_context}\n\n{user_content}"
-        definitions = tool_definitions(web=self.web_enabled, graph=self.graph_enabled)
+        definitions = tool_definitions(
+            web=self.web_enabled, graph=self.graph_enabled, records=bool(self.record_schemas)
+        )
         if provider in nvidia.OPENAI_COMPATIBLE:
             self.provider = provider
             await self._nvidia_loop(model, system, history, user_content, definitions, deep)
@@ -1036,6 +1045,26 @@ class AgentRun:
                         if listing
                         else f"Explored {args.get('name', '')}"
                     ),
+                    status="done",
+                    queries=outcome.queries,
+                    refs=outcome.refs,
+                )
+                return outcome.text, False
+            if name == "query_records" and self.record_schemas:
+                step = await self.em.step_start(
+                    "records", "Querying records", {"record_type": args.get("record_type")}
+                )
+                started = time.perf_counter()
+                try:
+                    outcome = await self.tools.query_records(args)
+                except ToolInputError:
+                    await self.em.step_update(step, label="Records query failed", status="error")
+                    raise
+                self.retrieval_ms += int((time.perf_counter() - started) * 1000)
+                await self.em.sources([s.to_source_ref() for s in outcome.new_sources])
+                await self.em.step_update(
+                    step,
+                    label=f"Found {outcome.hits} record{'s' if outcome.hits != 1 else ''}",
                     status="done",
                     queries=outcome.queries,
                     refs=outcome.refs,
