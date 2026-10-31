@@ -37,6 +37,8 @@ Three labels were corrected after review, each noted in the question's `notes`. 
 - **Judge reliability.** `label` walks a person through 50 judge verdicts without showing them (about 30 fact verdicts and 20 claim verdicts, balanced between the judge's yes and no), and `kappa` reports Cohen's κ against the human. The target is κ ≥ 0.7; until it's measured, read judge-based numbers as approximate.
 - **Comparing runs.** `compare a.json b.json` adds a paired bootstrap (10,000 resamples of questions) per category: the difference in pass rate with a 95% interval, and "better", "worse" or "no clear change". Summaries also show p95 latency and, for models with a per-token price, `usd`: the mean cost per answer at list price, counting input, output, cache-read and cache-write tokens (`app/llm/pricing.py`).
 
+`answers --no-judge` only answers (judge later with `rejudge`): for a model you can use now and a judge that is slower or limited.
+
 Each run is a single sample and the models aren't deterministic. With 150 questions, one question is 0.7 points; the bootstrap says whether a difference is bigger than resampling noise.
 
 ## Results

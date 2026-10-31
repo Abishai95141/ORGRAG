@@ -28,7 +28,6 @@ SEARCH_KNOWLEDGE = {
         "scope. Returns numbered sources; cite them as [n]. Pass several phrasings "
         "of the same need, or several distinct needs, as separate queries."
     ),
-    "eager_input_streaming": True,
     "input_schema": {
         "type": "object",
         "properties": {
@@ -61,7 +60,6 @@ READ_DOCUMENT = {
         "document, an attached file or a web result. Long sources are split into "
         "pages; the reply says how many there are."
     ),
-    "eager_input_streaming": True,
     "input_schema": {
         "type": "object",
         "properties": {
@@ -79,7 +77,6 @@ READ_DOCUMENT = {
 LIST_COLLECTIONS = {
     "name": "list_collections",
     "description": "List the organizations and collections in scope, with document counts.",
-    "eager_input_streaming": True,
     "input_schema": {"type": "object", "properties": {}},
 }
 
@@ -91,7 +88,6 @@ SEARCH_WEB = {
         "when the question is about the organization. Returns numbered sources; cite "
         "them as [n]."
     ),
-    "eager_input_streaming": True,
     "input_schema": {
         "type": "object",
         "properties": {
@@ -117,7 +113,6 @@ LIST_ENTITIES = {
         "every…' questions. Filter with `contains` (matched against names and what the "
         "documents say about each entity), then check the details before answering."
     ),
-    "eager_input_streaming": True,
     "input_schema": {
         "type": "object",
         "properties": {
@@ -138,7 +133,6 @@ EXPLORE_ENTITY = {
         "entity it is connected to. Use it to follow chains (service → owning team → "
         "approver) and to list everything linked to one thing."
     ),
-    "eager_input_streaming": True,
     "input_schema": {
         "type": "object",
         "properties": {"name": {"type": "string", "description": "Entity name."}},

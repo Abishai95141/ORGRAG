@@ -12,7 +12,9 @@ Event flow:  step(plan) → step(search/read/reflect)* + reasoning* + sources* �
 
 import asyncio
 import contextlib
+import contextvars
 import copy
+import dataclasses
 import json
 import logging
 import time
@@ -60,6 +62,12 @@ log = logging.getLogger("strata.agent")
 MAX_TURNS = {"quick": 4, "deep": 10}
 HISTORY_MESSAGES = 12
 PREAMBLE_CHARS = 160  # text shorter than this before a tool call is treated as reasoning
+MAX_PARALLEL_TOOLS = 4  # tool calls from one turn running at once (each holds a DB session)
+
+# The toolbox (with its DB session) of the tool call running in the current task.
+_bound_tools: contextvars.ContextVar[ToolBox | None] = contextvars.ContextVar(
+    "bound_tools", default=None
+)
 MAX_REASONING_CHARS = 8000
 INLINE_ATTACHMENT_CHARS = 40_000  # across all files attached to one message
 NVIDIA_MAX_TOKENS = {"quick": 8192, "deep": 16384}
@@ -277,7 +285,7 @@ class AgentRun:
                 )
             ).first()
         )
-        self.tools = ToolBox(
+        self._toolbox = ToolBox(
             None,  # bound per tool call by _tool_session
             scope,
             self.registry,
@@ -408,15 +416,34 @@ class AgentRun:
             await self._fail(exc)
         await self.em.queue.put(None)
 
+    @property
+    def tools(self) -> ToolBox:
+        """The toolbox bound to the tool call running in this task."""
+        return _bound_tools.get() or self._toolbox
+
     @contextlib.asynccontextmanager
     async def _tool_session(self):
-        """A session for one tool call (tool calls run one at a time)."""
+        """A session for one tool call. Calls from one model turn run concurrently, each
+        in its own task with its own session; they share the citation registry."""
         async with SessionLocal() as db:
-            self.tools.db = db
+            token = _bound_tools.set(dataclasses.replace(self._toolbox, db=db))
             try:
                 yield
             finally:
-                self.tools.db = None
+                _bound_tools.reset(token)
+
+    async def _run_tools(self, calls: list[tuple[str, dict[str, Any]]]) -> list[tuple[str, bool]]:
+        """Run one turn's tool calls concurrently (at most MAX_PARALLEL_TOOLS at once);
+        results come back in call order."""
+        if len(calls) == 1:
+            return [await self._run_tool(*calls[0])]
+        sem = asyncio.Semaphore(MAX_PARALLEL_TOOLS)
+
+        async def one(name: str, args: dict[str, Any]) -> tuple[str, bool]:
+            async with sem:
+                return await self._run_tool(name, args)
+
+        return list(await asyncio.gather(*(one(n, a) for n, a in calls)))
 
     # ── retrieval helpers ────────────────────────────────────────────────
     async def _search(self, step_id: str, args: dict[str, Any]):
@@ -585,20 +612,34 @@ class AgentRun:
         json_retries = 0
         turn = 0
 
+        caching = get_settings().prompt_caching
+        system_blocks: str | list[dict[str, Any]] = system
+        if caching:
+            # A breakpoint on the system prompt caches tools + system for every turn and
+            # every question with the same scope; the top-level one caches the loop so
+            # far (each turn re-reads the previous turns' tool results from cache).
+            system_blocks = [
+                {"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}
+            ]
+
         while turn < max_turns:
             last_turn = turn == max_turns - 1
             kwargs: dict[str, Any] = {
                 "model": model,
                 "max_tokens": 32000,
-                "system": system,
+                "system": system_blocks,
                 "messages": messages,
                 "tools": definitions,
                 "thinking": {"type": "adaptive", "display": "summarized"},
                 "output_config": {"effort": effort},
                 **request_extras(),
             }
+            if caching:
+                kwargs["cache_control"] = {"type": "ephemeral"}
             if last_turn:
-                # Research budget spent: the model must answer with what it has.
+                # Research budget spent: the model must answer with what it has. (Changing
+                # tool_choice misses the messages cache for this one turn; Haiku 5.5 has
+                # no mid-conversation system messages to say it another way.)
                 kwargs["tool_choice"] = {"type": "none"}
 
             reflect_step: str | None = None
@@ -677,9 +718,10 @@ class AgentRun:
                 break
 
             results = []
-            for block in tool_uses:
-                args = block.input if isinstance(block.input, dict) else {}
-                content, is_error = await self._run_tool(block.name, args)
+            outcomes = await self._run_tools(
+                [(b.name, b.input if isinstance(b.input, dict) else {}) for b in tool_uses]
+            )
+            for block, (content, is_error) in zip(tool_uses, outcomes, strict=True):
                 result = {"type": "tool_result", "tool_use_id": block.id, "content": content}
                 if is_error:
                     result["is_error"] = True
@@ -789,16 +831,17 @@ class AgentRun:
 
             researched = True
             messages.append(result.assistant_message())
-            for call in calls:
-                try:
-                    args = call.parsed()
-                except ValueError:
-                    content, is_error = (
-                        "The tool arguments were not valid JSON. Send a JSON object.",
-                        True,
-                    )
-                else:
-                    content, is_error = await self._run_tool(call.name, args)
+            parsed: dict[int, dict[str, Any]] = {}
+            for i, call in enumerate(calls):
+                with contextlib.suppress(ValueError):
+                    parsed[i] = call.parsed()
+            ran = iter(await self._run_tools([(calls[i].name, a) for i, a in parsed.items()]))
+            for i, call in enumerate(calls):
+                content, is_error = (
+                    next(ran)
+                    if i in parsed
+                    else ("The tool arguments were not valid JSON. Send a JSON object.", True)
+                )
                 messages.append(
                     {
                         "role": "tool",

@@ -144,6 +144,9 @@ async def test_quick_mode_tool_loop(app, monkeypatch):
     assert call["thinking"] == {"type": "adaptive", "display": "summarized"}
     assert call["output_config"] == {"effort": "low"} and "tool_choice" not in call
     assert "temperature" not in call
+    # Prompt caching: tools + system, then the growing loop.
+    assert call["system"][0]["cache_control"] == {"type": "ephemeral"}
+    assert call["cache_control"] == {"type": "ephemeral"}
 
 
 async def test_deep_mode_plans_then_researches(app, monkeypatch):
@@ -168,3 +171,33 @@ async def test_unknown_tool_input_is_reported_to_model(app, monkeypatch):
     result = fake.calls[1]["messages"][-1]["content"][0]
     assert result["is_error"] is True and "no source [99]" in result["content"].lower()
     assert events[-1][0] == "done"
+
+
+async def test_tool_calls_in_one_turn_run_concurrently(app, monkeypatch):
+    from app.agent.tools import ToolBox
+
+    calls = [
+        NS(type="tool_use", id=f"toolu_{i}", name="search_knowledge", input={"queries": [q]})
+        for i, q in enumerate(["friday deploy policy", "deploy approval"])
+    ]
+    turn1 = ([], NS(stop_reason="tool_use", content=calls))
+    started, sessions = [], []
+    both_started = asyncio.Event()
+    original = ToolBox.search
+
+    async def search(self, args):
+        # Each call waits until the other has started: run one at a time, this times out.
+        started.append(args["queries"][0])
+        sessions.append(self.db)
+        if len(started) == 2:
+            both_started.set()
+        await asyncio.wait_for(both_started.wait(), timeout=5)
+        return await original(self, args)
+
+    monkeypatch.setattr(ToolBox, "search", search)
+    fake, events = await _run(app, monkeypatch, "quick", [turn1, _answer_turn("Done [1].")])
+    assert events[-1][0] == "done", events[-1]
+    assert len(sessions) == 2 and sessions[0] is not sessions[1]  # one session per call
+    results = fake.calls[1]["messages"][-1]["content"]
+    assert [r["tool_use_id"] for r in results] == ["toolu_0", "toolu_1"]  # call order kept
+    assert all('<source ref="' in r["content"] for r in results)

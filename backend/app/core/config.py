@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     # Default model for new orgs; empty picks the best one for the configured key.
     llm_model: str | None = None
     llm_fallbacks: Literal["default", "off"] = "default"
+    # Claude prompt caching in the agent loop (tools + system, then the growing tool
+    # loop; 5-minute TTL). Off only to measure what it saves.
+    prompt_caching: bool = True
 
     embedding_provider: Literal["fastembed", "voyage", "hash"] = "fastembed"
     embedding_model: str = "BAAI/bge-small-en-v1.5"

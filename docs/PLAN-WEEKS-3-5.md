@@ -48,11 +48,12 @@ Each item is an org setting (or a harness variant), so it can be switched off an
 
 1. **Prompt caching in the agent loop** (`_claude_loop`).
    - An explicit `cache_control` on the last system block caches tools and system together. Top-level automatic caching (`cache_control={"type": "ephemeral"}`) caches the growing tool loop. Both use the 5-minute TTL; Haiku 5.5 caches prompts from 512 tokens.
-   - Known misses: the forced-answer turn (`tool_choice: none`) invalidates the messages cache. Replace it with an "answer now" mid-conversation system message, which Haiku 5.5 supports, then measure.
+   - Known misses: the forced-answer turn (`tool_choice: none`) misses the messages cache for that one turn. Haiku 5.5 doesn't support mid-conversation system messages (only Opus/Sonnet 5.5 and up do), so that turn keeps `tool_choice: none`.
    - Test: on the second turn, `cache_read_input_tokens > 0`.
    - The gateway path can't cache. That's a documented limitation.
-2. **Rerank once.** Rerank the candidate pool against the main question only (variant `rerank_queries: main|all`), and embed all queries in one batch. Measure recall@10, MRR and ms.
-3. **Concurrent tool calls.** When the model asks for several tool calls in one turn, run them concurrently, each with its own short DB session (the pattern from audit P2).
+   - **Done (2026-10-31).** Live: a second question read 2,877 tokens from cache; answers cost $0.0005–0.0006 (from ~$0.0013) and took 2.5–3.7 s. `PROMPT_CACHING=false` turns it off for comparison.
+2. **Rerank once.** ~~Rerank the candidate pool against the main question only.~~ **Dropped after measuring:** the per-query rerank calls already run in parallel, so one search takes 1.1–2.0 s whether it has 1 or 4 queries (NVIDIA reranker, 40 passages). Reranking once would save ~0.3–0.5 s and lose the best-of-queries score. The rerank call itself (1–2 s per search) is the cost to attack, e.g. in the fast path.
+3. **Concurrent tool calls.** When the model asks for several tool calls in one turn, run them concurrently, each with its own short DB session (the pattern from audit P2). **Done:** at most 4 at once, results in call order, on both the Claude and NVIDIA paths.
 4. **Fast path for simple lookups.**
    - When all of these hold:
      - quick mode, with no attachments and no web;
@@ -63,6 +64,8 @@ Each item is an org setting (or a harness variant), so it can be switched off an
    - Calibrate the thresholds on the eval so the pass rate stays within the confidence interval.
 
 **Gate:** quick p50 < 5 s and lower cost per answer, with no category worse.
+
+**Found while measuring (2026-10-31):** our tool definitions set `eager_input_streaming`, which streams the model's raw tool input unvalidated. Sonnet 5.5 sent malformed JSON on 60 of 150 questions (Haiku on none). Our inputs are a few short queries, so eager streaming bought nothing; it's off. (Strict tool use would also guarantee valid input, but the API rejects it together with Citations, which step 4 needs.)
 
 ## Step 2 — Retrieval quality (weeks 3–4)
 

@@ -497,23 +497,26 @@ async def grade_grounding(q: Question, answer: str, sources: list[dict]) -> dict
 
 
 async def score_answer(
-    q: Question, result: "AnswerResult", with_grounding: bool = True
+    q: Question, result: "AnswerResult", with_grounding: bool = True, with_judge: bool = True
 ) -> "AnswerResult":
-    """Fill in the judged fields of a result from its answer and sources."""
+    """Fill in the judged fields of a result from its answer and sources. Without the
+    judge only the deterministic fields are filled (and nothing passes) until `rejudge`."""
     answer, status = result.answer, result.status
     by_ref = {s["ref"]: s for s in result.sources}
     result.cited_titles = [by_ref[r]["title"] for r in cited_refs(answer) if r in by_ref]
     gold = set(q.gold_docs)
     result.gold_cited = len(gold & set(result.cited_titles)) / len(gold) if gold else 0.0
     result.fact_hits_substring = substring_hits(answer, q.facts)
-    if status == "complete":
+    if status == "complete" and with_judge:
         verdict = await judge(q, answer)
         result.fact_hits_judge = verdict["facts"]
         result.abstained = verdict["abstained"]
         result.contradiction = verdict["contradiction"]
         if with_grounding:
             result.grounding = await grade_grounding(q, answer, result.sources)
-    if q.category == "unanswerable":
+    if not with_judge:
+        result.passed = False  # unknown until `rejudge`
+    elif q.category == "unanswerable":
         # The answer must say it couldn't find this, without asserting a made-up answer.
         result.passed = status == "complete" and result.abstained and not result.contradiction
     else:
@@ -527,7 +530,7 @@ async def score_answer(
 
 
 async def answer_one(
-    q: Question, user, orgs, mode: str, with_grounding: bool = True
+    q: Question, user, orgs, mode: str, with_grounding: bool = True, with_judge: bool = True
 ) -> AnswerResult:
     primary = orgs[q.scope[0]]
     scope_ids = [orgs[s].id for s in q.scope]
@@ -571,7 +574,7 @@ async def answer_one(
     result.cost_usd = round(sum(costs), 6) if costs else None
     result.message_id = str(msg_id)
     result.sources = [_source_row(s) for s in sources]
-    return await score_answer(q, result, with_grounding)
+    return await score_answer(q, result, with_grounding, with_judge)
 
 
 def _source_row(s: dict[str, Any]) -> dict[str, Any]:
@@ -580,7 +583,11 @@ def _source_row(s: dict[str, Any]) -> dict[str, Any]:
 
 
 async def run_answers(
-    questions: list[Question], mode: str, concurrency: int, with_grounding: bool = True
+    questions: list[Question],
+    mode: str,
+    concurrency: int,
+    with_grounding: bool = True,
+    with_judge: bool = True,
 ) -> list[AnswerResult]:
     user, orgs = await _context()
     sem = asyncio.Semaphore(concurrency)
@@ -590,13 +597,12 @@ async def run_answers(
         nonlocal done
         async with sem:
             try:
-                r = await answer_one(q, user, orgs, mode, with_grounding)
+                r = await answer_one(q, user, orgs, mode, with_grounding, with_judge)
             except Exception as exc:  # a crashed question is a failed question, not a crash
                 r = AnswerResult(q.id, q.category, "", "error", error=repr(exc)[:300])
             done += 1
-            print(
-                f"  [{done}/{len(questions)}] {q.id} {'PASS' if r.passed else 'fail'}", flush=True
-            )
+            verdict = ("PASS" if r.passed else "fail") if with_judge else r.status
+            print(f"  [{done}/{len(questions)}] {q.id} {verdict}", flush=True)
             return r
 
     return list(await asyncio.gather(*(one(q) for q in questions)))
@@ -814,7 +820,7 @@ async def rejudge(run: dict, source_name: str, with_grounding: bool) -> Path:
     summary = summarize_answers(rows)
     print_table(summary)
     extra = {k: v for k, v in run.items() if k not in ("kind", "variant", "summary", "rows")}
-    extra.update(judge_versions(), rejudged_from=source_name)
+    extra.update(judge_versions(), rejudged_from=source_name, judged=True)
     return save("answers", f"{run['variant']}-rejudged", rows, summary, extra)
 
 
@@ -934,7 +940,9 @@ async def main_async(args) -> None:
         print_table(summary)
         print("saved", save("retrieval", args.variant, rows, summary, {"settings": overrides}))
     else:
-        answered = await run_answers(questions, args.mode, args.concurrency, not args.no_grounding)
+        answered = await run_answers(
+            questions, args.mode, args.concurrency, not args.no_grounding, not args.no_judge
+        )
         rows = [r.__dict__ for r in answered]
         summary = summarize_answers(rows)
         print_table(summary)
@@ -944,7 +952,8 @@ async def main_async(args) -> None:
             + (f"-{args.chat_model.split(':')[-1]}" if args.chat_model else "")
             + ("-smoke" if args.set == "smoke" else "")
         )
-        print("saved", save("answers", name, rows, summary, {"settings": overrides}))
+        extra = {"settings": overrides, "judged": not args.no_judge}
+        print("saved", save("answers", name, rows, summary, extra))
 
 
 def main() -> None:
@@ -968,6 +977,11 @@ def main() -> None:
     p.add_argument("--name", help="answers: result name (default: <variant>-<mode>)")
     p.add_argument("--no-grounding", action="store_true", help="skip faithfulness/citations")
     p.add_argument("--no-cache", action="store_true", help="don't reuse cached verdicts")
+    p.add_argument(
+        "--no-judge",
+        action="store_true",
+        help="answers: answer only; score later with `rejudge` (for a model you can use now)",
+    )
     p.add_argument("--n", type=int, default=50, help="label: items to label")
     p.add_argument("--seed", type=int, default=0, help="label: sampling seed")
     p.add_argument("--model", help="build-graph: extraction model (default: the org's)")
