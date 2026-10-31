@@ -31,13 +31,17 @@ class FakeSlack:
         self.channels: list[dict] = []
         self.ephemeral_fails = False
         self.outage: set[str] = set()  # methods answering 429 with a long Retry-After
+        self.shared: dict[str, dict] = {}  # channel id → conversations.info sharing flags
         self._ts = 0
 
-    def user(self, slack_id: str, email: str | None, name: str = "someone") -> None:
+    def user(self, slack_id: str, email: str | None, name: str = "someone", **extra) -> None:
         self.users[slack_id] = {
             "id": slack_id,
             "name": name,
+            "team_id": self.team[0],
+            "is_email_confirmed": True,
             "profile": {"display_name": name, **({"email": email} if email else {})},
+            **extra,
         }
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
@@ -75,6 +79,9 @@ class FakeSlack:
             return httpx.Response(200, json={"ok": True, "ts": f"1800000000.{self._ts:06d}"})
         if method == "chat.postEphemeral" and self.ephemeral_fails:
             return httpx.Response(200, json={"ok": False, "error": "user_not_in_channel"})
+        if method == "conversations.info":
+            channel = {"id": params["channel"], **self.shared.get(params["channel"], {})}
+            return httpx.Response(200, json={"ok": True, "channel": channel})
         if method == "conversations.open":
             return httpx.Response(200, json={"ok": True, "channel": {"id": "DNEW"}})
         if method == "users.conversations":
@@ -100,6 +107,7 @@ async def slack(monkeypatch):
     monkeypatch.setattr(s, "slack_client_id", "1234.5678")
     monkeypatch.setattr(s, "slack_client_secret", "client-secret")
     monkeypatch.setattr(s, "slack_signing_secret", SECRET)
+    monkeypatch.setattr(s, "slack_match_emails", True)  # off by default; tested on its own
     fake = FakeSlack()
     fake.team = (f"T{uuid.uuid4().hex[:10].upper()}", "Acme Slack")
     monkeypatch.setattr(client, "_transport", httpx.MockTransport(fake))
@@ -444,6 +452,12 @@ async def test_mention_is_answered_in_the_thread_with_linked_citations(app, slac
     assert insights["top_sources"][0]["citations"] == 1
     shared = (await admin.get(f"/api/shared/{share.group(1)}")).json()
     assert shared["access"] == "full"
+    # The audit log attributes the answer's reads to Slack, and the connection to the admin.
+    reads = (await admin.get(f"/api/orgs/{slug}/audit/access?kind=chat")).json()["items"]
+    assert [(e["channel"], e["query"]) for e in reads] == [("slack", "how much leave?")]
+    assert reads[0]["documents"][0]["title"] == "Leave policy"
+    events = (await admin.get(f"/api/orgs/{slug}/audit/events?action=slack")).json()["items"]
+    assert [e["action"] for e in events] == ["slack.connected"]
 
     # A follow-up in the same thread continues the conversation.
     await _send(admin, _event(slack.team[0], _mention("U1", "and extensions?", thread_ts=root)))
@@ -588,6 +602,8 @@ async def test_unknown_slack_user_gets_a_link_to_connect_accounts(app, slack):
 
     preview = (await admin.get(f"/api/slack/link/{token}")).json()
     assert preview["slack_user_id"] == "U9" and preview["slack_user_name"] == "ann"
+    # Slack's record of the account, not the display name its owner chose.
+    assert preview["slack_email"] == "nobody-in-strata@elsewhere.test" and not preview["used"]
     assert preview["team_name"] == "Acme Slack" and preview["eligible"] is True
     r = await admin.post(f"/api/slack/link/{token}")
     assert r.status_code == 201 and r.json()["slack_user_id"] == "U9"
@@ -604,9 +620,12 @@ async def test_unknown_slack_user_gets_a_link_to_connect_accounts(app, slack):
     convs = (await admin.get(f"/api/orgs/{slug}/conversations")).json()["items"]
     assert [c["title"] for c in convs] == ["vpn client?"]
 
-    # Unlinking puts them back to unknown.
+    # Unlinking puts them back to unknown, and the used link can't connect them again.
     assert (await admin.delete(f"/api/slack/links/{links[0]['id']}")).status_code == 204
     assert (await other.delete(f"/api/slack/links/{links[0]['id']}")).status_code == 404
+    assert (await other.get(f"/api/slack/link/{token}")).json()["used"] is True
+    r = await other.post(f"/api/slack/link/{token}")
+    assert r.status_code == 409 and r.json()["code"] == "link_used"
     await _send(admin, _event(slack.team[0], _mention("U9", "again?")))
     await _run_jobs()
     assert len(slack.of("chat.postEphemeral")) == 2
@@ -784,6 +803,21 @@ async def test_channel_scope_mapping_rules(app, slack):
     assert "isn't a member" not in slack.of("chat.postEphemeral")[-1]["text"]
     assert "doesn't search any" in slack.of("chat.postEphemeral")[-1]["text"]
 
+    # Each org's log has its own channel changes, and never names the other orgs.
+    def channel_events(items):
+        return [(e["action"], e["target_id"]) for e in items if e["action"].startswith("slack.ch")]
+
+    a_log = (await alice.get(f"/api/orgs/{a['slug']}/audit/events?action=slack")).json()["items"]
+    b_log = (await alice.get(f"/api/orgs/{b['slug']}/audit/events?action=slack")).json()["items"]
+    # An unmapped channel answers from the default org (A): mapping #b-team to B alone
+    # takes A out of it, and adding B to #shared adds only B.
+    assert channel_events(a_log) == [("slack.channel_removed", "C0BTEAM02")]
+    assert {("slack.channel_added", "C0SHARED1"), ("slack.channel_added", "C0BTEAM02")} <= set(
+        channel_events(b_log)
+    )
+    assert "slack.disconnected" in [e["action"] for e in b_log]
+    assert b["name"] not in str(a_log) and a["name"] not in str(b_log)
+
     # The last org to disconnect revokes the token and forgets the workspace.
     assert (
         await alice.delete(f"/api/orgs/{d['slug']}/slack/workspaces/{ws['id']}")
@@ -837,3 +871,84 @@ async def test_multi_org_channel_searches_only_the_askers_orgs(app, slack):
         alice, slack, _mention("UA", "kestrel launch runway", channel="C0UNMAPPED")
     )
     assert "Launch blue" in default and "Launch red" not in default
+
+
+# ── who may be answered, and where ───────────────────────────────────────────
+async def _answer_co(app, slack, name: str):
+    admin = await _signup(app, "slackadmin")
+    org = await _org(admin, name)
+    await _ingest(
+        admin, org["slug"], await _general(admin, org["slug"]), {"vpn.md": "# VPN\n\nBlue."}
+    )
+    await _connect(admin, org["slug"], slack)
+    return admin, org
+
+
+async def test_channels_shared_with_other_organizations_get_no_answer(app, slack):
+    admin, _ = await _answer_co(app, slack, "Shared Co")
+    slack.user("U1", admin.email)
+    slack.shared["C0PARTNER"] = {"is_ext_shared": True}
+    await _send(admin, _event(slack.team[0], _mention("U1", "vpn?", channel="C0PARTNER")))
+    await _run_jobs()
+    [note] = slack.of("chat.postEphemeral")
+    assert note["user"] == "U1" and "shared with other organizations" in note["text"]
+    assert not slack.of("chat.postMessage")  # nothing posted where outsiders read it
+
+
+async def test_emails_match_only_when_enabled_confirmed_and_in_the_workspace(
+    app, slack, monkeypatch
+):
+    from app.core.config import get_settings
+
+    admin, _ = await _answer_co(app, slack, "Match Co")
+
+    async def prompted(user: str) -> bool:
+        before = len(slack.of("chat.postEphemeral"))
+        await _send(admin, _event(slack.team[0], _mention(user, "vpn?")))
+        await _run_jobs()
+        texts = [p["text"] for p in slack.of("chat.postEphemeral")[before:]]
+        return any("/slack/link/" in t for t in texts)
+
+    slack.user("U2", admin.email, is_email_confirmed=False)
+    assert await prompted("U2")
+    slack.user("U3", admin.email, team_id="TSOMEONEELSE")  # a Slack Connect user
+    assert await prompted("U3")
+    monkeypatch.setattr(get_settings(), "slack_match_emails", False)  # the default
+    slack.user("U4", admin.email)
+    assert await prompted("U4")
+
+
+async def test_a_slack_outage_while_identifying_retries_instead_of_asking_to_link(app, slack):
+    from app.core.db import SessionLocal
+    from app.worker.jobs import HANDLERS
+    from app.worker.queue import claim_next
+
+    admin, _ = await _answer_co(app, slack, "Outage Co")
+    slack.user("U1", admin.email)
+    slack.outage.add("users.info")
+    await _send(admin, _event(slack.team[0], _mention("U1", "vpn?")))
+    async with SessionLocal() as db:  # the fixture removes the job afterwards
+        job = await claim_next(db)
+        with pytest.raises(Exception):  # noqa: B017 — the worker retries any failure
+            await HANDLERS[job.kind](db, job)
+        await db.rollback()
+    assert not slack.of("chat.postEphemeral")  # no "connect your account" for a known user
+
+
+async def test_unmapped_channels_stop_answering_when_the_default_org_leaves(app, slack):
+    alice = await _signup(app, "alice")
+    a = await _org(alice, "First Co")
+    b = await _org(alice, "Second Co")
+    ws = await _connect(alice, a["slug"], slack)
+    await _connect(alice, b["slug"], slack)
+    first = (await alice.get(f"/api/orgs/{b['slug']}/slack")).json()["workspaces"][0]
+    assert first["default_org"]["slug"] == a["slug"]
+    assert (
+        await alice.delete(f"/api/orgs/{a['slug']}/slack/workspaces/{ws['id']}")
+    ).status_code == 204
+    overview = (await alice.get(f"/api/orgs/{b['slug']}/slack")).json()["workspaces"][0]
+    assert overview["default_org"] is None and overview["default_elsewhere"] is False
+    slack.user("UA", alice.email)
+    await _send(alice, _event(slack.team[0], _mention("UA", "hello?", channel="C0RANDOM1")))
+    await _run_jobs()
+    assert "doesn't search any" in slack.of("chat.postEphemeral")[-1]["text"]

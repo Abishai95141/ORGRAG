@@ -393,7 +393,8 @@ a readable message. Records of hidden documents are never returned.
 
 A link to one answer, `{PUBLIC_URL}/a/{token}`. Opening it requires signing in, and
 **every viewer's permissions are checked when they open it**: they get the answer only
-if they can read every source it cites (the answer is made of those sources). Otherwise
+if they can read every source it cites (the answer is made of those sources), and
+`sources` holds only those: passages it retrieved but didn't cite aren't returned. Otherwise
 they get the question and what they'd need, and can request access. Web sources are
 public; a conversation attachment counts as readable only by the asker.
 
@@ -433,14 +434,25 @@ connects a workspace (OAuth v2); a workspace can be connected to several orgs, e
 an admin of that org. Needs `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` and
 `SLACK_SIGNING_SECRET` (else `503 slack_not_configured`); setup is in the README.
 
-- **Who asks.** A Slack user is the Strata user they linked (below), else the Strata user
-  whose email matches the one Slack reports (`users.info`) and who belongs to an org
-  connected to the workspace. Nobody: the bot replies, only to them (ephemeral; a DM if
-  that can't be shown), with a signed link to `{PUBLIC_URL}/slack/link/{token}` (valid an
-  hour) where they confirm, signed in, that the Slack account is theirs.
+- **Who asks.** A Slack user is the Strata user they linked (below). With
+  `SLACK_MATCH_EMAILS=true` (off by default: Strata doesn't verify signup emails, so turn
+  it on only when accounts come from SSO or emailed invitations), also the Strata user
+  whose email matches the one Slack reports (`users.info`), when Slack has confirmed that
+  email, the user belongs to this workspace (not Slack Connect) and the Strata user is in
+  an org connected to it. Nobody: the bot replies, only to them (ephemeral; a DM if that
+  can't be shown), with a signed, single-use link to `{PUBLIC_URL}/slack/link/{token}`
+  (valid an hour) where they confirm, signed in, that the Slack account is theirs; the
+  page shows the account's Slack email, not its self-chosen display name. A Slack error
+  while identifying them retries the job rather than asking them to link.
+- **Shared channels get no answer.** A channel shared with another organization (Slack
+  Connect: `is_ext_shared`, `is_pending_ext_shared` or `is_shared` in
+  `conversations.info`) has readers outside the org, so the bot tells the asker, only
+  them, to ask in a DM. Slack guests in an ordinary channel aren't detected: map such
+  channels to orgs whose org-wide content guests may read, or keep the bot out.
 - **What it searches.** A DM: every connected org the asker belongs to. A channel: its
   mapping's orgs (in order), or unmapped, the workspace's default org (the first to
-  connect); only orgs that connected the workspace, and of those only the ones the asker
+  connect; when it disconnects, unmapped channels search nothing until mapped, rather than
+  passing to another org); only orgs that connected the workspace, and of those only the ones the asker
   belongs to. Non-first orgs with `allow_cross_org: false` are skipped, as in chat.
 - **Channels are public to their members.** In a channel only collections with
   `visibility: "org"` are searched (an allow-list in the retrieval scope, intersected with
@@ -481,8 +493,8 @@ type SlackLink = { id: string; team_id: string; team_name: string; slack_user_id
 | PUT | `/orgs/{slug}/slack/workspaces/{id}/channels/{channel_id}` `[admin]` | `{org_slugs: string[] (1–20, in order), channel_name?}` | `SlackChannel` |
 | DELETE | `/orgs/{slug}/slack/workspaces/{id}/channels/{channel_id}` `[admin]` | – | `204`: back to the default org |
 | POST | `/slack/events` | Slack Events API (signed) | `200` |
-| GET | `/slack/link/{token}` `[session]` | – | `{team_id, team_name, slack_user_id, slack_user_name, expired, linked: "none" \| "you" \| "other", eligible}` (`404 link_not_found` for a forged token or a disconnected workspace) |
-| POST | `/slack/link/{token}` `[session]` | – | `201 SlackLink` (`200` if already yours; `400 link_expired`; `409 slack_user_linked` when linked to someone else; `403` when none of your orgs connected the workspace) |
+| GET | `/slack/link/{token}` `[session]` | – | `{team_id, team_name, slack_user_id, slack_user_name, slack_email, expired, used, linked: "none" \| "you" \| "other", eligible}` (`404 link_not_found` for a forged token or a disconnected workspace) |
+| POST | `/slack/link/{token}` `[session]` | – | `201 SlackLink` (`200` if already yours; `400 link_expired`; `409 link_used` once the link has connected an account, even after a disconnect; `409 slack_user_linked` when linked to someone else; `403` when none of your orgs connected the workspace) |
 | GET | `/slack/links` `[session]` | – | `SlackLink[]`: Slack accounts linked to you |
 | DELETE | `/slack/links/{id}` `[session]` | – | `204` (the Slack user is matched by email again) |
 
@@ -691,7 +703,9 @@ last question marks it `addressed`, and addressed clusters sort last.
 
 **Answered elsewhere.** `answered_elsewhere` lists (up to 3) similar questions with a
 good answer in *another* org — complete, citing the knowledge base, not downvoted,
-nothing reported missing, from the last 180 days — or a live verified answer there. A
+nothing reported missing, from the last 180 days, and either the caller's own or shared
+by its author with a permalink (other people's private conversations are never used) —
+or a live verified answer there. A
 hint appears only if the caller is a member of that org, that org allows cross-org reads
 (`allow_cross_org`), and the caller can read every source the answer cites (the shared-
 answer rule: membership of each cited document's org, its collection visible to them,
@@ -796,8 +810,14 @@ What counts as a read (`kind`):
 | `read` | `GET /documents/{id}`, MCP `read_document` | null | the document |
 | `shared` | a viewer opens a shared answer with `access: "full"` | the question | the answer's sources |
 
-`channel` is `app` (signed in), `api` (an API key on the REST API) or `mcp` (an API key
-through the MCP server). Web results and attached files aren't org data and aren't
+`channel` is `app` (signed in), `api` (an API key on the REST API), `mcp` (an API key
+through the MCP server) or `slack` (asked through the Slack bot, as the linked user).
+Records queries (`POST /records/query`, MCP `query_records`) are logged as `search` with
+the query `records {type}: {filters}`; `GET /records/{id}` as `read`. Admin actions also
+include `agent.*`, `graph.rebuilt`, `record_schema.*` (suggested, created, updated,
+activated, archived, extracted, deleted), `doc_request.fulfilled` / `.dismissed` and
+`slack.*` (connected, disconnected, and `channel_added` / `channel_removed` in each org a
+channel starts or stops answering from, never naming the channel's other orgs). Web results and attached files aren't org data and aren't
 listed.
 
 ```ts

@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agent.citations import cited_refs
 from app.api.chat import DEFAULT_TITLE, begin_answer, wait_for_answer
 from app.api.sharing import active_share
+from app.core import audit
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.deps import OrgContext
@@ -87,6 +88,19 @@ async def _save(db: AsyncSession, job: Job, payload: dict[str, Any]) -> None:
     await db.commit()
 
 
+# users.info errors that won't go away by retrying.
+PERMANENT_USER_ERRORS = {
+    "user_not_found",
+    "user_not_visible",
+    "missing_scope",
+    "not_allowed_token_type",
+}
+SHARED_CHANNEL = (
+    ":lock: I don't answer in channels shared with other organizations: people outside "
+    "yours would read the answer. Ask me in a direct message instead."
+)
+
+
 # ── 1. identity ──────────────────────────────────────────────────────────────
 async def identify(
     db: AsyncSession,
@@ -94,8 +108,8 @@ async def identify(
     token: str,
     slack_user_id: str,
     connected: list[Organization],
-) -> tuple[User | None, str | None]:
-    """The Strata user behind a Slack user, and the Slack user's display name."""
+) -> tuple[User | None, str | None, str | None]:
+    """The Strata user behind a Slack user, and the Slack user's display name and email."""
     link = (
         await db.execute(
             select(SlackUserLink).where(
@@ -105,17 +119,28 @@ async def identify(
         )
     ).scalar_one_or_none()
     if link is not None:
-        return await db.get(User, link.user_id), link.slack_user_name
+        return await db.get(User, link.user_id), link.slack_user_name, None
     try:
         info = await client.user_info(token, slack_user_id)
     except SlackError as exc:
+        if exc.error not in PERMANENT_USER_ERRORS:
+            raise  # rate limits, outages: the job retries rather than asking them to link
         log.warning("users.info failed for %s: %s", slack_user_id, exc.error)
-        return None, None
+        return None, None, None
     profile = info.get("profile") or {}
     name = profile.get("display_name") or profile.get("real_name") or info.get("name")
     email = str(profile.get("email") or "").strip().lower()
-    if info.get("is_bot") or info.get("deleted") or not email:
-        return None, name
+    if (
+        not get_settings().slack_match_emails
+        or info.get("is_bot")
+        or info.get("deleted")
+        or not email
+        # Only a confirmed email of a member of this workspace (not a Slack Connect
+        # user from another team) can stand for a Strata account.
+        or not info.get("is_email_confirmed")
+        or info.get("team_id", workspace.team_id) != workspace.team_id
+    ):
+        return None, name, email or None
     user = await db.scalar(
         select(User)
         .join(Membership, Membership.user_id == User.id)
@@ -125,11 +150,13 @@ async def identify(
         )
         .limit(1)
     )
-    return user, name
+    return user, name, email
 
 
-def _link_prompt(workspace: SlackWorkspace, place: Place, name: str | None) -> Reply:
-    token = make_link_token(workspace.id, workspace.team_id, place.user, name)
+def _link_prompt(
+    workspace: SlackWorkspace, place: Place, name: str | None, email: str | None
+) -> Reply:
+    token = make_link_token(workspace.id, workspace.team_id, place.user, name, email)
     url = _url(f"/slack/link/{token}")
     text = (
         "I don't know who you are in Strata yet, so I can't tell what you're allowed to "
@@ -208,6 +235,7 @@ async def _ask(
             user=await db.get(User, user.id),
             role=asked.roles[org.id],
             db=db,
+            via_slack=True,  # the audit log attributes the answer to Slack
         )
         conv, thread = await _thread_conversation(
             db, workspace, place, user, org, [o.id for o in asked.orgs]
@@ -233,7 +261,9 @@ async def _ask(
     return message, error, conv
 
 
-async def _share(message: dict[str, Any], org_id: uuid.UUID, user_id: uuid.UUID) -> str | None:
+async def _share(
+    message: dict[str, Any], org_id: uuid.UUID, user_id: uuid.UUID, question: str
+) -> str | None:
     """A permalink for an answer citing the knowledge base. Each person who opens it
     sees the answer only if they can read every source it cites (app.api.sharing)."""
     if message["status"] != "complete":
@@ -250,6 +280,13 @@ async def _share(message: dict[str, Any], org_id: uuid.UUID, user_id: uuid.UUID)
                 created_by_id=user_id,
             )
             db.add(share)
+            await db.flush()
+            # Recorded like a share from the web app; never the token, which is the link.
+            asker = await db.get(User, user_id)
+            audit.add_event(
+                db, org_id, audit.Actor.of_user(asker, channel="slack"), "share.created",
+                "shared_answer", share.id, question, message_id=message["id"],
+            )  # fmt: skip
             await db.commit()
         return _url(f"/a/{share.token}")
 
@@ -332,11 +369,22 @@ async def _answer(
     if len(question) > MAX_QUESTION_CHARS:
         return Reply([":warning: That question is too long for me (over 20,000 characters)."])
     connected = await scope.connected_orgs(db, workspace.id)
-    user, name = await identify(db, workspace, token, place.user, connected)
+    user, name, email = await identify(db, workspace, token, place.user, connected)
     if user is None:
-        return _link_prompt(workspace, place, name)
+        return _link_prompt(workspace, place, name, email)
+    if not place.private:
+        # A channel answer is read by everyone in the channel. One shared with another
+        # organization (Slack Connect) has readers outside it, so it gets no answer.
+        channel = await client.channel_info(token, place.channel)
+        if any(channel.get(k) for k in ("is_ext_shared", "is_pending_ext_shared", "is_shared")):
+            return Reply([SHARED_CHANNEL], ephemeral=True)
     orgs = await scope.place_orgs(
-        db, workspace.id, place.channel, private=place.private, connected=connected
+        db,
+        workspace.id,
+        place.channel,
+        private=place.private,
+        connected=connected,
+        default_org_id=workspace.default_org_id,
     )
     asked = await scope.asker_scope(db, user, orgs, private=place.private)
     if not asked.orgs:
@@ -371,7 +419,7 @@ async def _answer(
     message, error, conv = await _ask(workspace, place, user, asked, question)
     if message is None:
         return Reply([f":warning: I couldn't answer that: {mrkdwn.escape(error or 'error')}"])
-    share_url = await _share(message, asked.orgs[0].id, user.id)
+    share_url = await _share(message, asked.orgs[0].id, user.id, question)
     open_url = _url(f"/o/{asked.orgs[0].slug}/chat/{conv.id}") if place.private else share_url
     chunks = compose(
         message,

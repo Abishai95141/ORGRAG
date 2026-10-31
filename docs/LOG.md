@@ -2,6 +2,24 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
 
+## 2026-11-01 (later still) — Track B merged: knowledge gaps, audit log, Slack bot; review fixes
+
+Three features were built in parallel on their own branches (gaps and document requests, roadmap §6 #2; the per-org audit log, §6 #4; the Slack bot), merged with records, migrations chained 0013 → 0014 → 0015 → 0016 (round-trip checked). Each branch got an independent review; what it confirmed was fixed here.
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D44 | **"Answered in org B" hints use only the viewer's own conversations, answers shared by permalink, and verified answers.** | The review found hints quoting other members' private questions and answers in B to anyone who joined B: sharing is opt-in everywhere else. | `test_an_admin_outside_org_b_learns_nothing_about_it`: joining B shows nothing until the author shares the answer. | — |
+| D45 | **A shared answer returns only the sources it cites.** | Pre-existing: the permalink returned every retrieved passage, but permissions were checked only for cited ones, so a restricted snippet could reach a viewer who can't read it. | `test_a_shared_answer_shows_only_the_sources_it_cites`. | — |
+| D46 | **The Slack bot doesn't answer in channels shared with another organization** (`conversations.info`: ext-shared, pending, shared), and tells the asker to DM it. | "Org-wide collections only" in channels assumed everyone in the channel is in the org; Slack Connect channels have outside readers. Guests in ordinary channels aren't detected (documented). | `test_channels_shared_with_other_organizations_get_no_answer`. | — |
+| D47 | **Slack email matching is off by default** (`SLACK_MATCH_EMAILS`); when on, only Slack-confirmed emails of the workspace's own members. Link tokens are single-use and the link page shows the Slack email, not the display name. A Slack error while identifying retries the job. | Strata doesn't verify signup emails, so a matching email proved nothing; a link sent by someone else could make you vouch for their Slack account, and stayed reusable after unlinking. | Four new Slack tests; 18 Slack tests in all. | `SLACK_MATCH_EMAILS=true` (with SSO or emailed invites). |
+| D48 | **A workspace's default org is stored; when it disconnects, unmapped channels answer nothing** instead of passing to whichever org connected next. | No admin of the next org chose that. | `test_unmapped_channels_stop_answering_when_the_default_org_leaves`. | — |
+| D49 | **The features log to each other**: Slack answers carry audit channel `slack`; records queries and record reads are data access; record-type, document-request, Slack, agent and graph changes are admin events (each org's Slack channel events name only that org). The answer's audit insert runs in a savepoint, so it can't lose an answer. | They were built apart and didn't know about each other. | Audit assertions in the records, gaps and Slack tests. | — |
+| D50 | **Gaps: listing collections or graph entities isn't research, records lookups are; a race on duplicate document requests returns the first (200), not a 500; "truncated" counts candidates before filtering.** | Review findings, each confirmed in the code. | `test_what_counts_as_researching_an_answer`, `test_the_same_request_sent_twice_at_once_returns_the_first`. | — |
+
+Known and left as follow-ups (from the reviews): Slack guests in ordinary channels; Slack questions have no per-user rate limit and jump ahead of syncs in the queue; two quick questions in one thread can race on its conversation; the gaps page re-scans traces on every load (fine at hundreds of questions per window, not measured at thousands); verified-answer lists and admin document views aren't logged as reads; deleting an org deletes its audit trail.
+
+Tests: 327 passed, 1 skipped (239 before weeks 5–8).
+
 ## 2026-11-01 (later) — Weeks 5–8 Track A: structured records (and step 6, LangExtract)
 
 ### Decisions

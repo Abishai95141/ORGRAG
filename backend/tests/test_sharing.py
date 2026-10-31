@@ -142,3 +142,46 @@ async def test_dismissed_requests_grant_nothing(app, monkeypatch):
     token = (await admin.post(f"/api/orgs/{slug}/messages/{message['id']}/share")).json()["token"]
     seen = (await member.get(f"/api/shared/{token}")).json()
     assert seen["access"] == "restricted" and seen["missing"][0]["requested"] is False
+
+
+async def test_a_shared_answer_shows_only_the_sources_it_cites(app, monkeypatch):
+    """Retrieved-but-uncited passages were in the permalink unchecked: a restricted
+    document's snippet could reach a viewer who can't read it."""
+    from app.agent import engine
+    from app.core.config import get_settings
+
+    admin = await _signup(app, f"sc{uuid.uuid4().hex[:6]}")
+    member = await _signup(app, f"sd{uuid.uuid4().hex[:6]}")
+    org = await _org(admin, "Cite Co")
+    slug = org["slug"]
+    await _join(admin, member, slug)
+    general = _general(org, (await admin.get(f"/api/orgs/{slug}/collections")).json())
+    board = await admin.post(
+        f"/api/orgs/{slug}/collections",
+        json={"name": "Board", "visibility": "restricted", "allowed_user_ids": []},
+    )
+    await _ingest(admin, slug, general, {"plan.md": "# Merger plan\n\nProject Heron: March."})
+    await _ingest(
+        admin, slug, board.json()["id"], {"price.md": "# Board notes\n\nProject Heron: $40M."}
+    )
+    fake = FakeNvidia(
+        [
+            _tool_turn("search_knowledge", '{"queries": ["Project Heron"]}'),
+            _answer_turn("Project Heron is planned; ask the deal team for details."),
+        ]
+    )
+    monkeypatch.setattr(get_settings(), "nvidia_api_key", "nv-test")
+    monkeypatch.setattr(engine.nvidia, "stream_chat", fake.stream_chat)
+    conv = (await admin.post(f"/api/orgs/{slug}/conversations", json={})).json()
+    message = (
+        await admin.post(
+            f"/api/orgs/{slug}/conversations/{conv['id']}/messages?stream=false",
+            json={"content": "What is Heron?"},
+        )
+    ).json()["message"]
+    assert {s["title"] for s in message["sources"]} >= {"Board notes"}  # retrieved, uncited
+    share = (await admin.post(f"/api/orgs/{slug}/messages/{message['id']}/share")).json()
+    r = await member.get(f"/api/shared/{share['token']}")
+    seen = r.json()
+    assert seen["access"] == "full" and seen["sources"] == []
+    assert "40M" not in r.text and "Board notes" not in r.text

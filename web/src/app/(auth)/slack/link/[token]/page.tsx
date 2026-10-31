@@ -53,7 +53,8 @@ export default function SlackLinkPage({ params }: { params: Promise<{ token: str
     );
 
   const p = preview.data;
-  const who = p.slack_user_name ? `@${p.slack_user_name}` : "This Slack account";
+  // The email is Slack's own record of the account; the display name is whatever its owner typed.
+  const who = p.slack_email ?? (p.slack_user_name ? `@${p.slack_user_name}` : "This Slack account");
   return (
     <div className="flex flex-col gap-6">
       <span className="grid h-[52px] w-[52px] place-items-center rounded-[14px] border border-line bg-surface-2/60 text-ink-2">
@@ -65,7 +66,7 @@ export default function SlackLinkPage({ params }: { params: Promise<{ token: str
         <p className="mt-3 text-[14px] leading-relaxed text-ink-3">
           <span className="font-medium text-ink">{who}</span> in {p.team_name} will be able to ask Strata as{" "}
           <span className="font-medium text-ink">{me.data?.user.email}</span>, and see what you can see. Only confirm if that Slack
-          account is yours.
+          account is yours and you asked the bot yourself: anyone who sends you this link could be asking to act as you.
         </p>
       </div>
 
@@ -77,6 +78,8 @@ export default function SlackLinkPage({ params }: { params: Promise<{ token: str
         <Notice>This Slack account is already connected to another Strata account. It has to be disconnected there first.</Notice>
       ) : p.expired ? (
         <Notice>This link has expired. Ask the Strata bot in Slack again for a new one.</Notice>
+      ) : p.used ? (
+        <Notice>This link was already used. Ask the Strata bot in Slack again for a new one.</Notice>
       ) : !p.eligible ? (
         <Notice>
           None of your organizations has connected {p.team_name}. Ask an admin of your organization to connect it under Settings →

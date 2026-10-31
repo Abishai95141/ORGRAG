@@ -11,6 +11,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import delete, select
 
+from app.core import audit
 from app.core.deps import OrgContext, admin_ctx, org_context
 from app.core.errors import bad_request, conflict, not_found
 from app.models import Collection, Document, Job, Record, RecordRun, RecordSchema
@@ -81,6 +82,53 @@ def _out(
     )
 
 
+def _audited(schema: RecordSchema) -> dict:
+    return {
+        "label": schema.label,
+        "description": schema.description,
+        "fields": [f["name"] + ":" + f.get("type", "text") for f in schema.fields],
+        "key_field": schema.key_field,
+        "status": schema.status,
+    }
+
+
+async def log_reads(
+    ctx: OrgContext, result: records_query.Result, name: str, filters: list[dict]
+) -> None:
+    """Log the documents a records query returned, like a search (the REST API and the
+    MCP tool; chat answers are logged with all their sources). Caller commits."""
+    if not result.rows:
+        return
+    names = dict(
+        (
+            await ctx.db.execute(
+                select(Collection.id, Collection.name).where(
+                    Collection.id.in_({s.collection_id for s in result.schemas})
+                )
+            )
+        ).all()
+    )
+    collection_of = {s.id: names.get(s.collection_id) for s in result.schemas}
+    described = records_query.describe(filters)
+    audit.record_reads(
+        ctx.db,
+        audit.Actor.of(ctx),
+        "search",
+        [
+            {
+                "origin": "knowledge",
+                "org_id": ctx.org_id,
+                "document_id": r.document_id,
+                "title": r.title,
+                "collection_name": collection_of.get(r.schema_id),
+            }
+            for r in result.rows
+        ],
+        query=f"records {name}" + (f": {described}" if described else ""),
+        origin_org_id=ctx.org_id,
+    )
+
+
 async def _schema(ctx: OrgContext, schema_id: uuid.UUID) -> RecordSchema:
     schema = await ctx.db.get(RecordSchema, schema_id)
     if schema is None or schema.org_id != ctx.org_id:
@@ -145,6 +193,10 @@ async def suggest_schemas(collection_id: uuid.UUID, ctx: OrgContext = Depends(ad
     if collection is None or collection.org_id != ctx.org_id:
         raise not_found("Collection")
     schemas = await records_suggest.suggest(ctx.db, collection, ctx.user.id)
+    audit.record_event(
+        ctx, "record_schema.suggested", "collection", collection.id, collection.name,
+        found=[s.name for s in schemas if s.status == "suggested"],
+    )  # fmt: skip
     await ctx.db.commit()
     extracting = await _extracting(ctx)
     return [_out(s, {collection.id: collection}, extracting) for s in schemas]
@@ -177,6 +229,11 @@ async def create_schema(body: RecordSchemaCreate, ctx: OrgContext = Depends(admi
         created_by_id=ctx.user.id,
     )
     ctx.db.add(schema)
+    await ctx.db.flush()
+    audit.record_event(
+        ctx, "record_schema.created", "record_schema", schema.id, schema.label,
+        collection=collection.name, fields=[f["name"] for f in schema.fields],
+    )  # fmt: skip
     await ctx.db.commit()
     return _out(schema, {collection.id: collection})
 
@@ -188,6 +245,7 @@ async def update_schema(
     """Edit a schema or change its status. Activating, or changing the fields of an
     active schema, (re-)extracts its records."""
     schema = await _schema(ctx, schema_id)
+    before = _audited(schema)
     reextract = False
     if body.label is not None:
         schema.label = body.label
@@ -212,6 +270,12 @@ async def update_schema(
     if reextract and schema.status == "active":
         await ctx.db.execute(delete(RecordRun).where(RecordRun.schema_id == schema.id))
         await enqueue_extraction(ctx.db, schema, force=True)
+    if changed := audit.changes(before, _audited(schema)):
+        status = changed.get("status", {}).get("to")
+        action = {"active": "activated", "archived": "archived"}.get(status, "updated")
+        audit.record_event(
+            ctx, f"record_schema.{action}", "record_schema", schema.id, schema.label, **changed
+        )
     await ctx.db.commit()
     collection = await ctx.db.get(Collection, schema.collection_id)
     return _out(schema, {collection.id: collection}, await _extracting(ctx))
@@ -220,6 +284,7 @@ async def update_schema(
 @router.delete("/record-schemas/{schema_id}", status_code=204)
 async def delete_schema(schema_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)):
     schema = await _schema(ctx, schema_id)
+    audit.record_event(ctx, "record_schema.deleted", "record_schema", schema.id, schema.label)
     await ctx.db.delete(schema)  # records and runs cascade
     await ctx.db.commit()
     return Response(status_code=204)
@@ -234,6 +299,9 @@ async def extract_schema(
     if schema.status != "active":
         raise bad_request("Activate the schema before extracting", "schema_inactive")
     await enqueue_extraction(ctx.db, schema, force=force)
+    audit.record_event(
+        ctx, "record_schema.extracted", "record_schema", schema.id, schema.label, force=force
+    )
     await ctx.db.commit()
     return {"queued": True}
 
@@ -265,6 +333,9 @@ async def query_records(body: RecordQueryIn, ctx: OrgContext = Depends(org_conte
         )
     except records_query.QueryError as exc:
         raise bad_request(str(exc), "invalid_query") from exc
+    filters = [f.model_dump() for f in body.filters]
+    await log_reads(ctx, result, body.schema_name, filters)
+    await ctx.db.commit()
     return RecordQueryOut(
         total=result.total,
         schemas=[str(s.id) for s in schemas],
@@ -292,6 +363,14 @@ async def get_record(record_id: uuid.UUID, ctx: OrgContext = Depends(org_context
     doc = await ctx.db.get(Document, record.document_id)
     if doc is None or doc.hidden:
         raise not_found("Record")
+    audit.record_reads(
+        ctx.db,
+        audit.Actor.of(ctx),
+        "read",
+        [audit.document_ref(doc, collections[record.collection_id])],
+        origin_org_id=ctx.org_id,
+    )
+    await ctx.db.commit()
     return RecordOut(
         id=record.id,
         schema_id=record.schema_id,

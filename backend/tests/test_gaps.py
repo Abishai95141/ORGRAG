@@ -385,8 +385,13 @@ async def test_an_admin_outside_org_b_learns_nothing_about_it(app, monkeypatch):
     hints, text = await _hints(x, a["slug"])
     assert hints == [] and _leaks(text, b) == []
 
-    # Once they're a member of B (and can read the handbook), they see where it's answered.
+    # Joining B doesn't open y's private conversations to them…
     await _join(y, x, b["slug"])
+    hints, text = await _hints(x, a["slug"])
+    assert hints == [] and _leaks(text, b) == []
+    # …but once y shares the answer by link (and x can read the handbook), x sees it.
+    share = await y.post(f"/api/orgs/{b['slug']}/messages/{message['id']}/share")
+    assert share.status_code in (200, 201), share.text
     hints, _ = await _hints(x, a["slug"])
     (hint,) = hints
     assert hint["kind"] == "answer" and hint["org"]["slug"] == b["slug"]
@@ -438,7 +443,9 @@ async def test_an_admin_outside_org_b_learns_nothing_about_it(app, monkeypatch):
 
 
 async def test_a_member_of_org_b_needs_the_cited_collection(app, monkeypatch):
-    x, y, a, b, _, hr = await _answered_in_b(app, monkeypatch, restricted=True)
+    x, y, a, b, message, hr = await _answered_in_b(app, monkeypatch, restricted=True)
+    share = await y.post(f"/api/orgs/{b['slug']}/messages/{message['id']}/share")
+    assert share.status_code in (200, 201), share.text
     await _join(y, x, b["slug"])
     hints, text = await _hints(x, a["slug"])
     assert hints == [] and _leaks(text, b) == []
@@ -568,12 +575,45 @@ async def test_document_request_lifecycle(app):
     statuses = [i["status"] for i in (await member.get(f"{base}/mine")).json()["items"]]
     assert statuses == ["dismissed", "dismissed", "fulfilled"]
     assert (await admin.get(f"{base}?status=all")).json()["total"] == 3
+    # Each decision is in the audit log, with who asked.
+    log = (await admin.get(f"/api/orgs/{slug}/audit/events?action=doc_request")).json()["items"]
+    assert sorted(e["action"] for e in log) == [
+        "doc_request.dismissed", "doc_request.dismissed", "doc_request.fulfilled",
+    ]  # fmt: skip
+    done = next(e for e in log if e["action"] == "doc_request.fulfilled")
+    assert done["details"]["requester"] == member.email
+    assert done["details"]["note"] == "Added the handbook"
 
     # Someone who left the org can't be answered any more.
     left = (await other.post(base, json={"title": "Expense policy"})).json()
     assert (await admin.delete(f"/api/orgs/{slug}/members/{await _me(other)}")).status_code == 204
     r = await admin.post(f"{base}/{left['id']}/fulfill", json={"document_id": leave["id"]})
     assert r.status_code == 409 and r.json()["code"] == "not_a_member"
+
+
+async def test_the_same_request_sent_twice_at_once_returns_the_first(app, monkeypatch):
+    """Two identical requests racing: the second insert hits the unique index, rolls back
+    and returns the first (200), not a 500."""
+    from app.api import doc_requests
+
+    admin = await _signup(app, f"ga{uuid.uuid4().hex[:6]}")
+    member = await _signup(app, f"gm{uuid.uuid4().hex[:6]}")
+    slug = (await _org(admin, "Race Co"))["slug"]
+    await _join(admin, member, slug)
+    base = f"/api/orgs/{slug}/doc-requests"
+    first = await member.post(base, json={"title": "Travel policy"})
+    assert first.status_code == 201
+
+    real, calls = doc_requests._open_request, []
+
+    async def racing(ctx, key):  # the other request isn't visible yet at the first check
+        calls.append(key)
+        return None if len(calls) == 1 else await real(ctx, key)
+
+    monkeypatch.setattr(doc_requests, "_open_request", racing)
+    again = await member.post(base, json={"title": "Travel policy"})
+    assert again.status_code == 200, again.text
+    assert again.json()["id"] == first.json()["id"] and len(calls) == 2
 
 
 async def test_requests_attach_to_their_gap_and_fulfilling_addresses_it(app):
@@ -614,3 +654,28 @@ async def test_requests_attach_to_their_gap_and_fulfilling_addresses_it(app):
     await _ask(org, me, "How long is parental leave?")
     clusters = (await admin.get(f"/api/orgs/{slug}/gaps")).json()["clusters"]
     assert clusters[0]["label"] == leave["label"] and not clusters[0]["addressed"]
+
+
+@pytest.mark.parametrize(
+    ("trace", "researched"),
+    [
+        ([{"kind": "search", "detail": {"queries": ["leave"]}}], True),
+        ([{"kind": "records", "detail": {"record_type": "vendor_record"}}], True),
+        ([{"kind": "read", "detail": {}}], True),
+        # "What collections are there?" lists; it doesn't look for an answer.
+        ([{"kind": "search", "detail": {"listing": True}}], False),
+        ([{"kind": "plan", "detail": {}}, {"kind": "answer", "detail": {}}], False),
+    ],
+)
+async def test_what_counts_as_researching_an_answer(app, trace, researched):
+    from sqlalchemy import func, literal, select
+    from sqlalchemy.dialects.postgresql import JSONB
+
+    from app.core.db import SessionLocal
+    from app.gaps import signals
+
+    async with SessionLocal() as db:
+        found = await db.scalar(
+            select(func.jsonb_path_exists(literal(trace, JSONB), signals._path(signals.RESEARCHED)))
+        )
+    assert found is researched

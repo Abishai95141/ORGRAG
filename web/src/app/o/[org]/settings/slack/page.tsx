@@ -238,7 +238,9 @@ function WorkspaceCard({ ws }: { ws: SlackWorkspace }) {
       title: `Reset #${ch.channel_name ?? ch.channel_id}?`,
       body: ws.default_org
         ? `The channel goes back to searching ${ws.default_org.name}, like every channel without its own setting.`
-        : "The channel goes back to searching this workspace's default organization.",
+        : ws.default_elsewhere
+          ? "The channel goes back to searching this workspace's default organization."
+          : "The channel stops answering until it gets its own setting: this workspace has no default organization.",
       confirmLabel: "Reset channel",
     });
     if (!ok) return;
@@ -273,7 +275,11 @@ function WorkspaceCard({ ws }: { ws: SlackWorkspace }) {
       <dl className="mt-4 grid gap-x-4 gap-y-2 text-[13px] sm:grid-cols-[180px_1fr]">
         <dt className="text-ink-3">Channels without a setting</dt>
         <dd>
-          {ws.default_org ? <OrgChips orgs={[ws.default_org]} others={0} /> : <span className="text-ink-3">Another organization</span>}
+          {ws.default_org ? (
+            <OrgChips orgs={[ws.default_org]} others={0} />
+          ) : (
+            <span className="text-ink-3">{ws.default_elsewhere ? "Another organization" : "None: the organization that connected first has disconnected"}</span>
+          )}
         </dd>
         <dt className="text-ink-3">Direct messages</dt>
         <dd className="text-ink-2">Every connected organization the asker belongs to</dd>

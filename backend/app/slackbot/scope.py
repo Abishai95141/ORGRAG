@@ -48,6 +48,11 @@ async def connected_orgs(db: AsyncSession, workspace_id: uuid.UUID) -> list[Orga
     return list(rows.scalars())
 
 
+def default_orgs(default_org_id: uuid.UUID | None, connected: list[Organization]):
+    """What an unmapped channel searches: the workspace's default org while it's connected."""
+    return [o for o in connected if o.id == default_org_id]
+
+
 async def channel_mapping(
     db: AsyncSession, workspace_id: uuid.UUID, channel_id: str
 ) -> SlackChannel | None:
@@ -67,12 +72,13 @@ async def place_orgs(
     *,
     private: bool,
     connected: list[Organization],
+    default_org_id: uuid.UUID | None,
 ) -> list[Organization]:
     if private:
         return connected
     mapping = await channel_mapping(db, workspace_id, channel_id)
     if mapping is None:
-        return connected[:1]
+        return default_orgs(default_org_id, connected)
     by_id = {o.id: o for o in connected}
     return [by_id[i] for i in dict.fromkeys(mapping.org_ids) if i in by_id]
 

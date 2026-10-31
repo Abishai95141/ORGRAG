@@ -228,13 +228,15 @@ async def open_shared(
         return base
     base.access = "full"
     base.answer = message.content
-    base.sources = message.sources  # the full list, so [n] markers resolve
+    # Only what the answer cites: those are the sources checked above, and every [n] in
+    # the text is one of them. Passages it retrieved but didn't cite stay private.
+    base.sources = sources
     # A read of every org whose documents the viewer now sees through the answer.
     audit.record_reads(
         db,
         audit.Actor.of_user(user),
         "shared",
-        message.sources,
+        sources,
         query=question,
         origin_org_id=share.org_id,
         message_id=message.id,

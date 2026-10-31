@@ -38,6 +38,12 @@ def upgrade() -> None:
         sa.Column("app_id", sa.String(32), nullable=True),
         sa.Column("scopes", sa.Text(), nullable=False, server_default=""),
         sa.Column("secrets", postgresql.JSONB(), nullable=False),
+        sa.Column(
+            "default_org_id",
+            sa.Uuid(),
+            sa.ForeignKey("organizations.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )

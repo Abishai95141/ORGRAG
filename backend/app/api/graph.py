@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 
 from app.api.scope import key_collection_ids
+from app.core import audit
 from app.core.config import get_settings
 from app.core.deps import OrgContext, admin_ctx, org_context
 from app.core.errors import bad_request, not_found
@@ -66,6 +67,7 @@ async def rebuild_graph(ctx: OrgContext = Depends(admin_ctx)):
         await ctx.db.execute(select(Source).where(Source.org_id == ctx.org_id))
     ).scalars():
         await enqueue_graph(ctx.db, source)
+    audit.record_event(ctx, "graph.rebuilt", "organization", ctx.org_id, ctx.org.name)
     await ctx.db.commit()
     return await _stats(ctx)
 

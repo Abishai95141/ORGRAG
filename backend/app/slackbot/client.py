@@ -157,6 +157,10 @@ async def user_info(token: str, user: str) -> dict[str, Any]:
     return (await call("users.info", token=token, user=user))["user"]
 
 
+async def channel_info(token: str, channel: str) -> dict[str, Any]:
+    return (await call("conversations.info", token=token, channel=channel))["channel"]
+
+
 async def bot_channels(token: str, max_pages: int = 10) -> list[dict[str, Any]]:
     """Channels the bot is a member of (public and private), for the channel picker."""
     channels: list[dict[str, Any]] = []

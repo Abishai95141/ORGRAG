@@ -180,15 +180,7 @@ async def run(toolbox, schemas: list[RecordSchema], args: dict[str, Any]):
         raise ToolInputError(str(exc)) from exc
 
     label = matching[0].label
-    described = (
-        " AND ".join(
-            f"{f.get('field')} {f.get('op', 'eq')} {f.get('value')!r}"
-            if f.get("op") not in ("exists", "missing")
-            else f"{f.get('field')} {f.get('op')}"
-            for f in filters
-        )
-        or "no filters"
-    )
+    described = records_query.describe(filters) or "no filters"
     head = (
         f"query_records {name} ({label}), {described}: {result.total} matching record(s). "
         "Exact: every record of this type in scope was checked."

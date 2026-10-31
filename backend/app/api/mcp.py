@@ -36,6 +36,7 @@ from app.agent.citations import cited_refs
 from app.agent.engine import direct_search
 from app.agent.tools import paginate
 from app.api.chat import DEFAULT_TITLE, begin_answer, wait_for_answer
+from app.api.records import log_reads as log_record_reads
 from app.api.scope import key_collection_ids
 from app.core import audit
 from app.core.config import get_settings
@@ -373,6 +374,8 @@ async def query_records(
             )
         except records_query.QueryError as e:
             raise ToolError(str(e)) from e
+        await log_record_reads(ctx, result, record_type, filters or [])
+        await ctx.db.commit()
         return RecordResults(
             total=result.total,
             rows=[

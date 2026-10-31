@@ -727,6 +727,11 @@ class SlackWorkspace(Base):
     scopes: Mapped[str] = mapped_column(Text, default="", nullable=False)
     # {"bot_token": "xoxb-…"}, encrypted at rest (app.core.crypto); never returned.
     secrets: Mapped[dict[str, Any]] = mapped_column(EncryptedJSON, default=dict, nullable=False)
+    # The org unmapped channels search: the first to connect. Cleared when it disconnects,
+    # so unmapped channels then search nothing rather than another org nobody chose.
+    default_org_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("organizations.id", ondelete="SET NULL")
+    )
     created_at: Mapped[datetime] = _created()
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False

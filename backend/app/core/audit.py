@@ -57,7 +57,7 @@ class Actor:
     user_id: uuid.UUID | None
     name: str
     email: str
-    channel: str = "app"  # app (signed in) | api (API key) | mcp (API key, MCP server)
+    channel: str = "app"  # app (signed in) | api (API key) | mcp (API key, MCP server) | slack
     api_key_id: uuid.UUID | None = None
     api_key_name: str | None = None
 
@@ -68,14 +68,20 @@ class Actor:
             user_id=ctx.user.id,
             name=ctx.user.name,
             email=ctx.user.email,
-            channel="mcp" if ctx.via_mcp else "api" if key is not None else "app",
+            channel="mcp"
+            if ctx.via_mcp
+            else "slack"
+            if ctx.via_slack
+            else "api"
+            if key is not None
+            else "app",
             api_key_id=key.id if key is not None else None,
             api_key_name=key.name if key is not None else None,
         )
 
     @classmethod
-    def of_user(cls, user: User) -> "Actor":
-        return cls(user_id=user.id, name=user.name, email=user.email)
+    def of_user(cls, user: User, channel: str = "app") -> "Actor":
+        return cls(user_id=user.id, name=user.name, email=user.email, channel=channel)
 
     def columns(self) -> dict[str, Any]:
         return {

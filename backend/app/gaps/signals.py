@@ -26,7 +26,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.agent.citations import cited_refs
-from app.models import Conversation, Message, MessageCitation, SearchEvent, VerifiedAnswer
+from app.models import (
+    Conversation,
+    Message,
+    MessageCitation,
+    SearchEvent,
+    SharedAnswer,
+    VerifiedAnswer,
+)
 
 REASONS = ("unanswered", "incomplete", "downvoted", "no_results")
 # What the engine labels a coverage check that found everything (engine._coverage_note);
@@ -35,7 +42,12 @@ COVERED_LABEL = "Sources cover the question"
 
 # Only the trace steps read here leave the database: traces carry up to 8000 characters
 # of reasoning per step, which gap detection never needs.
-RESEARCHED = '$[*] ? (@.kind == "search" || @.kind == "read")'
+# Searching, reading or querying records for the answer; listing collections or graph
+# entities (detail.listing) doesn't count, so "what collections exist?" isn't a gap.
+RESEARCHED = (
+    '$[*] ? ((@.kind == "search" && !(exists(@.detail.listing))) '
+    '|| @.kind == "read" || @.kind == "records")'
+)
 REPORTED_MISSING = '$[*] ? (@.kind == "reflect" && exists(@.detail.missing))'
 COVERAGE_CHECKS = (
     '$[*] ? (@.kind == "reflect" && (exists(@.detail.missing) || @.label == "'
@@ -165,7 +177,7 @@ def _checks():
 
 async def answer_signals(
     db: AsyncSession, org_id: uuid.UUID, since: datetime, limit: int
-) -> list[Signal]:
+) -> tuple[list[Signal], bool]:
     """Answers in the org's conversations that were gaps, newest first. The SQL narrows
     to candidates (thumbs-down; researched with no knowledge citation; missing facts
     reported); `gap_reasons` decides."""
@@ -197,8 +209,10 @@ async def answer_signals(
         .order_by(Message.created_at.desc())
         .limit(limit)
     )
+    rows = rows.all()
     out: list[Signal] = []
-    for content, sources, feedback, at, user_id, did_research, checks, question in rows.all():
+    out_of: int = len(rows)  # candidates read, before the reasons filter
+    for content, sources, feedback, at, user_id, did_research, checks, question in rows:
         reasons, missing = gap_reasons(
             content=content,
             sources=sources,
@@ -208,12 +222,12 @@ async def answer_signals(
         )
         if reasons and question and question.strip():
             out.append(Signal(question.strip(), user_id, at, reasons, missing))
-    return out
+    return out, out_of >= limit
 
 
 async def search_signals(
     db: AsyncSession, org_id: uuid.UUID, since: datetime, limit: int
-) -> list[Signal]:
+) -> tuple[list[Signal], bool]:
     """Direct searches in the org that found nothing, newest first."""
     rows = await db.execute(
         select(SearchEvent.query, SearchEvent.user_id, SearchEvent.created_at)
@@ -234,9 +248,11 @@ async def search_signals(
 
 
 async def good_answers(
-    db: AsyncSession, org_id: uuid.UUID, since: datetime, limit: int
+    db: AsyncSession, org_id: uuid.UUID, since: datetime, limit: int, viewer_id: uuid.UUID
 ) -> list[Answered]:
-    """Good answers in the org's conversations, newest first."""
+    """Good answers in the org's conversations that `viewer_id` may already see, newest
+    first: their own, and answers someone shared by link (the permalink's per-source
+    check still applies). Other people's private conversations never become hints."""
     rows = await db.execute(
         select(
             Message.content,
@@ -254,6 +270,12 @@ async def good_answers(
             Message.created_at >= since,
             or_(Message.feedback.is_(None), Message.feedback != "down"),
             exists().where(MessageCitation.message_id == Message.id),
+            or_(
+                Conversation.user_id == viewer_id,
+                exists().where(
+                    SharedAnswer.message_id == Message.id, SharedAnswer.revoked_at.is_(None)
+                ),
+            ),
         )
         .order_by(Message.created_at.desc())
         .limit(limit)

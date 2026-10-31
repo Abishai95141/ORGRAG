@@ -18,6 +18,7 @@ from sqlalchemy import any_, delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import audit
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import OrgContext, admin_ctx, current_user, role_at_least, session_user
@@ -125,7 +126,8 @@ async def _workspace_out(
         bot_user_id=workspace.bot_user_id,
         connected_at=conn.created_at,
         connected_by=await _person(ctx.db, conn.connected_by_id),
-        default_org=mine.get(connected[0].id) if connected else None,
+        default_org=mine.get(workspace.default_org_id) if workspace.default_org_id else None,
+        default_elsewhere=bool(workspace.default_org_id) and workspace.default_org_id not in mine,
         orgs=[mine[o.id] for o in connected if o.id in mine],
         other_org_count=sum(1 for o in connected if o.id not in mine),
     )
@@ -246,8 +248,14 @@ async def slack_oauth_callback(
             SlackConnection.org_id == org.id, SlackConnection.workspace_id == workspace.id
         )
     )
+    if workspace.default_org_id is None:  # the first org to connect answers unmapped channels
+        workspace.default_org_id = org.id
     if exists is None:
         db.add(SlackConnection(org_id=org.id, workspace_id=workspace.id, connected_by_id=user.id))
+        audit.add_event(
+            db, org.id, audit.Actor.of_user(user), "slack.connected", "slack_workspace",
+            workspace.id, workspace.team_name, team_id=workspace.team_id,
+        )  # fmt: skip
     await db.commit()
     log.info("Slack workspace %s connected to %s", workspace.team_id, org.slug)
     return back(connected=workspace.team_name)
@@ -259,6 +267,8 @@ async def disconnect_workspace(workspace_id: uuid.UUID, ctx: OrgContext = Depend
     When no org is left connected, the bot token is revoked and the workspace forgotten."""
     conn = await _connection(ctx, workspace_id)
     workspace = await ctx.db.get(SlackWorkspace, workspace_id)
+    if workspace is not None and workspace.default_org_id == ctx.org_id:
+        workspace.default_org_id = None  # unmapped channels stop answering, not switch orgs
     await ctx.db.delete(conn)
     mappings = await ctx.db.execute(
         select(SlackChannel).where(
@@ -277,6 +287,10 @@ async def disconnect_workspace(workspace_id: uuid.UUID, ctx: OrgContext = Depend
     if not remaining and workspace is not None:
         token = (workspace.secrets or {}).get("bot_token")
         await ctx.db.delete(workspace)
+    audit.record_event(
+        ctx, "slack.disconnected", "slack_workspace", workspace_id,
+        workspace.team_name if workspace else None, uninstalled=bool(token),
+    )  # fmt: skip
     await ctx.db.commit()
     if token:
         try:
@@ -333,6 +347,27 @@ async def list_bot_channels(workspace_id: uuid.UUID, ctx: OrgContext = Depends(a
         for c in sorted(channels, key=lambda c: (c.get("name") or "").lower())
         if c.get("id")
     ]
+
+
+def _scope_events(
+    ctx: OrgContext,
+    workspace_id: uuid.UUID,
+    channel_id: str,
+    channel_name: str | None,
+    old: list[uuid.UUID],
+    new: list[uuid.UUID],
+) -> None:
+    """An event in each org a channel starts or stops answering from. Each org's entry
+    names only that org's change, never the other orgs in the channel's scope."""
+    actor = audit.Actor.of(ctx)
+    label = f"#{channel_name}" if channel_name else channel_id
+    for org_id, action in [(o, "slack.channel_added") for o in new if o not in old] + [
+        (o, "slack.channel_removed") for o in old if o not in new
+    ]:
+        audit.add_event(
+            ctx.db, org_id, actor, action, "slack_channel", channel_id, label,
+            workspace_id=str(workspace_id),
+        )  # fmt: skip
 
 
 async def _check_change(ctx: OrgContext, old: list[uuid.UUID], new: list[uuid.UUID]) -> None:
@@ -394,7 +429,9 @@ async def set_channel(
             f"{', '.join(offline)} hasn't connected this Slack workspace", "org_not_connected"
         )
     mapping = await scope.channel_mapping(ctx.db, workspace_id, channel_id)
-    old = list(mapping.org_ids) if mapping else [o.id for o in connected[:1]]
+    workspace = await ctx.db.get(SlackWorkspace, workspace_id)
+    unmapped = [o.id for o in scope.default_orgs(workspace.default_org_id, connected)]
+    old = list(mapping.org_ids) if mapping else unmapped
     # Orgs in the scope the caller isn't a member of can't be named here; they're kept
     # (after the caller's), not dropped by an edit that couldn't show them.
     mine = set(await _my_orgs(ctx.db, ctx.user.id, old))
@@ -408,6 +445,7 @@ async def set_channel(
     mapping.channel_name = body.channel_name or mapping.channel_name
     mapping.updated_by_id = ctx.user.id
     mapping.updated_at = datetime.now(UTC)
+    _scope_events(ctx, workspace_id, channel_id, mapping.channel_name, old, new)
     await ctx.db.commit()
     return await _channel_out(ctx, mapping)
 
@@ -424,7 +462,10 @@ async def reset_channel(
     if mapping is None:
         raise not_found("Channel mapping")
     connected = await scope.connected_orgs(ctx.db, workspace_id)
-    await _check_change(ctx, list(mapping.org_ids), [o.id for o in connected[:1]])
+    workspace = await ctx.db.get(SlackWorkspace, workspace_id)
+    default = [o.id for o in scope.default_orgs(workspace.default_org_id, connected)]
+    await _check_change(ctx, list(mapping.org_ids), default)
+    _scope_events(ctx, workspace_id, channel_id, mapping.channel_name, mapping.org_ids, default)
     await ctx.db.delete(mapping)
     await ctx.db.commit()
     return Response(status_code=204)
@@ -584,6 +625,14 @@ def _link_out(link: SlackUserLink, workspace: SlackWorkspace) -> SlackLinkOut:
     )
 
 
+async def _used(db: AsyncSession, claim) -> bool:
+    """Links carry a one-time id, recorded with the dedupe ids of Slack events (pruned
+    after a day, well past the link's hour)."""
+    if not claim.jti:
+        return False
+    return await db.get(SlackEvent, f"link:{claim.jti}") is not None
+
+
 @router.get("/slack/link/{token}", response_model=SlackLinkPreview)
 async def preview_link(
     token: str, user: User = Depends(session_user), db: AsyncSession = Depends(get_db)
@@ -596,7 +645,9 @@ async def preview_link(
         team_name=workspace.team_name,
         slack_user_id=claim.slack_user_id,
         slack_user_name=claim.slack_user_name,
+        slack_email=claim.slack_email,
         expired=claim.expired,
+        used=await _used(db, claim),
         linked="none" if existing is None else "you" if existing.user_id == user.id else "other",
         eligible=await _eligible(db, user, workspace),
     )
@@ -627,6 +678,10 @@ async def confirm_link(
         raise forbidden(
             f"None of your organizations has connected the {workspace.team_name} Slack workspace"
         )
+    if await _used(db, claim):
+        raise conflict("This link was already used; ask the bot again for a new one", "link_used")
+    # Spent for good: after a disconnect, the same link can't connect the account again.
+    db.add(SlackEvent(event_id=f"link:{claim.jti}", team_id=workspace.team_id))
     link = SlackUserLink(
         workspace_id=workspace.id,
         slack_user_id=claim.slack_user_id,

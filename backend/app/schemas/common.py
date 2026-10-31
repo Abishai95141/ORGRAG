@@ -705,7 +705,9 @@ class SlackWorkspaceOut(BaseModel):
     connected_by: PersonOut | None
     # The org unmapped channels search (the earliest connection); null when the caller
     # isn't a member of it.
-    default_org: SlackOrgOut | None
+    default_org: SlackOrgOut | None  # the caller's org that unmapped channels search
+    # Unmapped channels search an org the caller isn't in (False: they search nothing).
+    default_elsewhere: bool = False
     # Connected orgs the caller belongs to; the others are only counted.
     orgs: list[SlackOrgOut]
     other_org_count: int
@@ -749,7 +751,10 @@ class SlackLinkPreview(BaseModel):
     team_name: str
     slack_user_id: str
     slack_user_name: str | None
+    # The Slack account's email as Slack reports it (its display name is self-chosen).
+    slack_email: str | None = None
     expired: bool
+    used: bool = False  # the link was already used once
     # Who this Slack user is linked to now: nobody, the caller, or someone else.
     linked: Literal["none", "you", "other"]
     # The caller belongs to an org connected to the workspace (else they can't link).
@@ -902,7 +907,7 @@ DocRequestPage = Page[DocRequestOut]
 
 # ── audit log ────────────────────────────────────────────────────────────────
 AccessKind = Literal["chat", "search", "read", "shared"]
-AuditChannel = Literal["app", "api", "mcp"]
+AuditChannel = Literal["app", "api", "mcp", "slack"]
 AuditLog = Literal["access", "events"]
 ExportFormat = Literal["csv", "jsonl"]
 

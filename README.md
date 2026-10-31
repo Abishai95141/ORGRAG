@@ -208,11 +208,15 @@ running (`make worker`, or the `worker` container).
    To install into workspaces other than the app's own, turn on **Manage Distribution**.
 4. In Slack, invite the bot to channels (`/invite @Strata`). Unmapped channels search the
    organization that connected first; under **Settings → Slack → Channel scopes** an
-   admin can point a channel at other connected organizations (a Slack Connect channel
-   shared with a client, say).
+   admin can point a channel at other connected organizations. The bot doesn't answer in
+   channels shared with another organization (Slack Connect), whose outside members
+   would read the answer; it asks people to DM it there.
+5. People are answered once they link their Slack account (a one-time link the bot sends
+   them). If your Strata accounts come from SSO or emailed invitations, set
+   `SLACK_MATCH_EMAILS=true` to also answer people whose confirmed Slack email matches.
 
-People whose Slack email matches their Strata email are recognized automatically; anyone
-else gets a private link to connect their account the first time they ask.
+Each asker is answered with their own Strata permissions; in channels, only collections
+the whole organization can read are searched.
 
 ```yaml
 display_information:

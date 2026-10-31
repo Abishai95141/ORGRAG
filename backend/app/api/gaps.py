@@ -179,7 +179,9 @@ class _Elsewhere:
         found: dict[tuple, signals.Answered] = {}
         for org_id in self.orgs:
             answers = await signals.verified_answers(db, org_id, MAX_ANSWERS_PER_ORG)
-            answers += await signals.good_answers(db, org_id, since, MAX_ANSWERS_PER_ORG)
+            answers += await signals.good_answers(
+                db, org_id, since, MAX_ANSWERS_PER_ORG, self.ctx.user.id
+            )
             for a in answers:  # one per org, kind and question; the newest wins
                 kind = "verified" if a.verified_answer_id else "answer"
                 found.setdefault((org_id, kind, signals.text_key(a.question)), a)
@@ -270,10 +272,11 @@ async def knowledge_gaps(
     document request has addressed since go last."""
     since_date = datetime.now(UTC).date() - timedelta(days=days - 1)
     since = datetime.combine(since_date, datetime.min.time(), tzinfo=UTC)
-    answers = await signals.answer_signals(ctx.db, ctx.org_id, since, MAX_QUESTIONS)
+    answers, capped = await signals.answer_signals(ctx.db, ctx.org_id, since, MAX_QUESTIONS)
     searches = await signals.search_signals(ctx.db, ctx.org_id, since, MAX_QUESTIONS)
     found = sorted(answers + searches, key=lambda s: s.at, reverse=True)
-    truncated = MAX_QUESTIONS in (len(answers), len(searches)) or len(found) > MAX_QUESTIONS
+    # Capped when either query hit its limit (answers are counted before filtering).
+    truncated = capped or len(searches) == MAX_QUESTIONS or len(found) > MAX_QUESTIONS
     found = found[:MAX_QUESTIONS]
 
     threshold = clustering.similarity_threshold()

@@ -138,11 +138,44 @@ async def test_schemas_are_suggested_activated_extracted_and_queried(app):
     await admin.patch(f"/api/orgs/{slug}/documents/{basalt['id']}", json={"hidden": True})
     assert (await member.post(q, json=body)).json()["total"] == 1
 
+    # One schema, with extraction state; members see only active ones.
+    one = f"/api/orgs/{slug}/record-schemas/{vendor['id']}"
+    detail = (await member.get(one)).json()
+    assert detail["extracting"] is False and detail["failures"] == []
+    assert detail["stats"]["records"] == 4 and "samples" not in detail["stats"]
+    assert (await member.get(f"/api/orgs/{slug}/record-schemas/{teams['id']}")).status_code == 404
+    rec = {r["key"]: r["id"] for r in out["rows"]}
+    r = await member.get(f"/api/orgs/{slug}/records/{rec['harbor cloud']}")
+    assert r.status_code == 200 and r.json()["key"] == "harbor cloud"
+    hidden = await member.get(f"/api/orgs/{slug}/records/{rec['basalt analytics']}")
+    assert hidden.status_code == 404  # its document is hidden
+
     # Archiving removes the records; members no longer see the type.
     await admin.patch(
         f"/api/orgs/{slug}/record-schemas/{vendor['id']}", json={"status": "archived"}
     )
     assert (await member.post(q, json=body)).status_code == 404
+    assert (await member.get(one)).status_code == 404
+
+    # The audit log has the admin's changes and the member's reads.
+    events = (await admin.get(f"/api/orgs/{slug}/audit/events?action=record_schema")).json()
+    actions = [e["action"] for e in events["items"]]
+    assert actions.count("record_schema.activated") == 1
+    assert actions.count("record_schema.archived") == 1
+    assert "record_schema.suggested" in actions
+    activated = next(e for e in events["items"] if e["action"] == "record_schema.activated")
+    assert activated["details"]["status"] == {"from": "suggested", "to": "active"}
+    member_id = (await member.get("/api/auth/me")).json()["user"]["id"]
+    reads = (await admin.get(f"/api/orgs/{slug}/audit/access?actor_id={member_id}")).json()
+    searches = [e for e in reads["items"] if e["kind"] == "search"]
+    assert any(e["query"] == "records vendor_record: risk_tier eq 'high'" for e in searches)
+    assert {d["title"] for e in searches for d in e["documents"]} >= {
+        "Vendor record: Basalt Analytics", "Vendor record: Harbor Cloud",
+    }  # fmt: skip
+    assert any(e["kind"] == "read" for e in reads["items"])  # GET /records/{id}
+    # Every query that returned records is logged (a count returns its records too);
+    # a group-by and failed queries return none.
+    assert len(searches) == 4
 
 
 @pytest.mark.integration

@@ -138,6 +138,16 @@ def _condition(f: dict[str, Any], op: str, raw: Any, i: int) -> tuple[str, dict[
     return f"{expr} {_CMP[op]} :v{i}", params
 
 
+def describe(filters: list[dict[str, Any]]) -> str:
+    """Filters as text, for traces and the audit log: "risk_tier eq 'High' AND x missing"."""
+    return " AND ".join(
+        f"{f.get('field')} {f.get('op')}"
+        if f.get("op") in ("exists", "missing")
+        else f"{f.get('field')} {f.get('op', 'eq')} {f.get('value')!r}"
+        for f in filters
+    )
+
+
 async def run(
     db: AsyncSession,
     schemas: list[RecordSchema],

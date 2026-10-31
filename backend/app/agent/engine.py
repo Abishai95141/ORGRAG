@@ -1025,6 +1025,8 @@ class AgentRun:
                 step = await self.em.step_start(
                     "search",
                     "Listing entities" if listing else f"Exploring “{args.get('name', '')}”",
+                    # Listing what exists isn't looking for an answer (app.gaps.signals).
+                    {"listing": True} if listing else None,
                 )
                 started = time.perf_counter()
                 try:
@@ -1071,7 +1073,7 @@ class AgentRun:
                 )
                 return outcome.text, False
             if name == "list_collections":
-                step = await self.em.step_start("search", "Listing collections")
+                step = await self.em.step_start("search", "Listing collections", {"listing": True})
                 content = await self.tools.list_collections()
                 await self.em.step_update(step, label="Listed collections", status="done")
                 return content, False
@@ -1118,7 +1120,11 @@ class AgentRun:
                     hits=len(self.registry),
                 )
             )
-        await audit.record_answer(db, self.req, message)  # each org whose documents it read
+        try:  # a failed audit insert mustn't lose the answer (or its error state)
+            async with db.begin_nested():
+                await audit.record_answer(db, self.req, message)  # each org whose data it read
+        except Exception:
+            log.exception("Recording the answer's data access failed")
         conversation = await db.get(Conversation, self.req.conversation_id)
         if conversation:
             conversation.updated_at = datetime.now(UTC)

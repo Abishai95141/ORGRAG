@@ -142,6 +142,10 @@ class Settings(BaseSettings):
     slack_client_id: str | None = None
     slack_client_secret: str | None = None
     slack_signing_secret: str | None = None
+    # Answer Slack users whose Slack email matches a Strata account without asking them to
+    # link accounts first. Off by default: Strata doesn't verify signup emails, so a match
+    # proves nothing unless accounts come from SSO or invitations sent by email.
+    slack_match_emails: bool = False
 
     worker_poll_seconds: float = 2.0
     worker_concurrency: int = 2

@@ -109,6 +109,8 @@ class OrgContext:
     api_key: ApiKey | None = None
     # The request came through the MCP server (attributed as such in the audit log).
     via_mcp: bool = False
+    # Set for questions asked through the Slack bot (app.slackbot.answer).
+    via_slack: bool = False
 
     @property
     def org_id(self) -> uuid.UUID:

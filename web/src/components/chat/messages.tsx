@@ -329,7 +329,8 @@ function MessageToolbar({
  */
 function answerShortfall(steps: TraceStep[], cited: SourceRef[]): "short" | "fine" | "about-attachment" {
   if (cited.some((s) => s.origin === "attachment")) return "about-attachment";
-  const researched = steps.some((s) => s.kind === "search" || s.kind === "read");
+  // The same rule as the gaps report (app/gaps/signals.py): listing collections or graph entities isn't research.
+  const researched = steps.some((s) => (s.kind === "search" && !s.detail.listing) || s.kind === "read" || s.kind === "records");
   if (researched && !cited.some((s) => s.origin === "knowledge")) return "short";
   let missing = false;
   for (const s of steps) {

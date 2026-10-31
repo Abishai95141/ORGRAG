@@ -197,6 +197,10 @@ export type TraceStep = {
     document_title?: string;
     /** Coverage check: facts the sources didn't state. */
     missing?: string[];
+    /** Listing collections or graph entities: not a search for the answer. */
+    listing?: boolean;
+    /** query_records: the record type looked up. */
+    record_type?: string;
   };
   started_at: string;
   finished_at: string | null;
@@ -285,7 +289,7 @@ export type VerifiedAnswerInput = {
 export type CursorPage<T> = { items: T[]; next_cursor: string | null; limit: number };
 
 export type AccessKind = "chat" | "search" | "read" | "shared";
-export type AuditChannel = "app" | "api" | "mcp";
+export type AuditChannel = "app" | "api" | "mcp" | "slack";
 
 /** Who acted, as recorded at the time. With an API key, the user fields are its creator. */
 export type AuditActor = {
@@ -525,6 +529,7 @@ export type SlackWorkspace = {
   connected_by: Person | null;
   /** The org unmapped channels search (the first to connect); null if you're not in it. */
   default_org: SlackOrg | null;
+  default_elsewhere: boolean;
   orgs: SlackOrg[];
   other_org_count: number;
 };
@@ -553,7 +558,9 @@ export type SlackLinkPreview = {
   team_name: string;
   slack_user_id: string;
   slack_user_name: string | null;
+  slack_email: string | null;
   expired: boolean;
+  used: boolean;
   linked: "none" | "you" | "other";
   eligible: boolean;
 };

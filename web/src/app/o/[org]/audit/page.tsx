@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconBuilding, IconChevronDown, IconDownload, IconFile, IconKey, IconSearch, IconX } from "@/components/icons";
+import { IconBuilding, IconChannel, IconChevronDown, IconDownload, IconFile, IconKey, IconSearch, IconX } from "@/components/icons";
 import { Avatar, CompassArt, NoResultsArt } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
 import { Badge, Button, Card, EmptyState, Input, Menu, MenuContent, MenuItem, MenuLabel, MenuTrigger, PageHeader, Segmented, Select, Skeleton, Tooltip } from "@/components/ui";
@@ -36,6 +36,7 @@ const CHANNELS: { value: AuditChannel | "all"; label: string }[] = [
   { value: "app", label: "Strata app" },
   { value: "api", label: "API key" },
   { value: "mcp", label: "MCP server" },
+  { value: "slack", label: "Slack" },
 ];
 
 const GROUPS = [
@@ -50,6 +51,11 @@ const GROUPS = [
   { value: "share", label: "Share links" },
   { value: "access_request", label: "Access requests" },
   { value: "verified_answer", label: "Verified answers" },
+  { value: "agent", label: "Agents" },
+  { value: "graph", label: "Knowledge graph" },
+  { value: "record_schema", label: "Record types" },
+  { value: "doc_request", label: "Document requests" },
+  { value: "slack", label: "Slack" },
   { value: "audit", label: "Audit exports" },
 ];
 
@@ -93,6 +99,23 @@ const ACTIONS: Record<string, { verb: string; target?: false }> = {
   "verified_answer.updated": { verb: "edited the verified answer to" },
   "verified_answer.reverified": { verb: "re-verified the answer to" },
   "verified_answer.deleted": { verb: "deleted the verified answer to" },
+  "agent.created": { verb: "created the agent" },
+  "agent.updated": { verb: "edited the agent" },
+  "agent.deleted": { verb: "deleted the agent" },
+  "graph.rebuilt": { verb: "rebuilt the knowledge graph", target: false },
+  "record_schema.suggested": { verb: "looked for record types in" },
+  "record_schema.created": { verb: "created the record type" },
+  "record_schema.updated": { verb: "edited the record type" },
+  "record_schema.activated": { verb: "activated the record type" },
+  "record_schema.archived": { verb: "archived the record type" },
+  "record_schema.extracted": { verb: "re-extracted the record type" },
+  "record_schema.deleted": { verb: "deleted the record type" },
+  "doc_request.fulfilled": { verb: "fulfilled the document request" },
+  "doc_request.dismissed": { verb: "dismissed the document request" },
+  "slack.connected": { verb: "connected the Slack workspace" },
+  "slack.disconnected": { verb: "disconnected the Slack workspace" },
+  "slack.channel_added": { verb: "made this organization answer in" },
+  "slack.channel_removed": { verb: "stopped this organization answering in" },
   "audit.exported": { verb: "exported the audit log:" },
 };
 
@@ -528,6 +551,14 @@ function ActorName({ actor, onActor }: { actor: AuditActor; onActor: (a: AuditAc
 
 function ChannelBadge({ actor, channel, onActor }: { actor: AuditActor; channel: AuditChannel; onActor: (a: AuditActor, byKey?: boolean) => void }) {
   if (channel === "app") return null;
+  if (channel === "slack")
+    return (
+      <Tooltip label="Asked in Slack, answered with this person's Strata permissions">
+        <Badge tone="outline">
+          <IconChannel size={12} /> Slack
+        </Badge>
+      </Tooltip>
+    );
   return (
     <Tooltip label={`Through ${channel === "mcp" ? "the MCP server" : "the API"} with an API key created by ${actor.email}. Click to show only this key.`}>
       <button type="button" onClick={() => onActor(actor, true)} className="inline-flex">

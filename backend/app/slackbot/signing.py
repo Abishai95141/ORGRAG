@@ -98,12 +98,25 @@ class LinkClaim:
     slack_user_id: str
     slack_user_name: str | None
     expired: bool
+    slack_email: str | None = None  # the Slack account's own email, as Slack reports it
+    jti: str | None = None  # one use per link
 
 
 def make_link_token(
-    workspace_id: uuid.UUID, team_id: str, slack_user_id: str, slack_user_name: str | None
+    workspace_id: uuid.UUID,
+    team_id: str,
+    slack_user_id: str,
+    slack_user_name: str | None,
+    slack_email: str | None = None,
 ) -> str:
-    payload = {"w": str(workspace_id), "t": team_id, "u": slack_user_id, "n": slack_user_name}
+    payload = {
+        "w": str(workspace_id),
+        "t": team_id,
+        "u": slack_user_id,
+        "n": slack_user_name,
+        "e": slack_email,
+        "j": uuid.uuid4().hex,
+    }
     return _encode(payload, _LINK_AUDIENCE, LINK_TTL)
 
 
@@ -120,6 +133,8 @@ def read_link_token(token: str) -> LinkClaim | None:
             slack_user_id=str(claims["u"]),
             slack_user_name=claims.get("n"),
             expired=float(claims["exp"]) <= time.time(),
+            slack_email=claims.get("e"),
+            jti=claims.get("j"),
         )
     except (KeyError, ValueError, TypeError):
         return None

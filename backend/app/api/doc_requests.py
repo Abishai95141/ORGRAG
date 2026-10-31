@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.sharing import _own_answer
+from app.core import audit
 from app.core.deps import OrgContext, admin_ctx, org_context
 from app.core.errors import bad_request, conflict, not_found
 from app.gaps.signals import text_key
@@ -195,6 +196,10 @@ async def request_document(
             await ctx.db.commit()
         except IntegrityError:  # the same request sent twice at once: one wins
             await ctx.db.rollback()
+            # The rollback expired everything the session held, the caller's org and
+            # user included; reload them before reading their ids.
+            await ctx.db.refresh(ctx.org)
+            await ctx.db.refresh(ctx.user)
             existing = await _open_request(ctx, key)
             if existing is None:
                 raise
@@ -249,6 +254,10 @@ async def _pending(ctx: OrgContext, request_id: uuid.UUID) -> DocumentRequest:
     return req
 
 
+async def _email(ctx: OrgContext, user_id: uuid.UUID) -> str | None:
+    return (await audit.emails(ctx.db, [user_id]) or [None])[0]
+
+
 def _decide(ctx: OrgContext, req: DocumentRequest, status: str, note: str | None) -> None:
     req.status = status
     req.resolution = (note or "").strip() or None
@@ -285,6 +294,10 @@ async def fulfill_doc_request(
         )
     req.document_id = doc.id
     _decide(ctx, req, "fulfilled", body.note)
+    audit.record_event(
+        ctx, "doc_request.fulfilled", "doc_request", req.id, req.title,
+        requester=await _email(ctx, req.user_id), document=doc.title, note=req.resolution,
+    )  # fmt: skip
     await ctx.db.commit()
     return (await _out(ctx, [req]))[0]
 
@@ -298,5 +311,9 @@ async def dismiss_doc_request(
     """Close the request without a document; the optional note tells the requester why."""
     req = await _pending(ctx, request_id)
     _decide(ctx, req, "dismissed", body.note if body else None)
+    audit.record_event(
+        ctx, "doc_request.dismissed", "doc_request", req.id, req.title,
+        requester=await _email(ctx, req.user_id), note=req.resolution,
+    )  # fmt: skip
     await ctx.db.commit()
     return (await _out(ctx, [req]))[0]
