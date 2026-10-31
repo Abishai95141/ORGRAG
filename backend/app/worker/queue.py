@@ -64,6 +64,23 @@ async def enqueue_graph(db: AsyncSession, source: Source) -> None:
         )
 
 
+async def enqueue_contextualize(db: AsyncSession, source: Source) -> None:
+    """Queue Contextual Retrieval for a source unless one is already waiting."""
+    pending = (
+        await db.execute(
+            select(Job.id).where(
+                Job.kind == "contextualize",
+                Job.status == "queued",
+                Job.payload["source_id"].astext == str(source.id),
+            )
+        )
+    ).first()
+    if pending is None:
+        db.add(
+            Job(org_id=source.org_id, kind="contextualize", payload={"source_id": str(source.id)})
+        )
+
+
 _CLAIM = text(
     """
     UPDATE jobs SET status = 'running', started_at = now(), heartbeat_at = now(),

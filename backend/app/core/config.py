@@ -7,6 +7,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_CLAUDE_MODEL = "claude-opus-5-5"
 DEFAULT_NVIDIA_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
+# Contextual Retrieval prompt version (app/ingestion/contextual.py): bump it when the
+# prompt changes and every document's chunk contexts are regenerated.
+CONTEXT_VERSION = "ctx-v1"
 
 
 DEV_SECRET_KEY = "dev-only-change-me-strata-secret-key-0123456789"
@@ -59,6 +62,11 @@ class Settings(BaseSettings):
     nvidia_rerank_model: str = "nvidia/nemotron-3.5-rerank-8b"
     nvidia_rerank_url: str = "https://ai.api.nvidia.com/v1/retrieval"
     fastembed_rerank_model: str = "Xenova/ms-marco-MiniLM-L-6-v2"
+
+    # Contextual Retrieval: after indexing, a model writes a short context for each
+    # chunk of a multi-chunk document, embedded and keyword-indexed with it.
+    contextual_retrieval: bool = False
+    context_model: str = "claude-haiku-5-5"
 
     # Model for knowledge-graph extraction; empty uses each org's own model.
     graph_extraction_model: str | None = None

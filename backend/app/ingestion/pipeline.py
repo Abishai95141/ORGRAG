@@ -100,6 +100,7 @@ async def write_chunks(db: AsyncSession, doc: Document) -> int:
         [embedding_text(doc.title, d.heading, d.content) for d in drafts]
     )
     await db.execute(delete(Chunk).where(Chunk.document_id == doc.id))
+    doc.context_hash = None  # new chunks have no context yet
     db.add_all(
         Chunk(
             org_id=doc.org_id,

@@ -103,6 +103,16 @@ Following Anthropic's published recipe and cookbook prompt.
 - **New documents** are searchable at once without context; a background job adds context and re-embeds (two-phase indexing). Changed documents regenerate context only for changed chunks, or for all of a document's chunks after a large change.
 - **Cost:** about $0.25–0.50 per million document tokens. The eval corpus is under $0.10.
 
+**Built and measured (2026-10-31); off by default.** `CONTEXTUAL_RETRIEVAL=true` turns it on (`app/ingestion/contextual.py`, migration 0010, job `contextualize`). Single-chunk documents are skipped rather than documents under 512 tokens: this corpus's median document is ~350 tokens, so that rule would have skipped nearly everything. On the 135 answerable questions, contexts for all 522 chunks cost $0.055 (Haiku 5.5, 60% of input read from cache):
+
+| | recall@5 | recall@10 | MRR |
+|---|---|---|---|
+| Baseline | 0.937 | 0.967 | 0.942 |
+| + contexts | 0.943 | 0.975 | 0.943 |
+| Paired bootstrap, recall@5 | +0.006 [0.000, 0.016], p(not better) 0.14 | | |
+
+Cross-org vocabulary recall@5 rose 0.828 → 0.883 and table MRR 0.967 → 1.0; nothing lost recall; multi-hop MRR dipped 0.98 → 0.96 (one question). Three questions changed, all up on recall. The interval doesn't exclude zero, so by this plan's rule it isn't switched on. Re-measure on the long PDFs and spreadsheets of step 3, which is the case the method is built for.
+
 ### 2c. Embedding A/B: granite-embedding-small-english-r2
 
 - Supported natively by fastembed 0.9.1, and the same 384 dimensions, so no schema change; it's a global setting plus a re-embed command.

@@ -56,19 +56,30 @@ LABELS = HERE / "labels"
 DATA = HERE / ".data"
 JUDGE_CACHE = DATA / "judge-cache.jsonl"
 
+sys.path.insert(0, str(BACKEND))
+from app.core.config import CONTEXT_VERSION  # noqa: E402  (constants only; no settings yet)
+
 # What the index is built with. A configuration other than the default gets its own
-# database, so a variant that re-indexes (another embedding model; later BM25 and
-# contextual retrieval) never overwrites another's index.
+# database, so a variant that re-indexes (another embedding model, contextual
+# retrieval; later BM25) never overwrites another's index.
+CONTEXTUAL = os.environ.get("CONTEXTUAL_RETRIEVAL", "").lower() in ("1", "true", "yes")
 DEFAULT_INDEX = {"embedding": "fastembed:BAAI/bge-small-en-v1.5"}
 INDEX_CONFIG = {
     "embedding": f"{os.environ.get('EMBEDDING_PROVIDER', 'fastembed')}:"
     f"{os.environ.get('EMBEDDING_MODEL', 'BAAI/bge-small-en-v1.5')}",
+    **({"context": CONTEXT_VERSION} if CONTEXTUAL else {}),
 }
 INDEX_KEY = (
     ""
     if INDEX_CONFIG == DEFAULT_INDEX
     else hashlib.sha256(json.dumps(INDEX_CONFIG, sort_keys=True).encode()).hexdigest()[:8]
 )
+# Readable result-name suffix for a non-default index ("ctx", "<embedding model>").
+INDEX_SUFFIX = "-".join(
+    [*(["ctx"] if CONTEXTUAL else []),
+     *([INDEX_CONFIG["embedding"].rsplit("/", 1)[-1]]
+       if INDEX_CONFIG["embedding"] != DEFAULT_INDEX["embedding"] else [])]
+)  # fmt: skip
 EVAL_DB = os.environ.get(
     "EVAL_DATABASE_URL",
     "postgresql+asyncpg://postgres:postgres@localhost:55432/strata_eval"
@@ -78,7 +89,6 @@ EVAL_DB = os.environ.get(
 os.environ["DATABASE_URL"] = EVAL_DB
 os.environ["FILE_STORAGE_DIR"] = str(DATA / "files")
 os.environ.setdefault("EMBEDDING_PROVIDER", "fastembed")
-sys.path.insert(0, str(BACKEND))
 
 from sqlalchemy import func, select, text  # noqa: E402
 
@@ -87,6 +97,7 @@ from app.agent.citations import cited_refs  # noqa: E402
 from app.connectors.upload import storage_dir  # noqa: E402
 from app.core.db import SessionLocal  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
+from app.ingestion import contextual  # noqa: E402
 from app.ingestion.pipeline import sync_source  # noqa: E402
 from app.llm import nvidia  # noqa: E402
 from app.llm.client import complete_text  # noqa: E402
@@ -238,6 +249,9 @@ async def ingest(force: bool = False) -> None:
                 source.status = "ready"
                 await db.commit()
                 print(f"  {org_slug}/{col_name}: {stats}", flush=True)
+                if CONTEXTUAL:
+                    ctx = await contextual.contextualize_source(db, source.id)
+                    print(f"    contexts: {ctx}", flush=True)
     marker.parent.mkdir(parents=True, exist_ok=True)
     marker.write_text(digest)
 
@@ -938,7 +952,8 @@ async def main_async(args) -> None:
         rows = [r.__dict__ for r in await run_retrieval(questions)]
         summary = summarize_retrieval(rows)
         print_table(summary)
-        print("saved", save("retrieval", args.variant, rows, summary, {"settings": overrides}))
+        name = (args.name or args.variant) + (f"-{INDEX_SUFFIX}" if INDEX_SUFFIX else "")
+        print("saved", save("retrieval", name, rows, summary, {"settings": overrides}))
     else:
         answered = await run_answers(
             questions, args.mode, args.concurrency, not args.no_grounding, not args.no_judge
@@ -949,6 +964,7 @@ async def main_async(args) -> None:
         print(f"judge cache: {CACHE.hits} hits, {CACHE.misses} misses")
         name = (
             (f"{args.name}" if args.name else f"{args.variant}-{args.mode}")
+            + (f"-{INDEX_SUFFIX}" if INDEX_SUFFIX else "")
             + (f"-{args.chat_model.split(':')[-1]}" if args.chat_model else "")
             + ("-smoke" if args.set == "smoke" else "")
         )

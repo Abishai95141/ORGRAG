@@ -152,7 +152,10 @@ def chunk_markdown(
     return [d for d in drafts if d.content.strip()]
 
 
-def embedding_text(title: str, heading: str, content: str) -> str:
-    """Text actually embedded: title + heading path give each chunk its context."""
+def embedding_text(title: str, heading: str, content: str, context: str = "") -> str:
+    """Text actually embedded: title + heading path give each chunk its context, and a
+    generated context (Contextual Retrieval) situates it in the document."""
     prefix = title if not heading else f"{title} — {heading}"
+    if context:
+        prefix = f"{prefix}\n{context}"
     return f"{prefix}\n\n{content}"

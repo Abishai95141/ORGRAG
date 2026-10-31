@@ -180,6 +180,8 @@ class Document(Base):
     )
     # content_hash the knowledge graph was last extracted from (None = not yet).
     graph_hash: Mapped[str | None] = mapped_column(String(64))
+    # "<context prompt version>:<content_hash>" the chunk contexts were made from.
+    context_hash: Mapped[str | None] = mapped_column(String(96))
     created_at: Mapped[datetime] = _created()
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
@@ -230,6 +232,9 @@ class Chunk(Base):
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     heading: Mapped[str] = mapped_column(Text, default="", nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    # Contextual Retrieval: situates the chunk in its document. Embedded and indexed
+    # (weight C), never shown or cited. Empty until the contextualize job runs.
+    context: Mapped[str] = mapped_column(Text, default="", server_default="", nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     embedding: Mapped[list[float]] = mapped_column(
         Vector(get_settings().embedding_dim), nullable=False
@@ -238,7 +243,8 @@ class Chunk(Base):
         TSVECTOR,
         Computed(
             "setweight(to_tsvector('english', coalesce(heading, '')), 'A') || "
-            "setweight(to_tsvector('english', content), 'B')",
+            "setweight(to_tsvector('english', content), 'B') || "
+            "setweight(to_tsvector('english', coalesce(context, '')), 'C')",
             persisted=True,
         ),
     )

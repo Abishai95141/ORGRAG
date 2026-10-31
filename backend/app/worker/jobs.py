@@ -9,10 +9,11 @@ from sqlalchemy import or_, select
 from app.connectors.base import ConnectorError
 from app.core.config import get_settings
 from app.graph.extract import extract_document, prune_orphans
+from app.ingestion.contextual import contextualize_source
 from app.ingestion.pipeline import sync_source
 from app.models import Document, Job, Organization, Source
 from app.schemas.common import OrgSettings
-from app.worker.queue import enqueue_graph
+from app.worker.queue import enqueue_contextualize, enqueue_graph
 
 log = logging.getLogger("strata.worker")
 
@@ -47,8 +48,12 @@ async def handle_sync_source(db, job: Job) -> None:
     source.progress = None
     await db.commit()
     log.info("Synced source %s (%s): %s", source.name, source.id, stats)
+    settings = get_settings()
+    if settings.contextual_retrieval and "anthropic" in settings.llm_providers:
+        await enqueue_contextualize(db, source)
+        await db.commit()
     org = await db.get(Organization, source.org_id)
-    if OrgSettings(**(org.settings or {})).knowledge_graph and get_settings().llm_configured:
+    if OrgSettings(**(org.settings or {})).knowledge_graph and settings.llm_configured:
         await enqueue_graph(db, source)
         await db.commit()
 
@@ -95,4 +100,20 @@ async def handle_extract_graph(db, job: Job) -> None:
         raise RuntimeError(f"Graph extraction failed for {failed} of {len(pending)} documents")
 
 
-HANDLERS = {"sync_source": handle_sync_source, "extract_graph": handle_extract_graph}
+async def handle_contextualize(db, job: Job) -> None:
+    """Contextual Retrieval for a source's new or changed documents (each commits on
+    its own, so a retried job picks up where it stopped)."""
+    source = await db.get(Source, uuid.UUID(job.payload["source_id"]))
+    if source is None:
+        return
+    stats = await contextualize_source(db, source.id)
+    log.info("Contextualized %s: %s", source.name, stats)
+    if stats["failed"]:
+        raise RuntimeError(f"Contextualizing failed for {stats['failed']} documents")
+
+
+HANDLERS = {
+    "sync_source": handle_sync_source,
+    "extract_graph": handle_extract_graph,
+    "contextualize": handle_contextualize,
+}
