@@ -704,6 +704,8 @@ def print_table(summary: dict[str, dict[str, Any]]) -> None:
 
 def save(kind: str, variant: str, rows: list, summary: dict, extra: dict) -> Path:
     RESULTS.mkdir(exist_ok=True)
+    # Model ids like "nvidia/nemotron-…" would otherwise become directories.
+    variant = re.sub(r"[^A-Za-z0-9._-]+", "_", variant)
     path = RESULTS / f"{kind}-{variant}.json"
     if kind == "answers":
         extra = {**judge_versions(), **extra}

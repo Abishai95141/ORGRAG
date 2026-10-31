@@ -762,12 +762,24 @@ class AgentRun:
         if self.graph_enabled and not deep:
             max_turns += 1  # list → explore → answer needs one more step than search alone
         researched = False
+        retried_empty_start = False
 
         for turn in range(max_turns):
             # Research budget spent: the model must answer with what it has.
             tool_choice = "none" if turn == max_turns - 1 else "auto"
             result = await self._nvidia_turn(model, messages, tools, tool_choice, deep)
             calls = result.tool_calls
+            if (
+                not calls
+                and not researched
+                and not retried_empty_start
+                and not result.content.strip()
+                and not self.em.answer.strip()
+            ):
+                # Seen in the eval: Nemotron occasionally opens with an empty turn (no
+                # text, no tool call). Ask again once, tools still on.
+                retried_empty_start = True
+                continue
             if not calls or result.finish_reason == "length":
                 # No tool calls means the answer is complete; a truncated turn may hold
                 # partial tool arguments, which must never run.

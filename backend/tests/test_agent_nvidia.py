@@ -218,6 +218,20 @@ async def test_empty_final_turn_gets_one_answer_retry(app, monkeypatch):
     assert last["tools"] is None and "final answer now" in last["messages"][-1]["content"]
 
 
+async def test_empty_first_turn_is_retried_with_tools(app, monkeypatch):
+    """Seen in the eval: Nemotron sometimes opens with an empty turn and no tool call."""
+    answer = "Staff get sixteen weeks of leave under the policy [1]."
+    empty = ([], ChatTurn(content="", finish_reason="stop"))
+    fake, r, *_ = await _run(
+        app,
+        monkeypatch,
+        [empty, _tool_turn("search_knowledge", '{"queries": ["leave"]}'), _answer_turn(answer)],
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["message"]["content"] == answer
+    assert fake.calls[1]["tools"]  # the retry still offers tools
+
+
 async def test_injected_attachment_cannot_break_out_or_exfiltrate(app, monkeypatch):
     """Audit S3: a file can't close its block, and images in answers never get stored."""
     payload = (

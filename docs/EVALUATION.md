@@ -63,6 +63,25 @@ The weak spots are the ones the new questions were written to probe:
 
 These are the targets for Contextual Retrieval, BM25 and the embedding swap (roadmap §3). Search takes 652 ms on average, most of it reranking.
 
+### Answers and grounding, smoke set (2026-10-31)
+
+First run with the grounding metrics: the 15 smoke questions, answered by Nemotron 3 Ultra (NVIDIA free tier) in quick mode and judged by Mistral Large 4, a different model family. The full 150-question answer run is still to do.
+
+| | Result |
+|---|---|
+| Pass | 12/15 before the fix below; the failed superseded question passes after it |
+| Facts stated (judge) | 0.933 |
+| Faithfulness | **0.933** |
+| Citation precision | **1.000** |
+| Citation recall | **0.337** |
+| Latency | 30.7 s average, 63.8 s p95 |
+
+What it showed:
+- **Citations are accurate but sparse.** Every citation supported its statement, but about two thirds of claims carried no citation of their own. The worst cases were list items (0.06) and table rows (0.29), where answers cite the lead sentence and not each item. This is the clearest target for citation work (roadmap §3, item 5).
+- **An empty first turn ended the answer.** Nemotron sometimes opens with an empty turn (no text, no tool call), and the run then said it couldn't answer. It's now retried once with tools on (`test_empty_first_turn_is_retried_with_tools`).
+- **A real multi-hop miss (q100).** The answer gave the escalation rule but not who was on call that week, which is in the November rota.
+- **A judge call to check (q130).** "RSV isn't on the formulary, so there's no published price" was graded as not abstaining. Calls like this are what the κ labelling is for.
+
 ### Retrieval, original 45 questions
 
 | Configuration | recall@5 | recall@10 | MRR | ms/search |
