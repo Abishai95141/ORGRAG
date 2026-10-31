@@ -24,6 +24,9 @@ import type {
   Source,
   SourceRef,
   User,
+  VerifiedAnswer,
+  VerifiedAnswerInput,
+  VerifiedStatus,
   Vote,
 } from "./types";
 
@@ -226,6 +229,19 @@ export const api = {
   createApiKey: (slug: string, body: { name: string; role: "admin" | "member" | "viewer"; expires_in_days?: number }) =>
     request<ApiKey & { key: string }>(`${o(slug)}/api-keys`, { method: "POST", json: body }),
   revokeApiKey: (slug: string, id: string) => request<void>(`${o(slug)}/api-keys/${id}`, { method: "DELETE" }),
+
+  // verified answers
+  verifiedAnswers: (slug: string, params: { status?: VerifiedStatus | "all"; q?: string } = {}) =>
+    request<VerifiedAnswer[]>(`${o(slug)}/verified-answers?${query(params)}`),
+  createVerified: (
+    slug: string,
+    body: VerifiedAnswerInput & { message_id?: string; collection_id: string; expires_in_days: number | null },
+  ) => request<VerifiedAnswer>(`${o(slug)}/verified-answers`, { method: "POST", json: body }),
+  updateVerified: (slug: string, id: string, body: VerifiedAnswerInput & { expires_at?: string | null }) =>
+    request<VerifiedAnswer>(`${o(slug)}/verified-answers/${id}`, { method: "PATCH", json: body }),
+  reverify: (slug: string, id: string, expires_in_days: number | null) =>
+    request<VerifiedAnswer>(`${o(slug)}/verified-answers/${id}/reverify`, { method: "POST", json: { expires_in_days } }),
+  deleteVerified: (slug: string, id: string) => request<void>(`${o(slug)}/verified-answers/${id}`, { method: "DELETE" }),
 
   // knowledge graph
   graphStats: (slug: string) => request<GraphStats>(`${o(slug)}/graph`),

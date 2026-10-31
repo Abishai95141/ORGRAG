@@ -8,7 +8,8 @@ from app.core.config import get_settings
 
 Role = Literal["owner", "admin", "member", "viewer"]
 Mode = Literal["quick", "deep"]
-SourceKind = Literal["upload", "web", "github", "gdrive", "slack", "notion"]
+# "verified": the hidden source holding a collection's verified answers.
+SourceKind = Literal["upload", "web", "github", "gdrive", "slack", "notion", "verified"]
 SourceStatus = Literal["idle", "queued", "syncing", "ready", "error"]
 RecencyBias = Literal["off", "low", "medium", "high"]
 SourceOrigin = Literal["knowledge", "web", "attachment"]
@@ -438,6 +439,8 @@ class MessageOut(Out):
     feedback: Literal["up", "down"] | None
     status: Literal["complete", "streaming", "error", "stopped"]
     created_at: datetime
+    # Set when an admin verified this answer (conversation detail only).
+    verified_answer_id: uuid.UUID | None = None
 
 
 class ConversationDetail(BaseModel):
@@ -579,3 +582,57 @@ class EntityLink(BaseModel):
 class EntityDetail(EntityOut):
     relations: list[EntityLink]
     relation_count: int
+
+
+# ── verified answers ──────────────────────────────────────────────────────────
+VerifiedStatus = Literal["active", "expiring", "expired"]
+
+
+class PersonOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    email: str
+    avatar_hue: int
+
+
+class VerifiedAnswerOut(BaseModel):
+    id: uuid.UUID
+    collection_id: uuid.UUID
+    collection_name: str
+    document_id: uuid.UUID
+    message_id: uuid.UUID | None
+    question: str
+    answer: str
+    sources: list[dict[str, Any]]
+    owner: PersonOut | None
+    verified_by: PersonOut | None
+    verified_at: datetime
+    expires_at: datetime | None
+    # expiring = valid for 14 days or less; expired answers are left out of search.
+    status: VerifiedStatus
+    created_at: datetime
+    updated_at: datetime
+
+
+class VerifiedAnswerCreate(BaseModel):
+    """From a chat answer (`message_id`: question, answer and sources default to it)
+    or written directly (`question` and `answer`)."""
+
+    message_id: uuid.UUID | None = None
+    question: str | None = Field(default=None, min_length=1, max_length=2000)
+    answer: str | None = Field(default=None, min_length=1, max_length=50_000)
+    collection_id: uuid.UUID
+    owner_id: uuid.UUID | None = None  # default: the verifier
+    expires_in_days: int | None = Field(default=90, ge=1, le=3650)  # null: never expires
+
+
+class VerifiedAnswerPatch(BaseModel):
+    question: str | None = Field(default=None, min_length=1, max_length=2000)
+    answer: str | None = Field(default=None, min_length=1, max_length=50_000)
+    collection_id: uuid.UUID | None = None
+    owner_id: uuid.UUID | None = None
+    expires_at: datetime | None = None  # explicit null: never expires
+
+
+class ReverifyIn(BaseModel):
+    expires_in_days: int | None = Field(default=90, ge=1, le=3650)

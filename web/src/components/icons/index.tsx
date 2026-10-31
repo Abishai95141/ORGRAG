@@ -405,6 +405,15 @@ export const IconBoost = make(
   </>,
 );
 
+/** Verified answer: a shield with a check. */
+export const IconVerified = make(
+  "Verified",
+  <>
+    <path d="M10 2.75 4.25 5v4.6c0 3.6 2.45 6.4 5.75 7.65 3.3-1.25 5.75-4.05 5.75-7.65V5L10 2.75Z" />
+    <path d="m7.4 10.1 1.85 1.85 3.4-3.6" />
+  </>,
+);
+
 /** Drive-style shared folder: a folder whose tab is a small triangle of three points. */
 export const IconDrive = make(
   "Drive",

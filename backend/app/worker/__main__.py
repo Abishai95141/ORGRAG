@@ -17,6 +17,7 @@ from app.agent.runs import reap_stale
 from app.core import telemetry
 from app.core.config import get_settings
 from app.core.db import SessionLocal
+from app.ingestion.verified import expire_due
 from app.models import Source
 from app.worker.jobs import HANDLERS
 from app.worker.queue import (
@@ -84,6 +85,7 @@ async def scheduler(stop: asyncio.Event) -> None:
         async with SessionLocal() as db:
             await requeue_stale(db)
             await reap_stale(db)  # answers whose API process died mid-run
+            await expire_due(db)  # verified answers past their expiry leave search
             now = datetime.now(UTC)
             due = (
                 (

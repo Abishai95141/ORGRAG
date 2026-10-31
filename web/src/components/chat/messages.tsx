@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { IconCheck, IconCopy, IconDeep, IconPaperclip, IconQuick, IconThumbDown, IconThumbUp, IconWarning } from "@/components/icons";
+import Link from "next/link";
+import { IconCheck, IconCopy, IconDeep, IconPaperclip, IconQuick, IconThumbDown, IconThumbUp, IconVerified, IconWarning } from "@/components/icons";
 import { OrgMark, StrataMark } from "@/components/illustrations";
+import { useCurrentOrg } from "@/components/layout/org-context";
 import { Tooltip } from "@/components/ui";
+import { VerifyDialog } from "@/components/verified/verify-dialog";
 import { api } from "@/lib/api";
 import type { Message, MessageAttachment, Mode, SourceRef, TraceStep } from "@/lib/types";
-import { cn, formatBytes } from "@/lib/utils";
+import { atLeast, cn, formatBytes } from "@/lib/utils";
 import { Answer } from "./answer";
 import { citationStyle, originLabel, SourceRefIcon } from "./source-kind";
 import { Trace } from "./trace";
@@ -47,6 +50,9 @@ type AssistantProps = {
   status: "connecting" | "streaming" | "complete" | "error" | "stopped";
   error?: string | null;
   feedback?: "up" | "down" | null;
+  /** The question this answers (prefills "Verify this answer"). */
+  question?: string;
+  verifiedAnswerId?: string | null;
   agentName?: string | null;
   focused?: boolean;
   onFocus?: () => void;
@@ -105,7 +111,23 @@ export function AssistantMessage(props: AssistantProps) {
 
       {shownSources.length && !live ? <SourceStrip sources={shownSources} onOpenSource={onOpenSource} /> : null}
 
-      {!live && props.id && content ? <MessageToolbar slug={props.slug} id={props.id} content={content} feedback={props.feedback ?? null} /> : null}
+      {!live && props.id && content ? (
+        <MessageToolbar
+          slug={props.slug}
+          id={props.id}
+          content={content}
+          feedback={props.feedback ?? null}
+          verify={
+            status === "complete"
+              ? {
+                  question: props.question,
+                  verifiedAnswerId: props.verifiedAnswerId ?? null,
+                  sourceCollections: shownSources.filter((s) => s.org_slug === props.slug && s.collection_name).map((s) => s.collection_name!),
+                }
+              : null
+          }
+        />
+      ) : null}
     </article>
   );
 }
@@ -141,9 +163,25 @@ function SourceStrip({ sources, onOpenSource }: { sources: SourceRef[]; onOpenSo
   );
 }
 
-function MessageToolbar({ slug, id, content, feedback }: { slug: string; id: string; content: string; feedback: "up" | "down" | null }) {
+function MessageToolbar({
+  slug,
+  id,
+  content,
+  feedback,
+  verify,
+}: {
+  slug: string;
+  id: string;
+  content: string;
+  feedback: "up" | "down" | null;
+  verify: { question?: string; verifiedAnswerId: string | null; sourceCollections: string[] } | null;
+}) {
+  const { org } = useCurrentOrg();
   const [copied, setCopied] = useState(false);
   const [fb, setFb] = useState(feedback);
+  const [verifying, setVerifying] = useState(false);
+  const [verifiedId, setVerifiedId] = useState(verify?.verifiedAnswerId ?? null);
+  const canVerify = !!verify && atLeast(org.role, "admin");
 
   async function copy() {
     await navigator.clipboard.writeText(content.replace(/\[(\d+(?:,\s*\d+)*)\]/g, "")).catch(() => {});
@@ -180,6 +218,30 @@ function MessageToolbar({ slug, id, content, feedback }: { slug: string; id: str
           <IconThumbDown size={15} />
         </button>
       </Tooltip>
+      {verifiedId ? (
+        <Tooltip label="Verified answer — open in Verified answers">
+          <Link href={`/o/${slug}/verified?focus=${verifiedId}`} className={cn(btn, "text-accent")} aria-label="Verified answer">
+            <IconVerified size={15} />
+          </Link>
+        </Tooltip>
+      ) : canVerify ? (
+        <>
+          <Tooltip label="Verify this answer">
+            <button type="button" className={btn} onClick={() => setVerifying(true)} aria-label="Verify this answer">
+              <IconVerified size={15} />
+            </button>
+          </Tooltip>
+          <VerifyDialog
+            open={verifying}
+            onOpenChange={setVerifying}
+            messageId={id}
+            question={verify?.question}
+            answer={content}
+            sourceCollections={verify?.sourceCollections}
+            onDone={(v) => setVerifiedId(v.id)}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

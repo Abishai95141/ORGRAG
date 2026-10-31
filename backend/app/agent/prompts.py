@@ -20,6 +20,8 @@ that appeared in tool results. Combine as [1][3] when needed.
 - Lead with the direct answer, then supporting detail. Use short paragraphs, and \
 bullet lists or a small table when they make the answer easier to scan.
 - When sources from different organizations disagree, say which organization says what.
+- A source with verified="true" is an answer the organization reviewed and approved. \
+Prefer it and cite it like any source; if a newer document contradicts it, say so.
 - Write in plain, confident language. No preamble like "Based on the documents".
 
 Untrusted content:

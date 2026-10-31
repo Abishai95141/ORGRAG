@@ -20,6 +20,7 @@ from app.models.entities import (
     SearchEvent,
     Source,
     User,
+    VerifiedAnswer,
 )
 
 __all__ = [
@@ -44,4 +45,5 @@ __all__ = [
     "SearchEvent",
     "Source",
     "User",
+    "VerifiedAnswer",
 ]

@@ -168,7 +168,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               </div>
             ) : null}
 
-            {rows.map((m) =>
+            {rows.map((m, i) =>
               m.role === "user" ? (
                 <UserMessage key={m.id} content={m.content} attachments={m.attachments} />
               ) : (
@@ -182,6 +182,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   mode={conversation?.mode ?? "quick"}
                   status={messageStatus(m)}
                   feedback={m.feedback}
+                  question={rows.slice(0, i).findLast((r) => r.role === "user")?.content}
+                  verifiedAnswerId={m.verified_answer_id}
                   agentName={agent?.name}
                   focused={rail && !liveActive && (focusedId ? focusedId === m.id : m.id === lastAssistant?.id)}
                   onFocus={() => setFocusedId(m.id)}

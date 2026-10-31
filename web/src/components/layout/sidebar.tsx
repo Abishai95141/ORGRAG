@@ -19,6 +19,7 @@ import {
   IconPeople,
   IconPlus,
   IconSliders,
+  IconVerified,
   IconSources,
   IconSun,
   IconTrash,
@@ -42,6 +43,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     { href: `${base}/sources`, label: "Sources", icon: IconSources, match: `${base}/sources` },
     { href: `${base}/collections`, label: "Collections", icon: IconLayers, match: `${base}/collections` },
     { href: `${base}/agents`, label: "Agents", icon: IconAgent, match: `${base}/agents` },
+    { href: `${base}/verified`, label: "Verified answers", icon: IconVerified, match: `${base}/verified` },
     { href: `${base}/members`, label: "Members", icon: IconPeople, match: `${base}/members` },
     ...(isAdmin
       ? [

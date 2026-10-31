@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.core.deps import OrgContext, admin_ctx, current_user, member_ctx, org_context
 from app.core.errors import ApiError, bad_request, not_found
 from app.ingestion.parsers import UnsupportedFileType, mime_for
+from app.ingestion.verified import VERIFIED_KIND
 from app.models import Collection, Document, Source
 from app.retrieval.access import visible_collections
 from app.schemas.common import (
@@ -54,6 +55,7 @@ async def _get_source(ctx: OrgContext, source_id: uuid.UUID) -> Source:
     if (
         source is None
         or source.org_id != ctx.org_id
+        or source.kind == VERIFIED_KIND
         or source.collection_id not in await _visible_collection_ids(ctx)
     ):
         raise not_found("Source")
@@ -89,7 +91,12 @@ async def list_sources(ctx: OrgContext = Depends(org_context)):
     visible = await _visible_collection_ids(ctx)
     rows = await ctx.db.execute(
         select(Source)
-        .where(Source.org_id == ctx.org_id, Source.collection_id.in_(visible or {uuid.uuid4()}))
+        .where(
+            Source.org_id == ctx.org_id,
+            Source.collection_id.in_(visible or {uuid.uuid4()}),
+            # Verified answers are managed under Verified answers, not as a source.
+            Source.kind != VERIFIED_KIND,
+        )
         .order_by(Source.created_at.desc())
     )
     return await sources_out(ctx.db, list(rows.scalars()))

@@ -287,10 +287,11 @@ class ToolBox:
             section = await hit_window(self.db, hit)
             heading = f" section={quoteattr(hit.heading)}" if hit.heading else ""
             updated = f' updated="{hit.updated_at.date().isoformat()}"' if hit.updated_at else ""
+            verified = ' verified="true"' if hit.source_kind == "verified" else ""
             blocks.append(
                 f'<source ref="{entry.ref}" org={quoteattr(entry.org.name)} '
                 f"collection={quoteattr(entry.collection.name)} "
-                f"title={quoteattr(hit.title)}{heading}{updated}>\n"
+                f"title={quoteattr(hit.title)}{heading}{updated}{verified}>\n"
                 f"{escape(section)}\n</source>"
             )
         return SearchOutcome(

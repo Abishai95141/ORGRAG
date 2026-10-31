@@ -98,7 +98,7 @@ type Collection = {
   created_at: string;
 };
 
-type SourceKind = "upload" | "web" | "github" | "gdrive" | "slack" | "notion";
+type SourceKind = "upload" | "web" | "github" | "gdrive" | "slack" | "notion" | "verified";  // verified: a verified answer
 type SourceStatus = "idle" | "queued" | "syncing" | "ready" | "error";
 type Source = {
   id: string; org_id: string; collection_id: string; collection_name: string;
@@ -182,6 +182,7 @@ type Message = {
   feedback: "up" | "down" | null;
   status: "complete" | "streaming" | "error" | "stopped";
   created_at: string;
+  verified_answer_id?: string | null;  // conversation detail: set when verified
 };
 ```
 
@@ -269,6 +270,48 @@ Ranking: hybrid search (vector + full text, RRF) → up to 40 candidates (at mos
 document) reranked by a cross-encoder (NVIDIA Nemotron, or a local model) when
 `settings.rerank` → score × recency (`settings.recency_bias`) × boost (×0.55–×1.45) ×
 reader feedback (×0.75–×1.25). Hidden documents are filtered in SQL.
+
+## Verified answers
+
+An admin can promote a good answer, with an owner and an expiry. It's indexed as a
+document in the chosen collection (through a hidden source of kind `verified` that
+`/sources` doesn't list), so whoever can read that collection finds it in search, chat
+and MCP, cited with `source_kind: "verified"` and ranked ×1.3 while valid. Past its
+expiry it's hidden from search until someone re-verifies it (the worker checks every
+minute). Deleting its document deletes the verified answer.
+
+```ts
+type VerifiedAnswer = {
+  id: string; collection_id: string; collection_name: string; document_id: string;
+  message_id: string | null;           // the chat answer it came from
+  question: string; answer: string;    // Markdown; [n] markers are dropped when indexed
+  sources: SourceRef[];                // what the original answer cited
+  owner: Person | null; verified_by: Person | null;   // Person = {id, name, email, avatar_hue}
+  verified_at: string; expires_at: string | null;      // null: never expires
+  status: "active" | "expiring" | "expired";           // expiring: ≤ 14 days left
+  created_at: string; updated_at: string;
+};
+```
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/orgs/{slug}/verified-answers?status=all\|active\|expiring\|expired&q=&collection_id=` | – | `VerifiedAnswer[]` (collections the caller can see; newest verification first) |
+| POST | `/orgs/{slug}/verified-answers` `[admin]` | `{message_id?, question?, answer?, collection_id, owner_id?, expires_in_days?: 1..3650 \| null}` | `201 VerifiedAnswer` |
+| GET | `/orgs/{slug}/verified-answers/{id}` | – | `VerifiedAnswer` |
+| PATCH | `/orgs/{slug}/verified-answers/{id}` `[admin]` | `{question?, answer?, collection_id?, owner_id?, expires_at?: string \| null}` | `VerifiedAnswer` (re-indexed; doesn't re-verify) |
+| POST | `/orgs/{slug}/verified-answers/{id}/reverify` `[admin]` | `{expires_in_days?: 1..3650 \| null}` | `VerifiedAnswer` (caller becomes the verifier; expiry restarts; back in search) |
+| DELETE | `/orgs/{slug}/verified-answers/{id}` `[admin]` | – | `204` |
+
+With `message_id`, the question defaults to the user message before it, the answer to
+its text and `sources` to the sources it cited; it must be a `complete` answer in one
+of the caller's own conversations (else 404 / 400 `answer_incomplete`). Without it,
+`question` and `answer` are required (400 `missing_answer`). `expires_in_days` defaults
+to 90; `owner_id` (default: the caller) must be a member (400 `invalid_owner`).
+
+**Permissions.** 400 `sources_not_visible` when the answer cites another org's
+documents, or a restricted collection whose readers don't include everyone who can read
+the target collection — verifying can't widen who sees restricted content. Conversation
+detail marks a verified answer with `verified_answer_id` on its `Message`.
 
 ## Search (no LLM)
 

@@ -17,7 +17,15 @@ from app.core.db import SessionLocal
 from app.core.deps import OrgContext, org_context
 from app.core.errors import ApiError, bad_request, not_found
 from app.llm.client import structured_call
-from app.models import Agent, ChatAttachment, Conversation, Membership, Message, Organization
+from app.models import (
+    Agent,
+    ChatAttachment,
+    Conversation,
+    Membership,
+    Message,
+    Organization,
+    VerifiedAnswer,
+)
 from app.schemas.common import (
     MAX_OFFSET,
     ConversationCreate,
@@ -129,12 +137,32 @@ async def create_conversation(body: ConversationCreate, ctx: OrgContext = Depend
 @router.get("/conversations/{conversation_id}", response_model=ConversationDetail)
 async def get_conversation(conversation_id: uuid.UUID, ctx: OrgContext = Depends(org_context)):
     conv = await _conversation(ctx, conversation_id)
-    rows = await ctx.db.execute(
-        select(Message).where(Message.conversation_id == conv.id).order_by(Message.created_at)
+    messages = list(
+        (
+            await ctx.db.execute(
+                select(Message)
+                .where(Message.conversation_id == conv.id)
+                .order_by(Message.created_at)
+            )
+        ).scalars()
+    )
+    verified = dict(
+        (
+            await ctx.db.execute(
+                select(VerifiedAnswer.message_id, VerifiedAnswer.id).where(
+                    VerifiedAnswer.message_id.in_([m.id for m in messages])
+                )
+            )
+        ).all()
     )
     return ConversationDetail(
         conversation=ConversationOut.model_validate(conv),
-        messages=[MessageOut.model_validate(m) for m in rows.scalars()],
+        messages=[
+            MessageOut.model_validate(m).model_copy(
+                update={"verified_answer_id": verified.get(m.id)}
+            )
+            for m in messages
+        ],
     )
 
 

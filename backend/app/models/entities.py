@@ -474,3 +474,43 @@ class KGMention(Base):
     collection_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     keywords: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+
+class VerifiedAnswer(Base):
+    """An answer an admin reviewed and approved. It's indexed as a document (in a
+    hidden "Verified answers" source of its collection), so search, permissions and
+    citations treat it like any other; this row holds who vouches for it and until when."""
+
+    __tablename__ = "verified_answers"
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    collection_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("collections.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    # Deleting the document (from Documents) deletes the verified answer with it.
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    message_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("messages.id", ondelete="SET NULL"), index=True
+    )
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    answer: Mapped[str] = mapped_column(Text, nullable=False)
+    # The sources the original answer cited, as SourceRef dicts.
+    sources: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, nullable=False)
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    verified_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    verified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    # None = doesn't expire. Once past, the answer drops out of search until re-verified.
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = _created()
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )

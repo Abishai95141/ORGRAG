@@ -1,4 +1,4 @@
-import { IconChannel, IconDrive, IconFile, IconGlobe, IconPaperclip, IconRepo, IconWiki } from "@/components/icons";
+import { IconChannel, IconDrive, IconFile, IconGlobe, IconPaperclip, IconRepo, IconVerified, IconWiki } from "@/components/icons";
 import type { SourceKind, SourceRef } from "@/lib/types";
 
 const KIND_ICON: Record<SourceKind, typeof IconFile> = {
@@ -8,6 +8,7 @@ const KIND_ICON: Record<SourceKind, typeof IconFile> = {
   gdrive: IconDrive,
   slack: IconChannel,
   notion: IconWiki,
+  verified: IconVerified,
 };
 
 export function SourceKindIcon({ kind, size = 15, className }: { kind: SourceKind | null; size?: number; className?: string }) {
@@ -29,6 +30,7 @@ export const SOURCE_KIND_LABEL: Record<SourceKind, string> = {
   gdrive: "Google Drive",
   slack: "Slack",
   notion: "Notion",
+  verified: "Verified answer",
 };
 
 /** Where a citation came from, as a short label: org, "Web" or "Attached file". */

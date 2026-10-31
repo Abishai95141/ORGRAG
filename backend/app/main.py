@@ -28,6 +28,7 @@ from app.api import (
     orgs,
     search,
     sources,
+    verified,
 )
 from app.core import telemetry
 from app.core.config import get_settings
@@ -206,6 +207,7 @@ for module in (
     attachments,
     insights,
     api_keys,
+    verified,
     meta,
 ):
     app.include_router(

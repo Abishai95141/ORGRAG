@@ -70,7 +70,8 @@ export type Collection = {
   created_at: string;
 };
 
-export type SourceKind = "upload" | "web" | "github" | "gdrive" | "slack" | "notion";
+// "verified": an admin-verified answer, indexed like a document.
+export type SourceKind = "upload" | "web" | "github" | "gdrive" | "slack" | "notion" | "verified";
 export type SourceStatus = "idle" | "queued" | "syncing" | "ready" | "error";
 
 export type Source = {
@@ -210,6 +211,36 @@ export type Message = {
   feedback: "up" | "down" | null;
   status: "complete" | "streaming" | "error" | "stopped";
   created_at: string;
+  verified_answer_id?: string | null;
+};
+
+export type Person = { id: string; name: string; email: string; avatar_hue: number };
+
+export type VerifiedStatus = "active" | "expiring" | "expired";
+
+export type VerifiedAnswer = {
+  id: string;
+  collection_id: string;
+  collection_name: string;
+  document_id: string;
+  message_id: string | null;
+  question: string;
+  answer: string;
+  sources: SourceRef[];
+  owner: Person | null;
+  verified_by: Person | null;
+  verified_at: string;
+  expires_at: string | null;
+  status: VerifiedStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VerifiedAnswerInput = {
+  question?: string;
+  answer?: string;
+  collection_id?: string;
+  owner_id?: string;
 };
 
 export type Insights = {
