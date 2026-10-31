@@ -73,6 +73,8 @@ The full findings, with file:line evidence, are in [AUDIT.md](AUDIT.md).
 
 ## 3. Quality and speed upgrades (≈2–3 weeks)
 
+**Build plan:** [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) (verified against current library docs; it revises the reranker and embedding expectations below).
+
 Ranked by expected value. Each one is measured before it becomes the default.
 
 1. **Latency bundle (S–M).** Target: 2–3× faster.
