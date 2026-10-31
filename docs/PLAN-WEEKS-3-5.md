@@ -10,7 +10,7 @@ This is the build plan for [ROADMAP.md](ROADMAP.md) §3 (quality and speed upgra
 | Step | State |
 |---|---|
 | 0. Foundations | Done, except the Haiku 150-question baseline (running) and κ labelling (needs a person). |
-| 1. Latency | Prompt caching and concurrent tool calls done; rerank-once dropped after measuring; fast path not started (smoke p50 is already 4.9 s). |
+| 1. Latency | Prompt caching and concurrent tool calls done; rerank-once dropped after measuring; fast path built and measured, off by default: p50 −0.3 s, p90 +1 s (LOG D54). |
 | 2a. BM25 | Done; on where the index exists. |
 | 2b. Contextual Retrieval | Built; off until long documents (step 3) can show a significant gain. |
 | 2c. Embedding A/B | Done: granite not adopted (no gain at ~512-token chunks). |

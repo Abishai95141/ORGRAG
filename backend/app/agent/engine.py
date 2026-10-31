@@ -26,7 +26,7 @@ from xml.sax.saxutils import escape, quoteattr
 
 from sqlalchemy import select
 
-from app.agent import records_tool, runs, sufficiency
+from app.agent import fastpath, records_tool, runs, sufficiency
 from app.agent.citations import (
     CitationRegistry,
     citation_markers,
@@ -68,6 +68,17 @@ log = logging.getLogger("strata.agent")
 
 MAX_TURNS = {"quick": 4, "deep": 10}
 HISTORY_MESSAGES = 12
+# The quick-mode fast path's note ahead of its first search's passages: tools off (answer
+# now), or the loop starting from them.
+FIRST_SEARCH_ANSWER = (
+    "<first_search>The results of a search for this question, run before your turn. "
+    "Answer from them now: searching again isn't possible in this turn. If they don't "
+    "contain the answer, say so plainly and say what they cover.</first_search>"
+)
+FIRST_SEARCH_SEED = (
+    "<first_search>The results of a search for this question, run before your turn. "
+    "Answer from them if they're enough; otherwise keep researching.</first_search>"
+)
 PREAMBLE_CHARS = 160  # text shorter than this before a tool call is treated as reasoning
 # A tool result: text, or (Claude path) a list of search_result blocks.
 ToolContent = str | list[dict[str, Any]]
@@ -632,18 +643,65 @@ class AgentRun:
             self.provider = provider
             await self._nvidia_loop(model, system, history, user_content, definitions, deep)
         else:
-            await self._claude_loop(model, system, history, user_content, definitions, deep)
+            seed = None
+            if (
+                not deep
+                and get_settings().fast_path
+                and not history
+                and not self.attachments
+                and not self.web_enabled
+                and self.scope.collections
+                and fastpath.eligible(self.req.question)
+            ):
+                seed = await self._fast_path_search()
+            await self._claude_loop(
+                model, system, history, user_content, definitions, deep, seed=seed
+            )
+            if seed and seed[1] and not self.em.answer.strip():
+                # Tools off and no answer (the model wanted to search again): research
+                # normally, starting from the same passages.
+                await self._claude_loop(
+                    model, system, history, user_content, definitions, deep, seed=(seed[0], False)
+                )
         if not self.em.answer.strip():
             await self.em.delta(
                 "I wasn't able to put together an answer from the knowledge base. "
                 "Try rephrasing the question or narrowing it to a collection."
             )
 
-    async def _claude_loop(self, model, system, history, user_content, definitions, deep) -> None:
+    async def _fast_path_search(self) -> tuple[list[dict[str, Any]], bool] | None:
+        """The fast path's first search (app/agent/fastpath.py), run before the model's
+        first turn: the passages as user-turn content, and whether they're confident
+        enough to answer from without tools. None when it found nothing."""
+        question = self.req.question
+        step = await self.em.step_start("search", "Searching knowledge", {"queries": [question]})
+        async with self._tool_session():
+            outcome = await self._search(step, {"queries": [question]})
+        if not outcome.refs:
+            return None
+        if self.native_citations and outcome.results:
+            passages: list[dict[str, Any]] = list(outcome.results)
+        else:
+            passages = [{"type": "text", "text": outcome.text}]
+        confident = fastpath.confident(outcome.scores, outcome.documents)
+        if confident:
+            note = await self.em.step_start("reflect", "First search answers it")
+            await self.em.step_update(note, label="First search answers it", status="done")
+        return passages, confident
+
+    async def _claude_loop(
+        self, model, system, history, user_content, definitions, deep, seed=None
+    ) -> None:
         client = get_client()
-        messages: list[dict[str, Any]] = [*history, {"role": "user", "content": user_content}]
+        first: Any = user_content
+        if seed:  # the fast path's first search goes in ahead of the question
+            note = FIRST_SEARCH_ANSWER if seed[1] else FIRST_SEARCH_SEED
+            question = {"type": "text", "text": user_content}
+            first = [{"type": "text", "text": note}, *seed[0], question]
+        messages: list[dict[str, Any]] = [*history, {"role": "user", "content": first}]
         effort = self.settings.deep_effort if deep else self.settings.quick_effort
-        max_turns = MAX_TURNS["deep" if deep else "quick"]
+        # Confident: one turn with tools off, i.e. answer from the passages.
+        max_turns = 1 if seed and seed[1] else MAX_TURNS["deep" if deep else "quick"]
         json_retries = 0
         turn = 0
         evidence: list[str] = []  # search and read results so far, for the coverage check

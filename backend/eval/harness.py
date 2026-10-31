@@ -1135,6 +1135,11 @@ async def main_async(args) -> None:
     )
     overrides = await apply_variant(args.variant, args.chat_model)
     overrides["records"] = await apply_records(args.records)
+    # The quick-mode fast path (app/agent/fastpath.py) is recorded with every run; off
+    # unless asked for, so runs compare like with like.
+    from app.core.config import get_settings
+
+    get_settings().fast_path = overrides["fast_path"] = args.fast_path
     if args.cmd == "retrieval":
         rows = [r.__dict__ for r in await run_retrieval(questions)]
         summary = summarize_retrieval(rows)
@@ -1193,6 +1198,11 @@ def main() -> None:
         "--records",
         action="store_true",
         help="answers/retrieval: structured records on (all suggested schemas active)",
+    )
+    p.add_argument(
+        "--fast-path",
+        action="store_true",
+        help="answers: the quick-mode fast path on (off by default in eval runs)",
     )
     p.add_argument(
         "--no-judge",

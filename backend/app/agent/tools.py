@@ -187,6 +187,10 @@ class SearchOutcome:
     hits: int = 0
     # The same passages as citable search_result blocks, for Claude's native citations.
     results: list[dict[str, Any]] = field(default_factory=list)
+    # Ranked hits' scores (reranker probabilities when reranking ran) and documents, for
+    # the quick-mode fast path's confidence check (app/agent/fastpath.py).
+    scores: list[float] = field(default_factory=list)
+    documents: list[uuid.UUID] = field(default_factory=list)
 
 
 def _result_title(entry: Registered, hit: Hit) -> str:
@@ -285,7 +289,10 @@ class ToolBox:
         hits = await hybrid_search(
             self.db, queries, collection_ids, limit=self.top_k, ranking=self.ranking
         )
-        return await self.render_hits(queries, hits)
+        outcome = await self.render_hits(queries, hits)
+        outcome.scores = [h.score for h in hits]
+        outcome.documents = [h.document_id for h in hits]
+        return outcome
 
     async def render_hits(self, queries: list[str], hits: list[Hit]) -> SearchOutcome:
         if not hits:

@@ -60,6 +60,12 @@ class Settings(BaseSettings):
     # Measured (quick mode, Haiku): multi-hop pass +0.16, but ~2x latency, so it's on
     # for deep research by default; "always" adds quick mode, "off" disables it.
     sufficiency_check: Literal["off", "deep", "always"] = "deep"
+    # Quick-mode fast path (app/agent/fastpath.py): a short, single-hop question whose
+    # first search is confident is answered in one model call with no tools. Thresholds
+    # are on reranker probabilities. Off by default: measured no faster at p90 (LOG D54).
+    fast_path: bool = False
+    fast_path_min_top: float = 0.7
+    fast_path_min_gap: float = 0.2
     sufficiency_model: str = "claude-haiku-5-5"
 
     embedding_provider: Literal["fastembed", "voyage", "hash"] = "fastembed"

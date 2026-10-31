@@ -243,6 +243,7 @@ async def test_the_engines_coverage_check_and_abstentions_become_gaps(app, monke
     from tests.test_agent_loop import _answer_turn as claude_answer
     from tests.test_agent_loop import _tool_turn as claude_tool
 
+    monkeypatch.setattr(get_settings(), "fast_path", False)  # the turns script the tool loop
     admin = await _signup(app, "gengine")
     org = await _org(admin, "Gap Engine")
     slug = org["slug"]

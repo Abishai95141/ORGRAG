@@ -177,7 +177,11 @@ reads and exports; routes in [API.md](API.md#audit-log-admin)).
 ```
 user question
    │
-   ├─ quick mode ──────────────► tool loop (≤3 steps, effort=low)
+   ├─ quick mode ─┬─ FAST_PATH (off by default): short single-hop question? first search first
+   │              │    ├─ confident (top passage clear, or top 3 from one document)
+   │              │    │      → one call, tools off: answer from the passages
+   │              │    └─ otherwise → tool loop, starting with those passages
+   │              └──────────► tool loop (≤4 turns, effort=low)
    │
    └─ deep mode ─► PLAN (structured output: sub-questions)
                        │

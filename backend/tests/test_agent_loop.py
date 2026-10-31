@@ -61,9 +61,15 @@ def _answer_turn(text: str):
     return events, NS(stop_reason="end_turn", content=[NS(type="text", text=text)])
 
 
-async def _run(app, monkeypatch, mode: str, turns, plan=None):
+async def _run(
+    app, monkeypatch, mode: str, turns, plan=None, fast_path=False, question="Friday deploys?"
+):
+    """Run the engine on one scripted conversation. The fast path is off unless asked
+    for: these tests script the tool loop turn by turn."""
     from app.agent import engine
     from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "fast_path", fast_path)
 
     admin = await _signup(app, "agent")
     org = await _org(admin, f"Agent Co {mode}")
@@ -104,7 +110,7 @@ async def _run(app, monkeypatch, mode: str, turns, plan=None):
         assistant_message_id=reserved.id,
         user_id=uuid.UUID(me["id"]),
         org_id=uuid.UUID(org["id"]),
-        question="Friday deploys?",
+        question=question,
         mode=mode,
         scope_org_ids=[uuid.UUID(org["id"])],
         collection_ids=None,
@@ -326,3 +332,99 @@ async def test_coverage_check_is_off_in_quick_mode_by_default(app, monkeypatch):
     )
     assert events[-1][0] == "done"
     assert [b["type"] for b in fake.calls[1]["messages"][-1]["content"]] == ["tool_result"]
+
+
+# ── quick-mode fast path ─────────────────────────────────────────────────────
+@pytest.mark.parametrize(
+    ("question", "eligible"),
+    [
+        ("Friday deploys?", True),
+        ("How long is parental leave at Halcyon?", True),
+        ("What does the PTO policy say about carryover?", True),  # acronyms aren't names
+        ("How many vendors process PHI?", False),
+        ("Compare Halcyon's leave policy with Northwind's.", False),
+        ("Who approves changes to Driftwood and what does Ledger need?", False),
+        ("Is the current on-call rota still the October one?", False),
+        (" ".join(["word"] * 26), False),
+    ],
+)
+def test_which_questions_take_the_fast_path(question, eligible):
+    from app.agent import fastpath
+
+    assert fastpath.eligible(question) is eligible
+
+
+def test_a_confident_first_search(monkeypatch):
+    from app.agent import fastpath
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "fast_path_min_top", 0.7)
+    monkeypatch.setattr(get_settings(), "fast_path_min_gap", 0.2)
+    a, b, c = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    assert fastpath.confident([0.92, 0.6, 0.5, 0.4, 0.3], [a, b, c, a, b])
+    assert not fastpath.confident([0.92, 0.9, 0.9, 0.85, 0.8], [a, b, c, a, b])  # no clear top
+    assert not fastpath.confident([0.65, 0.2, 0.1, 0.1, 0.1], [a, b, c, a, b])  # too weak
+    assert fastpath.confident([0.3, 0.2, 0.1], [a, a, a])  # three passages of one document
+    assert not fastpath.confident([], [])
+
+
+async def test_fast_path_answers_from_a_confident_first_search(app, monkeypatch):
+    from app.agent import fastpath
+
+    monkeypatch.setattr(fastpath, "confident", lambda scores, documents: True)
+    answer = "Friday deploys need manager approval [1]."
+    fake, events = await _run(app, monkeypatch, "quick", [_answer_turn(answer)], fast_path=True)
+    assert events[-1][0] == "done" and events[-1][1]["message"]["content"] == answer
+    (call,) = fake.calls  # one model call
+    assert call["tool_choice"] == {"type": "none"}  # answer from the passages
+    first = call["messages"][-1]["content"]
+    assert "<first_search>" in first[0]["text"] and '<source ref="1"' in first[1]["text"]
+    assert first[-1]["text"] == "Friday deploys?"
+    labels = [d["label"] for e, d in events if e == "step" and d["status"] == "done"]
+    assert labels[:2] == ["Found 1 source", "First search answers it"]
+
+
+async def test_fast_path_seeds_the_loop_when_unsure(app, monkeypatch):
+    from app.agent import fastpath
+
+    monkeypatch.setattr(fastpath, "confident", lambda scores, documents: False)
+    answer = "Friday deploys need manager approval [1]."
+    fake, events = await _run(app, monkeypatch, "quick", [_answer_turn(answer)], fast_path=True)
+    (call,) = fake.calls  # the model answered on its first turn, tools still offered
+    assert "tool_choice" not in call and call["tools"]
+    assert "<first_search>" in call["messages"][-1]["content"][0]["text"]
+    assert "First search answers it" not in str(events)
+
+
+async def test_multi_hop_questions_skip_the_fast_path(app, monkeypatch):
+    answer = "Ask the manager [1]."
+    fake, _ = await _run(
+        app,
+        monkeypatch,
+        "quick",
+        [_tool_turn("friday deploy policy"), _answer_turn(answer)],
+        fast_path=True,
+        question="Who approves Friday deploys and what does each team need?",
+    )
+    assert isinstance(fake.calls[0]["messages"][-1]["content"], str)  # no seeded search
+
+
+async def test_an_empty_answer_from_the_fast_path_falls_back_to_the_loop(app, monkeypatch):
+    """With tools off the model may want to search again and say nothing; the engine then
+    researches normally, starting from the same passages."""
+    from app.agent import fastpath
+
+    monkeypatch.setattr(fastpath, "confident", lambda scores, documents: True)
+    empty = ([], NS(stop_reason="end_turn", content=[]))
+    answer = "Friday deploys need manager approval [1]."
+    fake, events = await _run(
+        app, monkeypatch, "quick", [empty, _answer_turn(answer)], fast_path=True
+    )
+    assert events[-1][1]["message"]["content"] == answer
+    first, second = fake.calls
+    assert first["tool_choice"] == {"type": "none"}
+    assert "isn't possible" in first["messages"][-1]["content"][0]["text"]
+    assert (
+        "tool_choice" not in second
+        and "keep researching" in (second["messages"][-1]["content"][0]["text"])
+    )
