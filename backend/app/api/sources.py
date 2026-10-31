@@ -4,12 +4,13 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.documents import document_page
 from app.api.serializers import sources_out
 from app.connectors.registry import CONNECTORS, get_connector_class
 from app.connectors.upload import storage_dir
+from app.core import audit
 from app.core.config import get_settings
 from app.core.deps import OrgContext, admin_ctx, current_user, member_ctx, org_context
 from app.core.errors import ApiError, bad_request, not_found
@@ -122,6 +123,19 @@ async def create_source(body: SourceCreate, ctx: OrgContext = Depends(admin_ctx)
     await ctx.db.flush()
     if body.kind != "upload":
         await enqueue_sync(ctx.db, source)
+    # The config is what clients see anyway; secret fields only by name.
+    audit.record_event(
+        ctx,
+        "source.created",
+        "source",
+        source.id,
+        source.name,
+        kind=source.kind,
+        collection=col.name,
+        config=config,
+        write_only_fields=sorted(secrets),
+        sync_interval_minutes=source.sync_interval_minutes,
+    )
     await ctx.db.commit()
     return await _one(ctx, source)
 
@@ -136,6 +150,8 @@ async def update_source(
     source_id: uuid.UUID, body: SourcePatch, ctx: OrgContext = Depends(admin_ctx)
 ):
     source = await _get_source(ctx, source_id)
+    before = _fields(source)
+    secrets: dict = {}
     if body.name is not None:
         source.name = body.name.strip()
     if body.config is not None:
@@ -145,13 +161,45 @@ async def update_source(
             source.secrets = {**(source.secrets or {}), **secrets}
     if "sync_interval_minutes" in body.model_fields_set:
         source.sync_interval_minutes = body.sync_interval_minutes
+    diff = audit.changes(before, _fields(source))
+    if diff or secrets:
+        audit.record_event(
+            ctx,
+            "source.updated",
+            "source",
+            source.id,
+            source.name,
+            changes=diff,
+            write_only_fields=sorted(secrets),
+        )
     await ctx.db.commit()
     return await _one(ctx, source)
+
+
+def _fields(source: Source) -> dict:
+    """What an update can change, for the audit log (secrets are never part of it)."""
+    return {
+        "name": source.name,
+        "sync_interval_minutes": source.sync_interval_minutes,
+        **{f"config.{k}": v for k, v in (source.config or {}).items()},
+    }
 
 
 @router.delete("/orgs/{slug}/sources/{source_id}", status_code=204)
 async def delete_source(source_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)):
     source = await _get_source(ctx, source_id)
+    documents = await ctx.db.scalar(
+        select(func.count(Document.id)).where(Document.source_id == source.id)
+    )
+    audit.record_event(
+        ctx,
+        "source.deleted",
+        "source",
+        source.id,
+        source.name,
+        kind=source.kind,
+        documents=documents or 0,
+    )
     await ctx.db.delete(source)
     await ctx.db.commit()
     # Files go only once the rows are gone, so a failed delete leaves a working source.
@@ -166,6 +214,7 @@ async def sync_source(source_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)
     status `queued`; poll the source for progress."""
     source = await _get_source(ctx, source_id)
     await enqueue_sync(ctx.db, source)
+    audit.record_event(ctx, "source.synced", "source", source.id, source.name, full=True)
     await ctx.db.commit()
     return await _one(ctx, source)
 
@@ -210,6 +259,9 @@ async def upload_files(
     for name, upload in named:
         (folder / name).write_bytes(await upload.read())
     await enqueue_sync(ctx.db, source)
+    audit.record_event(
+        ctx, "source.files_uploaded", "source", source.id, source.name, files=[n for n, _ in named]
+    )
     await ctx.db.commit()
     return UploadResult(accepted=len(named), source=await _one(ctx, source))
 

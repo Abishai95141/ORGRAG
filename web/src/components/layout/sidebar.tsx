@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useMemo } from "react";
 import {
   IconAgent,
+  IconAudit,
   IconChat,
   IconCheck,
   IconChevronUpDown,
@@ -54,6 +55,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       ? [
           { href: `${base}/insights`, label: "Insights", icon: IconInsights, match: `${base}/insights` },
           { href: `${base}/gaps`, label: "Knowledge gaps", icon: IconGap, match: `${base}/gaps` },
+          { href: `${base}/audit`, label: "Audit log", icon: IconAudit, match: `${base}/audit` },
           { href: `${base}/settings`, label: "Settings", icon: IconSliders, match: `${base}/settings` },
         ]
       : []),

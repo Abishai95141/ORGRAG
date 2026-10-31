@@ -7,10 +7,11 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy import select
 
+from app.core import audit
 from app.core.deps import ROLE_RANK, OrgContext, admin_ctx, session_user
 from app.core.errors import forbidden, not_found
 from app.core.security import hash_api_key, new_api_key
-from app.models import ApiKey
+from app.models import ApiKey, User
 from app.schemas.common import ApiKeyCreate, ApiKeyCreated, ApiKeyOut
 
 router = APIRouter(
@@ -45,6 +46,17 @@ async def create_key(body: ApiKeyCreate, ctx: OrgContext = Depends(admin_ctx)):
         ),
     )
     ctx.db.add(key)
+    await ctx.db.flush()
+    # Name, role and expiry only: never the key, its hash or its prefix.
+    audit.record_event(
+        ctx,
+        "api_key.created",
+        "api_key",
+        key.id,
+        key.name,
+        role=key.role,
+        expires_at=key.expires_at,
+    )
     await ctx.db.commit()
     return ApiKeyCreated(**ApiKeyOut.model_validate(key).model_dump(), key=raw)
 
@@ -54,6 +66,16 @@ async def revoke_key(key_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)):
     key = await ctx.db.get(ApiKey, key_id)
     if key is None or key.org_id != ctx.org_id:
         raise not_found("API key")
+    owner = await ctx.db.get(User, key.user_id)
+    audit.record_event(
+        ctx,
+        "api_key.revoked",
+        "api_key",
+        key.id,
+        key.name,
+        role=key.role,
+        created_by=owner.email if owner else None,
+    )
     await ctx.db.delete(key)
     await ctx.db.commit()
     return Response(status_code=204)

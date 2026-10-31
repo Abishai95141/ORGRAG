@@ -1,6 +1,9 @@
 import asyncio
 import math
+import uuid
+from datetime import UTC, datetime
 
+from app.core import audit
 from app.core.deps import role_at_least
 from app.core.security import (
     create_session_token,
@@ -55,3 +58,27 @@ def test_hash_embedder_is_deterministic_and_normalized():
     near = asyncio.run(emb.embed_query("deploy policy on friday"))
     far = asyncio.run(emb.embed_query("patient intake vitals"))
     assert cos(a, near) > cos(a, far)
+
+
+def test_audit_details_never_hold_credentials():
+    when = datetime(2026, 11, 1, tzinfo=UTC)
+    uid = uuid.uuid4()
+    cleaned = audit._clean(
+        {
+            "config": {"repo": "acme/handbook", "token": "ghp_x", "client_secret": "s"},
+            "password": "hunter2",
+            "service_account_json": "{}",
+            "note": "my key is strata_sk_abc",
+            "owner": uid,
+            "expires_at": when,
+            "files": ("a.md", "b.md"),
+        }
+    )
+    assert cleaned == {
+        "config": {"repo": "acme/handbook"},
+        "note": audit.REDACTED,
+        "owner": str(uid),
+        "expires_at": when.isoformat(),
+        "files": ["a.md", "b.md"],
+    }
+    assert audit.changes({"a": 1, "b": 2}, {"a": 1, "b": 3}) == {"b": {"from": 2, "to": 3}}

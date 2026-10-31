@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import or_, select
 
 from app.agent.citations import cited_refs
+from app.core import audit
 from app.core.deps import OrgContext, admin_ctx, org_context
 from app.core.errors import bad_request, not_found
 from app.ingestion import verified as svc
@@ -195,8 +196,29 @@ async def create_verified(body: VerifiedAnswerCreate, ctx: OrgContext = Depends(
     )
     await _index(ctx, va, col)
     ctx.db.add(va)
+    audit.record_event(
+        ctx,
+        "verified_answer.created",
+        "verified_answer",
+        va.id,
+        va.question,
+        collection=col.name,
+        owner=(await audit.emails(ctx.db, [va.owner_id]) or [None])[0],
+        expires_at=va.expires_at,
+        message_id=va.message_id,
+    )
     await ctx.db.commit()
     return (await _out(ctx, [va]))[0]
+
+
+def _fields(va: VerifiedAnswer) -> dict:
+    return {
+        "question": va.question,
+        "answer": va.answer,
+        "collection_id": va.collection_id,
+        "owner_id": va.owner_id,
+        "expires_at": va.expires_at,
+    }
 
 
 @router.get("/verified-answers/{answer_id}", response_model=VerifiedAnswerOut)
@@ -211,6 +233,7 @@ async def update_verified(
     """Edit the text, move it, change the owner or the expiry. Editing doesn't
     re-verify: use `reverify` to vouch for it again."""
     va = await _get(ctx, answer_id)
+    before = _fields(va)
     if body.question is not None:
         va.question = body.question.strip()
     if body.answer is not None:
@@ -222,6 +245,18 @@ async def update_verified(
     col = await _collection(ctx, body.collection_id or va.collection_id)
     va.collection_id = col.id
     await _index(ctx, va, col)
+    if diff := audit.changes(before, _fields(va)):
+        if "answer" in diff:  # the text can be long: say it changed, not what it says
+            diff["answer"] = {"changed": True}
+        audit.record_event(
+            ctx,
+            "verified_answer.updated",
+            "verified_answer",
+            va.id,
+            va.question,
+            changes=diff,
+            collection=col.name,
+        )
     await ctx.db.commit()
     return (await _out(ctx, [va]))[0]
 
@@ -234,6 +269,14 @@ async def reverify(answer_id: uuid.UUID, body: ReverifyIn, ctx: OrgContext = Dep
     va.verified_at = datetime.now(UTC)
     va.expires_at = svc.expiry(body.expires_in_days, va.verified_at)
     await _index(ctx, va, await _collection(ctx, va.collection_id))
+    audit.record_event(
+        ctx,
+        "verified_answer.reverified",
+        "verified_answer",
+        va.id,
+        va.question,
+        expires_at=va.expires_at,
+    )
     await ctx.db.commit()
     return (await _out(ctx, [va]))[0]
 
@@ -242,6 +285,7 @@ async def reverify(answer_id: uuid.UUID, body: ReverifyIn, ctx: OrgContext = Dep
 async def delete_verified(answer_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)):
     va = await _get(ctx, answer_id)
     doc = await ctx.db.get(Document, va.document_id)
+    audit.record_event(ctx, "verified_answer.deleted", "verified_answer", va.id, va.question)
     await ctx.db.delete(doc if doc is not None else va)  # the answer goes with its document
     await ctx.db.commit()
     return Response(status_code=204)

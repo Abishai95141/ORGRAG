@@ -1,7 +1,8 @@
 """Worker process: `python -m app.worker`.
 
 Runs N job loops plus a scheduler that re-queues sources whose
-sync_interval_minutes has elapsed and closes out chat answers whose run died.
+sync_interval_minutes has elapsed, closes out chat answers whose run died and deletes
+audit log entries past AUDIT_RETENTION_DAYS.
 Scheduled syncs are incremental; a full sync (which also removes documents
 deleted upstream) runs at least once a day."""
 
@@ -14,7 +15,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 
 from app.agent.runs import reap_stale
-from app.core import telemetry
+from app.core import audit, telemetry
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.ingestion.verified import expire_due
@@ -86,6 +87,8 @@ async def scheduler(stop: asyncio.Event) -> None:
             await requeue_stale(db)
             await reap_stale(db)  # answers whose API process died mid-run
             await expire_due(db)  # verified answers past their expiry leave search
+            if purged := await audit.purge_expired(db):
+                log.info("Purged %d audit log entries past retention", purged)
             now = datetime.now(UTC)
             due = (
                 (

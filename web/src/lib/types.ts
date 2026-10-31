@@ -281,6 +281,54 @@ export type VerifiedAnswerInput = {
   owner_id?: string;
 };
 
+/** A page of a log that's read newest first; pass `next_cursor` back for the next one. */
+export type CursorPage<T> = { items: T[]; next_cursor: string | null; limit: number };
+
+export type AccessKind = "chat" | "search" | "read" | "shared";
+export type AuditChannel = "app" | "api" | "mcp";
+
+/** Who acted, as recorded at the time. With an API key, the user fields are its creator. */
+export type AuditActor = {
+  type: "user" | "api_key";
+  user_id: string | null;
+  name: string;
+  email: string;
+  api_key_id: string | null;
+  api_key_name: string | null;
+};
+
+/** A request that returned this org's documents (only this org's are listed). */
+export type AccessEntry = {
+  id: string;
+  created_at: string;
+  kind: AccessKind;
+  channel: AuditChannel;
+  actor: AuditActor;
+  query: string | null;
+  /** Made from another organization's workspace (which stays unnamed). */
+  cross_org: boolean;
+  message_id: string | null;
+  documents: { id: string; title: string; collection: string | null; cited: boolean }[];
+  document_count: number;
+  cited_count: number;
+};
+
+export type AuditEvent = {
+  id: string;
+  created_at: string;
+  action: string;
+  channel: AuditChannel;
+  actor: AuditActor;
+  target_type: string;
+  target_id: string | null;
+  target_label: string | null;
+  details: Record<string, unknown>;
+};
+
+type AuditWindow = { since?: string; until?: string; actor_id?: string; q?: string };
+export type AccessFilters = AuditWindow & { kind?: AccessKind; channel?: AuditChannel; document_id?: string };
+export type EventFilters = AuditWindow & { action?: string };
+
 export type Insights = {
   totals: { questions: number; conversations: number; documents: number; chunks: number; active_users: number };
   questions_per_day: { date: string; count: number }[];

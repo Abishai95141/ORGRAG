@@ -67,10 +67,11 @@ core/config.py          Settings (pydantic-settings, env-driven)
 core/db.py              Async engine + session factory
 core/security.py        Argon2 password hashing, JWT session tokens
 core/deps.py            current_user, OrgContext (membership + role checks)
+core/audit.py           Audit log writes (data access, admin actions) and retention
 models/                 SQLAlchemy 2.0 typed models
 schemas/                Pydantic request/response models (the API contract)
 api/                    Routers: auth, orgs, members, invites, collections, sources,
-                        documents, search, agents, chat, insights
+                        documents, search, agents, chat, insights, audit
 connectors/             base.py, upload.py, web.py, github.py, registry.py
 ingestion/              parsers.py, chunker.py, pipeline.py
 embeddings/             base.py, fastembed_provider.py, voyage_provider.py, factory
@@ -99,6 +100,8 @@ users ──< memberships >── organizations ──< invitations
                   └─< record_runs (schema, document → content hash, cost, error)
 jobs (org_id, kind, payload, status, progress)
 search_events (org_id, user_id, query, latency_ms, hits) — powers Insights
+audit_access (org_id = the org read, actor, kind, query, documents) — the audit log
+audit_events (org_id, actor, action, target, details)              — admin actions
 ```
 
 Every row that holds tenant data has `org_id` and an index on it. `chunks` has
@@ -122,6 +125,48 @@ Retrieval scope = ∪ over the requested orgs the user belongs to of the collect
 can see in that org. This allow-list of collection ids is computed once per request
 (`retrieval/access.py`) and applied as a SQL filter on every search — the model never
 sees anything outside it, regardless of which tool arguments it sends.
+
+## Audit log
+
+Each org's admins see every read of the org's data — including reads by its members
+working in another org's workspace, which is what cross-org questions make possible —
+and the sensitive changes made in it (`app/core/audit.py` writes, `app/api/audit.py`
+reads and exports; routes in [API.md](API.md#audit-log-admin)).
+
+* **Written, not derived.** Access rows are written as the read happens rather than
+  reconstructed from messages and search events later: `search_events` belongs to the
+  org the request came from and doesn't say which documents (or which orgs) a search
+  returned, a member can delete the conversation that holds an answer's sources, and
+  shared-answer views and document reads leave no other trace. So `audit_access` gets
+  one row per request **per org whose documents it returned**, listing only that org's
+  documents. Org A's log can then show a B-workspace question that read A's documents
+  (actor, query, A's documents, `cross_org: true`) without anything of B's: B's
+  documents are in B's row, and the origin org is stored but only ever shown as
+  "another organization". `search_events` stays as it was, Insights' usage record for
+  the asking org.
+* **"Touched" means shown.** For an answer, everything in its citation registry —
+  every document retrieved and put in front of the model, cited or not (`cited` marks
+  the difference); for a search, the results; a document opened in full (REST or MCP);
+  a shared answer opened with full access. The engine's only hook is one call in
+  `_persist`, in the same transaction as the message. Who is asking (user, API key or
+  MCP) reaches the run through a context variable set where the run is spawned
+  (`chat.begin_answer`), so the engine knows nothing about keys.
+* **Admin actions** (`audit_events`) are added to the request's session before it
+  commits, so the event and the change commit or roll back together. Details hold
+  before/after values and names, never secrets: invite and share tokens, API keys and
+  connector secrets are left out by the callers, and a key-name filter strips anything
+  credential-like as a backstop.
+* **Snapshots.** Actor name and email, API key name and document titles are copied in;
+  message and origin-org ids carry no foreign key. Revoking a key (which deletes it), a
+  member leaving, deleting a conversation or deleting the other org leaves the record
+  intact. Only deleting the org itself removes its log.
+* **Reading at scale.** Lists are newest first with keyset pagination on
+  `(created_at, id)` over `(org_id, created_at, id)` indexes; a GIN index on the
+  documents column answers "who read this document"; exports stream through a
+  server-side cursor in their own session, so a year of log is never in memory.
+* **Retention.** The worker's scheduler deletes entries older than
+  `AUDIT_RETENTION_DAYS` (default 365, 0 = keep) every minute, in batches, using BRIN
+  indexes on `created_at`.
 
 ## Agentic RAG engine
 

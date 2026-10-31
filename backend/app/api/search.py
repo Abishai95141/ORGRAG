@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app.agent.engine import direct_search
 from app.api.scope import key_collection_ids
+from app.core import audit
 from app.core.deps import OrgContext, org_context
 from app.models import SearchEvent
 from app.schemas.common import SearchIn, SearchOut, SourceRef
@@ -31,6 +32,11 @@ async def search(body: SearchIn, ctx: OrgContext = Depends(org_context)):
         limit=body.limit,
     )
     latency = int((time.perf_counter() - started) * 1000)
+    refs = [r.to_source_ref() for r in results]
+    # Attributed to every org whose documents came back, not only the one searched from.
+    audit.record_reads(
+        ctx.db, audit.Actor.of(ctx), "search", refs, query=body.query, origin_org_id=ctx.org_id
+    )
     ctx.db.add(
         SearchEvent(
             org_id=ctx.org_id,
@@ -42,4 +48,4 @@ async def search(body: SearchIn, ctx: OrgContext = Depends(org_context)):
         )
     )
     await ctx.db.commit()
-    return SearchOut(results=[SourceRef(**r.to_source_ref()) for r in results], latency_ms=latency)
+    return SearchOut(results=[SourceRef(**r) for r in refs], latency_ms=latency)

@@ -1,15 +1,20 @@
 import type {
+  AccessEntry,
+  AccessFilters,
   Agent,
   ApiKey,
   Attachment,
+  AuditEvent,
   Collection,
   ConnectorSpec,
   Conversation,
   DocRequest,
   DocRequestStatus,
+  CursorPage,
   DocumentDetail,
   DocumentRow,
   DocumentSort,
+  EventFilters,
   GraphStats,
   Gaps,
   Health,
@@ -334,4 +339,17 @@ export const api = {
     request<DocRequest>(`${o(slug)}/doc-requests/${id}/fulfill`, { method: "POST", json: body }),
   dismissDocRequest: (slug: string, id: string, note?: string) =>
     request<DocRequest>(`${o(slug)}/doc-requests/${id}/dismiss`, { method: "POST", json: { note } }),
+
+  // audit log
+  auditAccess: (slug: string, filters: AccessFilters, cursor?: string | null) =>
+    request<CursorPage<AccessEntry>>(`${o(slug)}/audit/access?${query({ ...filters, cursor, limit: 50 })}`),
+  auditEvents: (slug: string, filters: EventFilters, cursor?: string | null) =>
+    request<CursorPage<AuditEvent>>(`${o(slug)}/audit/events?${query({ ...filters, cursor, limit: 50 })}`),
+  /** A download link: the browser streams the file straight to disk (the export is recorded). */
+  auditExportUrl: (
+    slug: string,
+    log: "access" | "events",
+    format: "csv" | "jsonl",
+    filters: AccessFilters | EventFilters,
+  ) => `/api${o(slug)}/audit/export?${query({ ...filters, log, format })}`,
 };

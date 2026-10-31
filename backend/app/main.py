@@ -17,6 +17,7 @@ from app.api import (
     agents,
     api_keys,
     attachments,
+    audit,
     auth,
     chat,
     collections,
@@ -216,6 +217,7 @@ for module in (
     sharing,
     records,
     doc_requests,
+    audit,
     meta,
 ):
     app.include_router(

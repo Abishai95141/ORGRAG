@@ -68,6 +68,10 @@ what changed.
   starter prompts.
 - **Insights.** Question volume, most-cited sources, answer feedback, and
   recent questions.
+- **Audit log.** Each org's admins see every read of its data — answers, searches,
+  opened documents, shared answers, by people or API keys, including questions asked
+  from another org's workspace — and every admin change, with CSV/JSONL export and a
+  retention window (`AUDIT_RETENTION_DAYS`).
 - **Design.** A hand-built icon and illustration system, light and dark themes,
   and an editorial type system. See [`docs/DESIGN.md`](docs/DESIGN.md).
 

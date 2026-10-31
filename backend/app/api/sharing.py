@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.citations import cited_refs
+from app.core import audit
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import OrgContext, admin_ctx, org_context, session_user
@@ -89,16 +90,40 @@ async def share_answer(message_id: uuid.UUID, ctx: OrgContext = Depends(org_cont
             created_by_id=ctx.user.id,
         )
         ctx.db.add(share)
+        await ctx.db.flush()
+        await _share_event(ctx, "share.created", share, message)
         await ctx.db.commit()
     return _share_out(share)
+
+
+async def _question(db: AsyncSession, message: Message) -> str | None:
+    """The user message an answer replies to."""
+    return await db.scalar(
+        select(Message.content)
+        .where(
+            Message.conversation_id == message.conversation_id,
+            Message.role == "user",
+            Message.created_at <= message.created_at,
+        )
+        .order_by(Message.created_at.desc())
+        .limit(1)
+    )
+
+
+async def _share_event(ctx: OrgContext, action: str, share: SharedAnswer, message: Message) -> None:
+    """Labelled with the question; never the token, which is the link itself."""
+    question = await _question(ctx.db, message)
+    audit.record_event(ctx, action, "shared_answer", share.id, question, message_id=message.id)
 
 
 @router.delete("/orgs/{slug}/messages/{message_id}/share", status_code=204)
 async def unshare_answer(message_id: uuid.UUID, ctx: OrgContext = Depends(org_context)):
     """Revoke the link: it stops working for everyone."""
-    share = await active_share(ctx.db, (await _own_answer(ctx, message_id)).id)
+    message = await _own_answer(ctx, message_id)
+    share = await active_share(ctx.db, message.id)
     if share is not None:
         share.revoked_at = datetime.now(UTC)
+        await _share_event(ctx, "share.revoked", share, message)
         await ctx.db.commit()
     return Response(status_code=204)
 
@@ -191,16 +216,7 @@ async def open_shared(
 
     conv = await db.get(Conversation, message.conversation_id)
     author = await db.get(User, conv.user_id) if conv else None
-    question = await db.scalar(
-        select(Message.content)
-        .where(
-            Message.conversation_id == message.conversation_id,
-            Message.role == "user",
-            Message.created_at <= message.created_at,
-        )
-        .order_by(Message.created_at.desc())
-        .limit(1)
-    )
+    question = await _question(db, message)
     cited = set(cited_refs(message.content))
     sources = [s for s in message.sources if s.get("ref") in cited]
     base.author_name = author.name if author else None
@@ -213,6 +229,18 @@ async def open_shared(
     base.access = "full"
     base.answer = message.content
     base.sources = message.sources  # the full list, so [n] markers resolve
+    # A read of every org whose documents the viewer now sees through the answer.
+    audit.record_reads(
+        db,
+        audit.Actor.of_user(user),
+        "shared",
+        message.sources,
+        query=question,
+        origin_org_id=share.org_id,
+        message_id=message.id,
+        cited=cited,
+    )
+    await db.commit()
     return base
 
 
@@ -310,6 +338,21 @@ async def _pending(ctx: OrgContext, request_id: uuid.UUID) -> AccessRequest:
     return req
 
 
+async def _decision_event(ctx: OrgContext, action: str, req: AccessRequest) -> None:
+    requester = await ctx.db.get(User, req.user_id)
+    collection = await ctx.db.get(Collection, req.collection_id)
+    audit.record_event(
+        ctx,
+        action,
+        "access_request",
+        req.id,
+        requester.email if requester else None,
+        collection=collection.name if collection else None,
+        collection_id=req.collection_id,
+        note=req.note,
+    )
+
+
 @router.post("/orgs/{slug}/access-requests/{request_id}/approve", response_model=AccessRequestOut)
 async def approve_access(request_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)):
     """Grant the requester read access to the collection."""
@@ -325,6 +368,7 @@ async def approve_access(request_id: uuid.UUID, ctx: OrgContext = Depends(admin_
     if granted is None:
         ctx.db.add(CollectionAccess(collection_id=req.collection_id, user_id=req.user_id))
     req.status, req.decided_by_id, req.decided_at = "approved", ctx.user.id, datetime.now(UTC)
+    await _decision_event(ctx, "access_request.approved", req)
     await ctx.db.commit()
     return (await _request_out(ctx.db, [req]))[0]
 
@@ -333,5 +377,6 @@ async def approve_access(request_id: uuid.UUID, ctx: OrgContext = Depends(admin_
 async def dismiss_access(request_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)):
     req = await _pending(ctx, request_id)
     req.status, req.decided_by_id, req.decided_at = "dismissed", ctx.user.id, datetime.now(UTC)
+    await _decision_event(ctx, "access_request.dismissed", req)
     await ctx.db.commit()
     return (await _request_out(ctx.db, [req]))[0]

@@ -43,7 +43,7 @@ from app.agent.tools import (
     openai_tools,
     tool_definitions,
 )
-from app.core import telemetry
+from app.core import audit, telemetry
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.llm import nvidia, pricing
@@ -1118,6 +1118,7 @@ class AgentRun:
                     hits=len(self.registry),
                 )
             )
+        await audit.record_answer(db, self.req, message)  # each org whose documents it read
         conversation = await db.get(Conversation, self.req.conversation_id)
         if conversation:
             conversation.updated_at = datetime.now(UTC)

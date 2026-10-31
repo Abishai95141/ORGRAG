@@ -1,7 +1,7 @@
 """Structured records: record_schemas, records, record_runs
 
 Revision ID: 0016
-Revises: 0013
+Revises: 0014
 Create Date: 2026-11-01 02:00:00.000000
 """
 
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0016"
-down_revision: str | None = "0013"
+down_revision: str | None = "0014"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

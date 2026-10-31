@@ -473,6 +473,18 @@ export const IconRequest = make(
   </>,
 );
 
+/** Audit log: a clipboard holding a list of entries. */
+export const IconAudit = make(
+  "Audit",
+  <>
+    <rect x="4.5" y="3.75" width="11" height="13.5" rx="1.75" />
+    <path d="M7.75 3.75v-.25c0-.55.45-1 1-1h2.5c.55 0 1 .45 1 1v.25" />
+    <path d="M7.5 8.5h5M7.5 11.25h5M7.5 14h3" />
+  </>,
+);
+
+export const IconDownload = make("Download", <path d="M10 3.75v8.5M6.25 8.75 10 12.5l3.75-3.75M4.25 16h11.5" />);
+
 export function Spinner({ size = 16, className }: { size?: number; className?: string }) {
   return (
     <svg viewBox="0 0 20 20" width={size} height={size} className={className} aria-hidden="true">

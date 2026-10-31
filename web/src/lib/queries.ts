@@ -1,8 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 import type { DocRequestStatus } from "./types";
+import type { AccessFilters, EventFilters } from "./types";
 
 export const qk = {
   me: ["me"] as const,
@@ -30,6 +31,9 @@ export const qk = {
   gaps: (slug: string) => ["org", slug, "gaps"] as const,
   docRequests: (slug: string) => ["org", slug, "doc-requests"] as const,
   myDocRequests: (slug: string) => ["org", slug, "doc-requests", "mine"] as const,
+  audit: (slug: string) => ["org", slug, "audit"] as const,
+  auditAccess: (slug: string, filters: AccessFilters) => ["org", slug, "audit", "access", filters] as const,
+  auditEvents: (slug: string, filters: EventFilters) => ["org", slug, "audit", "events", filters] as const,
   connectors: ["connectors"] as const,
   models: ["models"] as const,
 };
@@ -73,4 +77,23 @@ export const useSource = (slug: string, id: string) =>
     queryKey: qk.source(slug, id),
     queryFn: () => api.source(slug, id),
     refetchInterval: (q) => (q.state.data && ACTIVE.has(q.state.data.status) ? 1200 : false),
+  });
+
+/** The audit log, newest first, a page of 50 at a time (cursor pagination). */
+export const useAuditAccess = (slug: string, filters: AccessFilters, enabled = true) =>
+  useInfiniteQuery({
+    queryKey: qk.auditAccess(slug, filters),
+    queryFn: ({ pageParam }) => api.auditAccess(slug, filters, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page) => page.next_cursor,
+    enabled,
+  });
+
+export const useAuditEvents = (slug: string, filters: EventFilters, enabled = true) =>
+  useInfiniteQuery({
+    queryKey: qk.auditEvents(slug, filters),
+    queryFn: ({ pageParam }) => api.auditEvents(slug, filters, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page) => page.next_cursor,
+    enabled,
   });

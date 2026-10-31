@@ -25,7 +25,8 @@ probed. 403 means "you can see it but your role can't do that".
 
 Pagination: unbounded lists return `Page<T> = {items: T[], total, limit, offset}` and take
 `?limit=&offset=` (`limit` ≤ 200, `offset` ≤ 10 000 000). Small bounded lists (members,
-collections, agents…) return plain arrays.
+collections, agents…) return plain arrays. The audit log is the exception: it is
+cursor-paginated (`{items, next_cursor, limit}`, see [Audit log](#audit-log-admin)).
 
 Paths: a trailing slash is ignored (`/orgs/acme/agents/` = `/orgs/acme/agents`), no redirect.
 
@@ -262,7 +263,7 @@ listing that comes back empty never deletes anything (it usually means lost acce
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | GET | `/orgs/{slug}/documents?q=&collection_id=&source_id=&hidden=&sort=title\|updated\|feedback\|boost&limit=&offset=` | – | `Page<DocumentRow>` (only collections the caller can see; `q` is a literal substring of title or URL, ≤ 200 chars) |
-| GET | `/orgs/{slug}/documents/{id}` | – | `DocumentRow & {content: string, my_vote: "up" \| "down" \| null}` |
+| GET | `/orgs/{slug}/documents/{id}` | – | `DocumentRow & {content: string, my_vote: "up" \| "down" \| null}` (each read is recorded in the [audit log](#audit-log-admin)) |
 | PATCH | `/orgs/{slug}/documents/{id}` `[admin]` | `{boost?: -3..3, hidden?: boolean}` | `DocumentRow & {content, my_vote}` |
 | POST | `/orgs/{slug}/documents/{id}/feedback` | `{vote: "up" \| "down" \| null, message_id?}` | `{document_id, vote, feedback_up, feedback_down}` (one vote per person; `null` clears; `message_id` must be an answer in one of the caller's own conversations, else 404) |
 | DELETE | `/orgs/{slug}/documents/{id}` `[admin]` | – | `204` |
@@ -400,7 +401,7 @@ public; a conversation attachment counts as readable only by the asker.
 |---|---|---|---|
 | POST | `/orgs/{slug}/messages/{id}/share` | – | `{token, url, created_at}` (one active link per answer; the asker's own `complete` answers only, else 404 / 400 `answer_incomplete`) |
 | DELETE | `/orgs/{slug}/messages/{id}/share` | – | `204` (turns the link off for everyone; sharing again makes a new token) |
-| GET | `/shared/{token}` `[session]` | – | `SharedAnswer`; `404 share_not_found` when turned off |
+| GET | `/shared/{token}` `[session]` | – | `SharedAnswer`; `404 share_not_found` when turned off (a `full` view is recorded in the audit log of each org whose documents it shows) |
 | POST | `/orgs/{slug}/collections/{id}/access-requests` | `{note?: string ≤ 500}` | `201 AccessRequest` (a pending request is returned as is; `409 already_has_access`) |
 | GET | `/orgs/{slug}/access-requests?status=pending\|approved\|dismissed\|all` `[admin]` | – | `AccessRequest[]` |
 | POST | `/orgs/{slug}/access-requests/{id}/approve` `[admin]` | – | `AccessRequest` (grants read access to the collection; `409 already_decided`, `409 not_a_member`) |
@@ -697,6 +698,105 @@ type DocRequest = {
 To close the loop, an admin re-asks the question in chat (`/o/{slug}/chat?q=…` in the web
 app prefills it) and verifies the answer, or writes a verified answer directly
 (`POST /orgs/{slug}/verified-answers` with `question` and `answer`).
+
+## Audit log `[admin]`
+
+Who read the organization's data, and the sensitive changes made in it. An org's log
+covers **every request that returned its documents, whichever org's workspace it came
+from**: when someone in orgs A and B asks a question from B that reads A's documents,
+A's admins see who asked, what, and which of A's documents it reached — and nothing of
+what it read in B (B's documents, name and ids never appear in A's log). Entries are
+snapshots (name, email, API key name, document titles as they were), so they outlive
+the conversation, a revoked key or a member leaving. Admin API keys can read and export
+the log (for a SIEM); members get 403, non-members 404.
+
+What counts as a read (`kind`):
+
+| kind | recorded when | `query` | `documents` |
+|---|---|---|---|
+| `chat` | an answer is saved (also `stopped` / `error`) | the question | everything retrieved and shown to the model; `cited` marks what the answer cites |
+| `search` | `POST /search`, MCP `search` | the query | the results |
+| `read` | `GET /documents/{id}`, MCP `read_document` | null | the document |
+| `shared` | a viewer opens a shared answer with `access: "full"` | the question | the answer's sources |
+
+`channel` is `app` (signed in), `api` (an API key on the REST API) or `mcp` (an API key
+through the MCP server). Web results and attached files aren't org data and aren't
+listed.
+
+```ts
+type AuditActor = {
+  type: "user" | "api_key";            // an API key acts as its creator: user_* is the creator
+  user_id: string | null;              // null once the user no longer exists
+  name: string; email: string;         // as they were at the time
+  api_key_id: string | null; api_key_name: string | null;
+};
+type AccessEntry = {
+  id: string; created_at: string;
+  kind: "chat" | "search" | "read" | "shared";
+  channel: "app" | "api" | "mcp";
+  actor: AuditActor;
+  query: string | null;
+  cross_org: boolean;                  // made from another org's workspace (never named)
+  message_id: string | null;           // the answer (chat, shared); null when cross_org
+  documents: { id: string; title: string; collection: string | null; cited: boolean }[];  // this org's only
+  document_count: number; cited_count: number;
+};
+type AuditEvent = {
+  id: string; created_at: string;
+  action: string;                      // see below
+  channel: "app" | "api";
+  actor: AuditActor;
+  target_type: string; target_id: string | null; target_label: string | null;
+  details: Record<string, unknown>;    // never secrets: no tokens, keys, passwords or connector secrets
+};
+type CursorPage<T> = { items: T[]; next_cursor: string | null; limit: number };
+```
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/orgs/{slug}/audit/access?since=&until=&actor_id=&q=&kind=&channel=&document_id=&cursor=&limit=50` | – | `CursorPage<AccessEntry>`, newest first |
+| GET | `/orgs/{slug}/audit/events?since=&until=&actor_id=&q=&action=&cursor=&limit=50` | – | `CursorPage<AuditEvent>`, newest first |
+| GET | `/orgs/{slug}/audit/export?log=access\|events&format=csv\|jsonl` + the same filters | – | the log, oldest first, streamed as a download (`text/csv` or `application/x-ndjson`) |
+
+Filters: `since` (inclusive) / `until` (exclusive) are ISO-8601 times (UTC if no offset;
+400 `invalid_range` unless `since < until`); `actor_id` is a user id (their own requests
+and their API keys') or an API key id; `q` is a substring of the query (access) or of
+the target label (events); `document_id` finds the entries that returned a document;
+`action` is one action or a group (`member` matches every `member.*`). `limit` ≤ 200.
+Pass `next_cursor` back as `?cursor=` for the next page (null at the end; 400
+`invalid_cursor` for one that wasn't issued). The log is cursor-paginated, not
+`Page<T>`: it grows while you read it, and has no useful total.
+
+Exports carry every column of the list routes (CSV: `documents` as `title (cited); …`,
+`details` as JSON; cells that a spreadsheet would run as a formula are prefixed with
+`'`). Each export is itself recorded, as `audit.exported` with its filters, before it
+starts.
+
+Actions (`target_type` in brackets):
+
+| action | details |
+|---|---|
+| `org.created`, `org.updated` (organization) | `changes`: `name`, `description`, `hue`, `settings.<key>` → `{from, to}` |
+| `member.joined` (member) | `role`; the actor is the person who accepted the invite |
+| `member.role_changed` (member) | `role: {from, to}` |
+| `member.removed`, `member.left` (member) | `role`, `keys_revoked` (their API keys for the org) |
+| `invite.created`, `invite.revoked` (invite) | `role`; the label is the email (never the token) |
+| `collection.created` (collection) | `visibility`, `granted` (emails) |
+| `collection.updated`, `collection.access_changed` (collection) | `changes`, `granted`, `revoked`; `access_changed` when the visibility or the access list changed |
+| `collection.deleted` (collection) | `documents` |
+| `source.created` (source) | `kind`, `collection`, `config` (secret fields removed), `write_only_fields` (names only), `sync_interval_minutes` |
+| `source.updated` (source) | `changes` (`name`, `sync_interval_minutes`, `config.<key>`), `write_only_fields` |
+| `source.synced`, `source.files_uploaded`, `source.deleted` (source) | `full`; `files`; `kind`, `documents` |
+| `document.hidden`, `document.unhidden`, `document.boosted`, `document.deleted` (document) | `boost: {from, to}`; `source` |
+| `api_key.created`, `api_key.revoked` (api_key) | `role`, `expires_at`, `created_by` (never the key, its hash or prefix) |
+| `share.created`, `share.revoked` (shared_answer) | `message_id`; the label is the question (never the token) |
+| `access_request.approved`, `access_request.dismissed` (access_request) | `collection`, `collection_id`, `note`; the label is the requester's email |
+| `verified_answer.created`, `.updated`, `.reverified`, `.deleted` (verified_answer) | `collection`, `owner`, `expires_at`, `changes` (an edited answer shows as `{changed: true}`) |
+| `audit.exported` (audit_log) | `log`, `format`, `filters` |
+
+Events are written in the same transaction as the change: a change that fails leaves
+no event. The worker deletes entries older than `AUDIT_RETENTION_DAYS` (default 365;
+0 keeps them forever).
 
 ## OpenAPI
 

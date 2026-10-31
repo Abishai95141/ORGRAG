@@ -620,3 +620,93 @@ class DocumentRequest(Base):
     )
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = _created()
+
+
+class DataAccess(Base):
+    """One org's documents reaching someone: an answer that retrieved them, a search
+    that returned them, a document opened in full, or a shared answer viewed (roadmap
+    §6 #4). One row per request per org whose data it returned, holding only that org's
+    documents, so each org's admins see every read of their data — also from another
+    org's workspace — and nothing of other orgs'.
+
+    A snapshot, not a set of references: the actor's name and email, the API key's name
+    and the document titles are copied, and the message and origin org carry no foreign
+    key, so revoking a key, deleting a conversation or deleting the other org doesn't
+    erase this org's record."""
+
+    __tablename__ = "audit_access"
+    __table_args__ = (
+        Index("ix_audit_access_org_created", "org_id", "created_at", "id"),
+        Index("ix_audit_access_org_actor", "org_id", "actor_user_id", "created_at"),
+        Index(
+            "ix_audit_access_org_key",
+            "org_id",
+            "api_key_id",
+            "created_at",
+            postgresql_where=text("api_key_id IS NOT NULL"),
+        ),
+        Index(
+            "ix_audit_access_documents",
+            "documents",
+            postgresql_using="gin",
+            postgresql_ops={"documents": "jsonb_path_ops"},
+        ),
+        # Retention purges by age across orgs; BRIN suits an append-only time column.
+        Index("ix_audit_access_created_brin", "created_at", postgresql_using="brin"),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = _created()
+    kind: Mapped[str] = mapped_column(String(8), nullable=False)  # chat | search | read | shared
+    channel: Mapped[str] = mapped_column(String(8), nullable=False)  # app | api | mcp
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    actor_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    actor_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    api_key_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    api_key_name: Mapped[str | None] = mapped_column(String(120))
+    # The org whose workspace the request came from; only ever shown as "another org".
+    origin_org_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    query: Mapped[str | None] = mapped_column(Text)
+    message_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)  # the answer (chat, shared)
+    # [{"id", "title", "collection", "cited"}] — this org's documents only.
+    documents: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, nullable=False)
+    document_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cited_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class AuditEvent(Base):
+    """A sensitive change in one org — members, invites, collections and their access,
+    sources, documents, settings, API keys, share links, access requests, verified
+    answers, audit exports: who did what to which target. Written in the same
+    transaction as the change. `details` never holds secrets (app.core.audit)."""
+
+    __tablename__ = "audit_events"
+    __table_args__ = (
+        Index("ix_audit_events_org_created", "org_id", "created_at", "id"),
+        Index("ix_audit_events_org_action", "org_id", "action", "created_at"),
+        Index("ix_audit_events_created_brin", "created_at", postgresql_using="brin"),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = _created()
+    action: Mapped[str] = mapped_column(String(48), nullable=False)  # "member.role_changed"
+    channel: Mapped[str] = mapped_column(String(8), nullable=False)  # app | api
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    actor_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    actor_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    api_key_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    api_key_name: Mapped[str | None] = mapped_column(String(120))
+    target_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    target_id: Mapped[str | None] = mapped_column(String(64))
+    target_label: Mapped[str | None] = mapped_column(String(512))
+    details: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
