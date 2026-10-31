@@ -263,3 +263,66 @@ async def test_without_native_citations_results_are_tagged_text(app, monkeypatch
     result = fake.calls[1]["messages"][-1]["content"][0]
     assert isinstance(result["content"], str) and '<source ref="1"' in result["content"]
     assert "list item and table row" in fake.calls[0]["system"][0]["text"]  # default rule
+
+
+async def _with_coverage(app, monkeypatch, verdict):
+    from app.agent import sufficiency
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "sufficiency_check", "always")
+    calls = []
+
+    async def fake_check(**kwargs):
+        calls.append(kwargs)
+        if isinstance(verdict, Exception):
+            raise verdict
+        return verdict
+
+    monkeypatch.setattr(sufficiency, "structured_call", fake_check)
+    answer = "Friday deploys need manager approval [1]."
+    fake, events = await _run(
+        app, monkeypatch, "quick", [_tool_turn("friday deploy"), _answer_turn(answer)]
+    )
+    return fake, events, calls
+
+
+async def test_coverage_check_tells_the_model_what_is_missing(app, monkeypatch):
+    verdict = {"sufficient": False, "missing": ["who approves Friday deploys"]}
+    fake, events, calls = await _with_coverage(app, monkeypatch, verdict)
+    assert events[-1][0] == "done"
+    # The check saw the question and the search results.
+    assert "<question>\nFriday deploys?" in calls[0]["prompt"]
+    assert "Friday deploys need manager approval" in calls[0]["prompt"]
+    tool_result, note = fake.calls[1]["messages"][-1]["content"]
+    assert tool_result["type"] == "tool_result" and note["type"] == "text"
+    assert "<coverage_check>" in note["text"] and "who approves Friday deploys" in note["text"]
+    labels = [d["label"] for e, d in events if e == "step" and d["status"] == "done"]
+    assert "Missing: who approves Friday deploys" in labels
+
+
+async def test_coverage_check_adds_nothing_when_sources_suffice(app, monkeypatch):
+    fake, events, _ = await _with_coverage(app, monkeypatch, {"sufficient": True, "missing": []})
+    assert [b["type"] for b in fake.calls[1]["messages"][-1]["content"]] == ["tool_result"]
+    labels = [d["label"] for e, d in events if e == "step" and d["status"] == "done"]
+    assert "Sources cover the question" in labels
+
+
+async def test_a_failing_coverage_check_never_blocks_the_answer(app, monkeypatch):
+    fake, events, _ = await _with_coverage(app, monkeypatch, RuntimeError("model down"))
+    assert events[-1][0] == "done"
+    assert [b["type"] for b in fake.calls[1]["messages"][-1]["content"]] == ["tool_result"]
+
+
+async def test_coverage_check_is_off_in_quick_mode_by_default(app, monkeypatch):
+    from app.agent import sufficiency
+
+    async def fail(**kwargs):
+        raise AssertionError("the check shouldn't run in quick mode by default")
+
+    monkeypatch.setattr(sufficiency, "structured_call", fail)
+    answer = "Friday deploys need manager approval [1]."
+    fake, events = await _run(
+        app, monkeypatch, "quick", [_tool_turn("friday"), _answer_turn(answer)]
+    )
+    assert events[-1][0] == "done"
+    assert [b["type"] for b in fake.calls[1]["messages"][-1]["content"]] == ["tool_result"]

@@ -90,6 +90,7 @@ async def structured_call(
     schema: dict[str, Any],
     effort: str = "low",
     max_tokens: int = 4000,
+    think: bool = True,
 ) -> dict[str, Any]:
     """One-shot call that returns a JSON object matching `schema`. Claude enforces the
     schema with structured outputs; NVIDIA models are asked for JSON and parsed."""
@@ -113,7 +114,8 @@ async def structured_call(
         max_tokens=max_tokens,
         system=system,
         messages=[{"role": "user", "content": prompt}],
-        thinking={"type": "adaptive"},
+        # Haiku 5.5 accepts thinking off (at effort high or below); Sonnet/Opus 5.5 don't.
+        thinking={"type": "disabled" if not think and "haiku" in model else "adaptive"},
         output_config={"effort": effort, "format": {"type": "json_schema", "schema": schema}},
         **request_extras(),
     ) as stream:

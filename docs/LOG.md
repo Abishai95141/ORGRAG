@@ -2,7 +2,7 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
 
-## 2026-10-31 (later) — Step 4a: citations
+## 2026-10-31 (later) — Step 4: citations, grounding, sufficient context
 
 ### Decisions
 
@@ -12,6 +12,11 @@ What was decided, why, and what was measured, newest first. Each entry links to 
 | D20 | **The typed-[n] prompt now requires a citation on every list item and table row.** | Lists and tables were the weakest spots for citation recall (0.06 and 0.29 on Nemotron). | Smoke: citation recall 0.763 → 0.791 (paired +0.033, CI [−0.006, +0.075], p 0.05), precision 0.973 → 0.990, faithfulness 0.982 both, pass 14/15 both. Live: every step of a 6-item list cited. | `CITE_BY_NUMBER` in `app/agent/prompts.py`. |
 | D21 | **Native mode keeps the work that makes it viable**: passages split into one block per sentence, list item or table row (abbreviation-aware); the ref carried in `source` (`strata://source/<n>`); markers appended when a cited block finishes streaming; model-typed `[1-6]` (result-block) markers mapped to `[1]`; repeated markers collapsed. | So the switch can be re-tested on other models (Sonnet/Opus 5.5) or after prompt work without rebuilding it. | Tests: `test_claude_citations_become_markers`, `test_markers_the_model_also_wrote_are_not_doubled`. | — |
 | D22 | **A `[n]` that matches no source is shown, struck through, instead of hidden** (audit C3), and each answer's trace records `strata.unknown_refs`. | Hiding it made an unsupported claim look like an uncited one. | `test_a_chat_answer_is_one_trace_with_turns_tools_and_usage`. | — |
+| D23 | **HHEM-2.1-Open is not adopted** for the per-sentence grounding check. | Too slow and too many false alarms to flag sentences in the UI. | Against Sonnet's labels on 180 cited claims (plus 120 synthetic negatives): AUC 0.95 vs a wrong document, 0.84 vs a changed number, 0.91 on the judge's 6 real negatives; at threshold 0.5 it flags 25% of supported claims (44/174) while catching 49/60 changed numbers. 1.36 s per claim on CPU (~800-token passages), ~14 s per 10-claim answer. Code reviewed at revision `de9a5e6` before running. | Script: `hhem_eval.py` in the session scratchpad. |
+
+| D24 | **Sufficient-context check** (`app/agent/sufficiency.py`): after a search/read round, Haiku 5.5 (low effort, adaptive thinking) says which facts the sources don't state yet; the answering model gets that note after the tool results and searches again or says what's missing. At most two checks per answer. | The full baseline's failures were mostly multi-hop answers that found the first fact and stopped. | 55 hardest questions (multi-hop, unanswerable, cross-org vocabulary), Sonnet judge: pass 0.836 → 0.909 (paired +0.073, CI [+0.018, +0.145]); multi-hop 0.72 → 0.88 (+0.16, CI [+0.04, +0.32]); fixed q059, q104, q21, q26, broke none. Smoke: 15/15 (q100 fixed). Cost: mean latency 5.8 → 10.9 s on the hard set, 5.7 → 10.8 s on smoke; $0.0011 → $0.0015 per answer. Each check takes 1.8 s (median), 3.5 s (p90). | `SUFFICIENCY_CHECK=off`. |
+| D25 | **The check is on for deep mode by default, off for quick mode** (`SUFFICIENCY_CHECK=deep`; `always` adds quick). | Doubling quick-mode latency breaks its < 5 s target; deep research already takes ~16 s and exists for thoroughness. | As D24. | `SUFFICIENCY_CHECK=always` or `off`. |
+| D26 | **The check keeps thinking on and runs up to twice.** | A faster variant (thinking off, one check) saved only ~1.3 s and lost the gain. | Faster variant on the hard set: pass 0.855 (paired +0.018, CI [−0.054, +0.091]), fixed 3 and broke 2; mean 9.6 s. | `MAX_COVERAGE_CHECKS`, `think` in `structured_call`. |
 
 ### Evals
 
@@ -23,9 +28,18 @@ Smoke set, quick mode, Haiku 5.5, judged by Sonnet 5.5, one question at a time:
 | Native citations | 14/15 | 0.963 | 0.375 | 0.887 | 6.3 / 9.6 s | 0.00160 | `answers-step4-native-…-smoke.json` |
 | Typed [n] + per-item rule (shipped) | 14/15 | 0.982 | 0.791 | 0.990 | 5.7 / 13.2 s | 0.00117 | `answers-step4-text-…-smoke.json` |
 
-Still below the 0.85 citation-recall target: the next lever is the per-sentence grounding check (HHEM), which can also find the supporting source for an uncited sentence.
+Still below the 0.85 citation-recall target. HHEM, the planned per-sentence check, was tested and not adopted (D23).
 
-Cost of this step: about $1.5 (Haiku answers, Sonnet judging).
+Sufficient-context check, Sonnet judge:
+
+| Run | Questions | Pass | Multi-hop | Faithfulness | Citation precision | Mean / p95 | $ per answer | File |
+|---|---|---|---|---|---|---|---|---|
+| Check off | 55 hardest | 0.836 | 0.72 | 0.968 | 0.963 | 5.8 / 9.2 s | 0.00108 | `answers-suff-off-hard-…json` |
+| Check on (shipped form) | 55 hardest | **0.909** | **0.88** | 0.969 | 0.982 | 10.9 / 18.8 s | 0.00147 | `answers-suff-on-hard-…json` |
+| Check on, no thinking, once | 55 hardest | 0.855 | 0.80 | 0.961 | 0.979 | 9.6 / 13.2 s | 0.00155 | `answers-suff-on2-hard-…json` |
+| Check on (shipped form) | smoke 15 | **15/15** | — | 0.963 | 1.000 | 10.8 / 20.7 s | 0.00127 | `answers-suff-on-…-smoke.json` |
+
+Cost of step 4 so far: about $6.5 (Haiku answers, Sonnet judging); HHEM ran locally.
 
 ## 2026-10-31 — Weeks 3–5 start: Claude Haiku 5.5, latency, BM25, Contextual Retrieval
 
@@ -76,7 +90,7 @@ Plan steps covered: 0 (foundations), 1 (latency), 2a (BM25) and 2b (Contextual R
 | Sonnet 5.5, quick | 0 | 0.967 | 0.841 | 6.0 / 5.8 / 8.7 s | 0.0159 | 2.38 |
 | Sonnet 5.5, deep | 0 | 1.000 | 0.870 | 15.5 / 15.2 / 22.0 s | 0.0406 | 6.09 |
 | Haiku 5.5, deep | 0 | 1.000 | 0.885 | 16.6 / 15.9 / 24.1 s | 0.0027 | 0.41 |
-| Haiku 5.5, quick (baseline) | running | | | | | |
+| Haiku 5.5, quick (baseline, judged by Nemotron) | 0 | 0.974 | 0.857 | 5.4 / — / 8.5 s | 0.00114 | 0.17 |
 
 - Sonnet costs ~15× Haiku per answer in deep mode for the same substring facts and gold-citation rate. Whether deep research should route to Sonnet waits for the judged numbers.
 - The Sonnet quick run and both deep runs used the step-1 code (prompt caching, concurrent tools); the Haiku quick baseline started before it.

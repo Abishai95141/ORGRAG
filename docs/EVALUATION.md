@@ -58,9 +58,39 @@ Quick mode, 15 questions. The Haiku baseline is the native Anthropic API with no
 
 Against the Nemotron answers above (citation recall 0.337, 30.7 s mean), Haiku roughly doubles citation recall and answers 4–6× faster. Step 1 changed no question's outcome. The only failure is q100, the multi-hop rota question. The full 150-question Haiku run and the Sonnet comparison runs are in [LOG.md](LOG.md#evals-and-metrics) until they're judged.
 
+### Sufficient-context check (2026-10-31)
+
+After a research round, Haiku 5.5 names the facts the sources don't state yet, and the answering model is told before it writes. On the 55 hardest questions (multi-hop, unanswerable, cross-org vocabulary), Sonnet judge:
+
+| | Pass | Multi-hop | Mean / p95 latency | $ per answer |
+|---|---|---|---|---|
+| Off | 0.836 | 0.72 | 5.8 / 9.2 s | 0.00108 |
+| On | **0.909** (paired +0.073, CI [+0.018, +0.145]) | **0.88** (+0.16, CI [+0.04, +0.32]) | 10.9 / 18.8 s | 0.00147 |
+
+It fixed four questions and broke none; the smoke set went to 15/15. Because it doubles latency, it's on for deep mode by default and one setting away for quick mode (`SUFFICIENCY_CHECK`).
+
+### Answers on Claude Haiku 5.5, all 150 questions (2026-10-31)
+
+Quick mode, native Anthropic API, before prompt caching; judged by Nemotron 3 Ultra.
+
+| Category | n | Pass | Faithfulness | Citation recall | Citation precision | Mean s |
+|---|---|---|---|---|---|---|
+| **All** | 150 | **0.940** | 0.955 | 0.628 | 0.982 | 5.4 (p95 8.5) |
+| Alias | 12 | 1.000 | 0.948 | 0.636 | 0.983 | 4.9 |
+| Cross-org | 8 | 1.000 | 0.963 | 0.675 | 1.000 | 6.3 |
+| Cross-org vocabulary | 15 | 0.867 | 0.959 | 0.550 | 0.991 | 6.7 |
+| List / aggregate | 18 | 1.000 | 0.963 | 0.587 | 0.985 | 6.0 |
+| Multi-hop | 25 | **0.760** | 0.969 | 0.664 | 0.977 | 5.9 |
+| Single fact | 30 | 1.000 | 0.939 | 0.675 | 0.962 | 4.6 |
+| Superseded | 12 | 1.000 | 0.989 | 0.638 | 0.986 | 4.9 |
+| Table | 15 | 1.000 | 0.971 | 0.729 | 1.000 | 4.1 |
+| Unanswerable | 15 | 0.933 | 0.902 | 0.554 | 0.986 | 6.3 |
+
+$0.00114 per answer ($0.17 for the run). The failures concentrate in multi-hop (6 of 9): answers that find the first fact and stop before the second, such as q100 (the escalation rule, but not who was on call that week). Result file: `answers-haiku-baseline-claude-haiku-5-5.json`.
+
 ### Citations: native vs typed (2026-10-31)
 
-Smoke set, Haiku 5.5, Sonnet judge. Claude's native citations (search_result blocks) cite only near-quotes, so synthesized claims went uncited; a typed-[n] prompt that requires a citation on every list item and table row is what ships. Details in [LOG.md](LOG.md#2026-10-31-later--step-4a-citations).
+Smoke set, Haiku 5.5, Sonnet judge. Claude's native citations (search_result blocks) cite only near-quotes, so synthesized claims went uncited; a typed-[n] prompt that requires a citation on every list item and table row is what ships. Details in [LOG.md](LOG.md#2026-10-31-later--step-4-citations-grounding-sufficient-context).
 
 | | Citation recall | Citation precision | Faithfulness | Pass |
 |---|---|---|---|---|

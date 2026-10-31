@@ -55,6 +55,12 @@ class Settings(BaseSettings):
     # writes [n]. Measured on Haiku 5.5 it cites only near-quotes, so synthesized
     # claims (tables, comparisons) went uncited: citation recall 0.38 vs 0.79 typed.
     claude_citations: bool = False
+    # Sufficient-context check: after a research round, a fast model says what the
+    # sources don't yet state, and the answering model is told before it writes.
+    # Measured (quick mode, Haiku): multi-hop pass +0.16, but ~2x latency, so it's on
+    # for deep research by default; "always" adds quick mode, "off" disables it.
+    sufficiency_check: Literal["off", "deep", "always"] = "deep"
+    sufficiency_model: str = "claude-haiku-5-5"
 
     embedding_provider: Literal["fastembed", "voyage", "hash"] = "fastembed"
     embedding_model: str = "BAAI/bge-small-en-v1.5"

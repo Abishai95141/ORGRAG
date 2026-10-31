@@ -26,7 +26,7 @@ from xml.sax.saxutils import escape, quoteattr
 
 from sqlalchemy import select
 
-from app.agent import runs
+from app.agent import runs, sufficiency
 from app.agent.citations import (
     CitationRegistry,
     citation_markers,
@@ -71,6 +71,9 @@ PREAMBLE_CHARS = 160  # text shorter than this before a tool call is treated as 
 # A tool result: text, or (Claude path) a list of search_result blocks.
 ToolContent = str | list[dict[str, Any]]
 MAX_PARALLEL_TOOLS = 4  # tool calls from one turn running at once (each holds a DB session)
+# Tools whose results are evidence for the sufficient-context check.
+EVIDENCE_TOOLS = frozenset({"search_knowledge", "read_document", "search_web"})
+MAX_COVERAGE_CHECKS = 2  # after the first research round, and after a follow-up
 
 # The toolbox (with its DB session) of the tool call running in the current task.
 _bound_tools: contextvars.ContextVar[ToolBox | None] = contextvars.ContextVar(
@@ -198,6 +201,7 @@ class AgentRun:
         # Claude path: search and read results go back as citable search_result blocks,
         # and Claude's citations become [n] markers (CLAUDE_CITATIONS).
         self.native_citations = False
+        self.coverage_checks = 0
         self.status = "streaming"
 
     def _add_usage(self, model: str, usage: dict[str, int] | None) -> None:
@@ -633,6 +637,7 @@ class AgentRun:
         max_turns = MAX_TURNS["deep" if deep else "quick"]
         json_retries = 0
         turn = 0
+        evidence: list[str] = []  # search and read results so far, for the coverage check
 
         caching = get_settings().prompt_caching
         system_blocks: str | list[dict[str, Any]] = system
@@ -763,7 +768,36 @@ class AgentRun:
                 if is_error:
                     result["is_error"] = True
                 results.append(result)
+                if not is_error and block.name in EVIDENCE_TOOLS:
+                    evidence.append(content if isinstance(content, str) else json.dumps(content))
+            searched = any(b.name in EVIDENCE_TOOLS for b in tool_uses)
+            if searched and (hint := await self._coverage_note(evidence)):
+                results.append({"type": "text", "text": hint})  # after the tool results
             messages.append({"role": "user", "content": results})
+
+    async def _coverage_note(self, evidence: list[str]) -> str | None:
+        """Run the sufficient-context check (SUFFICIENCY_CHECK: deep mode, always or off;
+        at most MAX_COVERAGE_CHECKS per answer) and return the note for the model, if
+        facts are missing."""
+        mode = get_settings().sufficiency_check
+        on = mode == "always" or (mode == "deep" and self.req.mode == "deep")
+        if not on or self.coverage_checks >= MAX_COVERAGE_CHECKS:
+            return None
+        self.coverage_checks += 1
+        step = await self.em.step_start("reflect", "Checking the sources cover the question")
+        with telemetry.span("coverage check", "evaluator"):
+            verdict = await sufficiency.check(self.req.question, "\n\n".join(evidence))
+        if verdict is None or verdict["sufficient"] or not verdict["missing"]:
+            label = "Sources cover the question" if verdict else "Coverage check skipped"
+            await self.em.step_update(step, label=label, status="done")
+            return None
+        await self.em.step_update(
+            step,
+            label="Missing: " + "; ".join(verdict["missing"]),
+            status="done",
+            missing=verdict["missing"],
+        )
+        return sufficiency.note(verdict["missing"])
 
     async def _nvidia_turn(
         self, model: str, messages: list[dict[str, Any]], tools, tool_choice: str, deep: bool

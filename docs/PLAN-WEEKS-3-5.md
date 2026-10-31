@@ -15,7 +15,7 @@ This is the build plan for [ROADMAP.md](ROADMAP.md) §3 (quality and speed upgra
 | 2b. Contextual Retrieval | Built; off until long documents (step 3) can show a significant gain. |
 | 2c. Embedding A/B | Not started. |
 | 3 | Not started. |
-| 4. Citations | 4a done: native citations built and measured (off: they cite only near-quotes); per-item [n] rule shipped (citation recall 0.79); unknown [n] flagged. Next: per-sentence grounding (HHEM), sufficiency check. |
+| 4. Citations and abstention | Done: per-item [n] rule (citation recall 0.79); native citations built, off (they cite only near-quotes); unknown [n] flagged; HHEM tested and not adopted (25% false alarms, 1.4 s per claim); sufficient-context check on for deep mode (multi-hop pass 0.72 → 0.88, ~2x latency). Citation recall 0.85 not reached. |
 | 5–6 | Not started. |
 
 Every decision, with its evidence and how to reverse it, is in [LOG.md](LOG.md#2026-10-31--weeks-35-start-claude-haiku-55-latency-bm25-contextual-retrieval).
