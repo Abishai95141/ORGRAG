@@ -166,7 +166,12 @@ Deprioritised: expert finding (identities don't align across orgs), actions with
 - **Contextual Retrieval:** built, off by default (+0.006 recall@5, not significant on this short-document corpus).
 - **Eval:** cost per answer recorded; smoke runs judged by Sonnet 5.5, full runs by the free Nemotron; answer-only runs judged later.
 
-**Progress, weeks 5–8 (2026-11-01):** structured records are built (Track A's main item, with step 6's LangExtract as their prose path): suggested from recurring tables and labelled lines, activated by an admin, queried exactly by the agent, the API, MCP and a Records page. Item recall on the 60-vendor register 26/50 → 50/50 (LOG D39–D43).
+**Progress, weeks 5–8 (2026-11-01):** every item is built and measured; decisions in [LOG.md](LOG.md) D39–D62.
+- **Structured records** (with step 6's LangExtract as their prose path): suggested from recurring tables and labelled lines, activated by an admin, queried exactly by the agent, the API, MCP and a Records page. Item recall on the 60-vendor register 26/50 → 50/50.
+- **Scan tool:** every document matching a filter checked one by one, grounded and cited; 23/50 → 50/50 on the same register without records, refused past its cap rather than partial.
+- **People and roles:** `resolve_role` over the records plus a next-hop prompt rule; quick-mode multi-hop 19/25 → 23/25 questions (q21 and q24 now pass).
+- **Track B:** knowledge gaps and document requests, the per-org audit log with compliance export, and the Slack bot, each reviewed independently and wired into the others (Slack answers in the audit log, records reads logged, gaps that understand records and scans).
+- **Open:** the Docker image with Docling (needs a Docker daemon to verify), turning on the fast path's seeding after a judged run, and Slack against a real workspace.
 
 
 | When | Track A: quality and platform | Track B: product |
