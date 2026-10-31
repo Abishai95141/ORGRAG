@@ -370,6 +370,7 @@ type RecordRow = {
 | POST | `/orgs/{slug}/record-schemas/{id}/extract?force=` `[admin]` | – | `202 {queued: true}`: changed documents only, all with `force`; 400 `schema_inactive` |
 | POST | `/orgs/{slug}/records/query` | `RecordQuery` | `{total, schemas: string[], rows: RecordRow[], groups: {value, count}[]}` |
 | GET | `/orgs/{slug}/records/{id}` | – | `RecordRow` (404 when its collection isn't readable or its document is hidden) |
+| POST | `/orgs/{slug}/records/resolve` | `{role, of?}` | `{record_type, field, value, by: "column" \| "value", record: RecordRow}[]`: who holds a role, from columns named for it ("Change approver") and values naming it ("Tomasz Wierzbicki (Head of Security)"), across active record types you can read; `of` keeps rows mentioning a team, system or code ("PLAT") |
 
 ```ts
 type RecordQuery = {
@@ -592,6 +593,7 @@ claude mcp add --transport http strata https://strata.example.com/api/mcp \
 | `list_collections` | – | the collections the key can read, with document counts |
 | `list_record_types` | – | the active record types the key can query: name, label, collection, fields, record count |
 | `query_records` | `record_type`, `filters?`, `mode?`, `group_by?`, `sort?`, `descending?`, `latest_only?`, `limit?` | the matching records (or count, or groups), each with its document; same query as `/records/query` |
+| `resolve_role` | `role`, `of?` | who holds the role, with the record and its document; same lookup as `/records/resolve` |
 | `ask` | `question`, `mode?` (`quick` \| `deep`), `collection_ids?` | `{answer, status, sources, conversation_id}`: the agent's cited answer, with only the cited sources. Uses the org's model budget and appears in the key owner's chat history |
 
 Tools return structured content (and the same JSON as text). Anticipated failures

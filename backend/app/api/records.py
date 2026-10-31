@@ -16,6 +16,7 @@ from app.core.deps import OrgContext, admin_ctx, org_context
 from app.core.errors import bad_request, conflict, not_found
 from app.models import Collection, Document, Job, Record, RecordRun, RecordSchema
 from app.records import query as records_query
+from app.records import resolve as records_resolve
 from app.records import suggest as records_suggest
 from app.records.jobs import enqueue_extraction
 from app.retrieval.access import ADMIN_ROLES, visible_collections
@@ -30,6 +31,8 @@ from app.schemas.records import (
     RecordSchemaDetail,
     RecordSchemaOut,
     RecordSchemaPatch,
+    RoleMatchOut,
+    RoleQueryIn,
 )
 
 router = APIRouter(prefix="/orgs/{slug}", tags=["records"])
@@ -124,7 +127,8 @@ async def log_reads(
             }
             for r in result.rows
         ],
-        query=f"records {name}" + (f": {described}" if described else ""),
+        query=(name if name.startswith("resolve ") else f"records {name}")
+        + (f": {described}" if described else ""),
         origin_org_id=ctx.org_id,
     )
 
@@ -352,6 +356,40 @@ async def query_records(body: RecordQueryIn, ctx: OrgContext = Depends(org_conte
         ],
         groups=[RecordGroup(value=v, count=n) for v, n in result.groups],
     )
+
+
+@router.post("/records/resolve", response_model=list[RoleMatchOut])
+async def resolve_role(body: RoleQueryIn, ctx: OrgContext = Depends(org_context)):
+    """Who holds a role (a column named for it, or a value naming it), across the active
+    record types you can read; `of` narrows to rows mentioning a team, system or code.
+    The same lookup as the agent's and MCP's `resolve_role`."""
+    collections = await _readable(ctx)
+    schemas = await records_query.schemas_in_scope(ctx.db, list(collections))
+    matches = await records_resolve.resolve(ctx.db, schemas, list(collections), body.role, body.of)
+    rows = [m.row for m in matches]
+    result = records_query.Result(schemas=schemas, total=len(matches), rows=rows)
+    asked = f"resolve {body.role}" + (f" of {body.of}" if body.of else "")
+    await log_reads(ctx, result, asked, [])
+    await ctx.db.commit()
+    return [
+        RoleMatchOut(
+            record_type=m.schema.name,
+            field=m.field,
+            value=m.value,
+            by=m.by,
+            record=RecordOut(
+                id=m.row.record_id,
+                schema_id=m.row.schema_id,
+                key=m.row.key,
+                values=m.row.values,
+                provenance=m.row.provenance,
+                document=RecordDocument(
+                    id=m.row.document_id, title=m.row.title, updated_at=m.row.updated_at
+                ),
+            ),
+        )
+        for m in matches
+    ]
 
 
 @router.get("/records/{record_id}", response_model=RecordOut)

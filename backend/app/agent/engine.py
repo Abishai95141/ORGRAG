@@ -1052,21 +1052,28 @@ class AgentRun:
                     refs=outcome.refs,
                 )
                 return outcome.text, False
-            if name == "query_records" and self.record_schemas:
+            if name in ("query_records", "resolve_role") and self.record_schemas:
+                resolving = name == "resolve_role"
                 step = await self.em.step_start(
-                    "records", "Querying records", {"record_type": args.get("record_type")}
+                    "records",
+                    f"Resolving “{args.get('role', '')}”" if resolving else "Querying records",
+                    {"role": args.get("role")}
+                    if resolving
+                    else {"record_type": args.get("record_type")},
                 )
                 started = time.perf_counter()
                 try:
-                    outcome = await self.tools.query_records(args)
+                    run = self.tools.resolve_role if resolving else self.tools.query_records
+                    outcome = await run(args)
                 except ToolInputError:
                     await self.em.step_update(step, label="Records query failed", status="error")
                     raise
                 self.retrieval_ms += int((time.perf_counter() - started) * 1000)
                 await self.em.sources([s.to_source_ref() for s in outcome.new_sources])
+                one, many = ("match", "matches") if resolving else ("record", "records")
                 await self.em.step_update(
                     step,
-                    label=f"Found {outcome.hits} record{'s' if outcome.hits != 1 else ''}",
+                    label=f"Found {outcome.hits} {one if outcome.hits == 1 else many}",
                     status="done",
                     queries=outcome.queries,
                     refs=outcome.refs,

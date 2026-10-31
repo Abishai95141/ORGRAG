@@ -185,6 +185,7 @@ user question
                 tool loop (≤8 steps, effort=high, adaptive thinking summarized)
                   search_knowledge(queries[], collections?, orgs?, after?)
                   query_records(record_type, filters, mode) — when record types are active
+                  resolve_role(role, of?)     — the next hop: who holds a role
                   read_document(ref)          — expand to neighbour chunks
                   list_collections()
                        │  model decides when evidence suffices
@@ -234,6 +235,11 @@ Search returns the top few passages, so "which vendors…", "how many incidents�
   table with a `[n]` source per row (the chunk where the key is written) and exact
   tallies of choice fields, so breakdowns aren't counted by the model. The same query
   is `POST /records/query` and the MCP `query_records` tool.
+* **Roles** (`records/resolve.py`): `resolve_role` finds who holds a role in the same
+  records, from a column named for it (a directory's "Change approver") or a value naming
+  it ("Tomasz Wierzbicki (Head of Security)"), narrowed to rows mentioning a team, system
+  or code. With the prompt's "take the next hop" rule, multi-hop answers follow a role to
+  the person instead of stopping at "the Head of Security".
 
 ## Tracing
 

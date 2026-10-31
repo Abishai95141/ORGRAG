@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent import records_tool
 from app.agent.citations import CitationRegistry, Registered, search_result
-from app.agent.records_tool import QUERY_RECORDS
+from app.agent.records_tool import QUERY_RECORDS, RESOLVE_ROLE
 from app.graph import query as graph
 from app.graph.extract import ENTITY_TYPES
 from app.models import ChatAttachment, Document
@@ -151,7 +151,7 @@ def tool_definitions(
 ) -> list[dict[str, Any]]:
     out = list(TOOL_DEFINITIONS)
     if records:
-        out.append(QUERY_RECORDS)
+        out += [QUERY_RECORDS, RESOLVE_ROLE]
     if graph:
         out += [LIST_ENTITIES, EXPLORE_ENTITY]
     if web:
@@ -329,6 +329,9 @@ class ToolBox:
 
     async def query_records(self, args: dict[str, Any]) -> SearchOutcome:
         return await records_tool.run(self, self.record_schemas, args)
+
+    async def resolve_role(self, args: dict[str, Any]) -> SearchOutcome:
+        return await records_tool.run_resolve(self, self.record_schemas, args)
 
     async def list_collections(self) -> str:
         if not self.scope.collections:

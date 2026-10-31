@@ -11,6 +11,7 @@ from sqlalchemy import select
 
 from app.models import Chunk, RecordSchema
 from app.records import query as records_query
+from app.records import resolve as records_resolve
 from app.retrieval.hybrid import hits_for_chunks
 
 QUERY_RECORDS = {
@@ -60,6 +61,26 @@ QUERY_RECORDS = {
             "limit": {"type": "integer", "minimum": 1, "maximum": records_query.MAX_ROWS},
         },
         "required": ["record_type"],
+    },
+}
+
+RESOLVE_ROLE = {
+    "name": "resolve_role",
+    "description": (
+        "Who holds a role, or what a code or name stands for, looked up in the structured "
+        "records (directories, registers, rotas). Use it for the next hop when the "
+        "evidence names a role rather than a person: 'the change approver' of a team, 'the "
+        "Head of Security', 'the incident commander', a team code like PLAT. Finds columns "
+        "named for the role and values that name it, optionally only in rows that mention "
+        "`of` (a team, system or code). Returns the matching rows with [n] sources."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "role": {"type": "string", "description": "e.g. 'change approver', 'Head of Security'"},
+            "of": {"type": "string", "description": "Optional: the team, system or code it's for"},
+        },
+        "required": ["role"],
     },
 }
 
@@ -143,6 +164,70 @@ async def _source_chunks(
     return first | found
 
 
+async def _cite(toolbox, rows: list[records_query.Row], key_fields: dict[uuid.UUID, str]):
+    """Register each row's document as a source: (newly registered sources, refs in order,
+    ref per document)."""
+    new, refs, ref_of_doc = [], [], {}
+    chunk_of = await _source_chunks(toolbox.db, rows, key_fields) if rows else {}
+    hits = {h.document_id: h for h in await hits_for_chunks(toolbox.db, list(chunk_of.values()))}
+    for row in rows:
+        hit = hits.get(row.document_id)
+        if hit is None or hit.collection_id not in toolbox.scope.collections:
+            continue
+        entry, is_new = toolbox.registry.register(
+            hit, toolbox.scope.orgs[hit.org_id], toolbox.scope.collections[hit.collection_id]
+        )
+        if is_new:
+            new.append(entry)
+        ref_of_doc[row.document_id] = entry.ref
+        if entry.ref not in refs:
+            refs.append(entry.ref)
+    return new, refs, ref_of_doc
+
+
+async def run_resolve(toolbox, schemas: list[RecordSchema], args: dict[str, Any]):
+    """resolve_role for the agent: (text for the model, refs, newly registered sources)."""
+    from app.agent.tools import SearchOutcome, ToolInputError
+
+    role, of = args.get("role"), args.get("of")
+    if not isinstance(role, str) or not role.strip():
+        raise ToolInputError("'role' is required")
+    if of is not None and not isinstance(of, str):
+        raise ToolInputError("'of' must be text")
+    matches = await records_resolve.resolve(
+        toolbox.db, schemas, toolbox.scope.collection_ids, role, of
+    )
+    asked = f"{role!r}" + (f" of {of!r}" if of else "")
+    if not matches:
+        return SearchOutcome(
+            text=f"resolve_role {asked}: no record names this role"
+            + (" in rows mentioning it" if of else "")
+            + ". Search the documents instead.",
+            queries=[asked],
+            refs=[],
+            hits=0,
+        )
+    rows = list({m.row.record_id: m.row for m in matches}.values())
+    new, refs, ref_of_doc = await _cite(
+        toolbox, rows, {m.schema.id: m.schema.key_field for m in matches}
+    )
+    lines = [f"resolve_role {asked}: {len(matches)} match(es) in the records.", ""]
+    for m in matches:
+        labels = {f["name"]: f.get("label", f["name"]) for f in m.schema.fields}
+        how = "column" if m.by == "column" else "named in"
+        others = "; ".join(
+            f"{labels.get(k, k)}: {_show(v)}" for k, v in m.row.values.items() if k != m.field
+        )
+        ref = ref_of_doc.get(m.row.document_id)
+        lines.append(
+            f"- {m.schema.label} ({how} {labels.get(m.field, m.field)}): **{_show(m.value)}**"
+            f" — {others}" + (f" [{ref}]" if ref else "")
+        )
+    return SearchOutcome(
+        text="\n".join(lines), queries=[asked], refs=refs, new_sources=new, hits=len(matches)
+    )
+
+
 async def run(toolbox, schemas: list[RecordSchema], args: dict[str, Any]):
     """Run a query for the agent: (text for the model, refs, newly registered sources)."""
     from app.agent.tools import SearchOutcome, ToolInputError
@@ -190,22 +275,8 @@ async def run(toolbox, schemas: list[RecordSchema], args: dict[str, Any]):
         lines += [f"| {_show(v) if v is not None else '(blank)'} | {n} |" for v, n in result.groups]
         return SearchOutcome(text="\n".join(lines), queries=[described], refs=[], hits=result.total)
 
-    new, refs, ref_of_doc = [], [], {}
     key_fields = {s.id: s.key_field for s in matching}
-    chunk_of = await _source_chunks(toolbox.db, result.rows, key_fields) if result.rows else {}
-    hits = {h.document_id: h for h in await hits_for_chunks(toolbox.db, list(chunk_of.values()))}
-    for row in result.rows:
-        hit = hits.get(row.document_id)
-        if hit is None or hit.collection_id not in toolbox.scope.collections:
-            continue
-        entry, is_new = toolbox.registry.register(
-            hit, toolbox.scope.orgs[hit.org_id], toolbox.scope.collections[hit.collection_id]
-        )
-        if is_new:
-            new.append(entry)
-        ref_of_doc[row.document_id] = entry.ref
-        if entry.ref not in refs:
-            refs.append(entry.ref)
+    new, refs, ref_of_doc = await _cite(toolbox, result.rows, key_fields)
 
     fields = [f for s in matching for f in s.fields]
     names: list[str] = []

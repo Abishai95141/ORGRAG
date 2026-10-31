@@ -18,7 +18,7 @@ import logging
 import time
 import uuid
 from collections.abc import AsyncIterator
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.provider import AccessToken, TokenVerifier
@@ -46,6 +46,7 @@ from app.core.errors import ApiError
 from app.core.security import API_KEY_PREFIX
 from app.models import ApiKey, Collection, Conversation, Document, SearchEvent
 from app.records import query as records_query
+from app.records import resolve as records_resolve
 from app.retrieval.access import visible_collections
 from app.schemas.common import MessageCreate
 
@@ -389,6 +390,46 @@ async def query_records(
             ],
             groups=[{"value": v, "count": n} for v, n in result.groups],
         )
+
+
+class RoleMatch(BaseModel):
+    record_type: str
+    field: str = Field(description="The column named for the role, or the one naming it")
+    value: Any = Field(description="Who holds the role, or the text that names it")
+    row: RecordRow
+
+
+@server.tool(annotations=READ_ONLY)
+async def resolve_role(
+    role: Annotated[str, Field(min_length=1, max_length=200)],
+    of: Annotated[str | None, Field(max_length=200)] = None,
+) -> list[RoleMatch]:
+    """Who holds a role ('change approver', 'Head of Security'), looked up in the
+    structured records: columns named for the role and values naming it, optionally only
+    in rows that mention `of` (a team, system or code like PLAT)."""
+    async with _context() as ctx:
+        visible = await key_collection_ids(ctx, None)
+        schemas = await records_query.schemas_in_scope(ctx.db, visible)
+        matches = await records_resolve.resolve(ctx.db, schemas, visible, role, of)
+        result = records_query.Result(
+            schemas=schemas, total=len(matches), rows=[m.row for m in matches]
+        )
+        await log_record_reads(ctx, result, f"resolve {role}" + (f" of {of}" if of else ""), [])
+        await ctx.db.commit()
+        return [
+            RoleMatch(
+                record_type=m.schema.name,
+                field=m.field,
+                value=m.value,
+                row=RecordRow(
+                    key=m.row.key,
+                    values=m.row.values,
+                    document_id=str(m.row.document_id),
+                    document_title=m.row.title,
+                ),
+            )
+            for m in matches
+        ]
 
 
 @server.tool(annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=True))

@@ -138,6 +138,29 @@ def _condition(f: dict[str, Any], op: str, raw: Any, i: int) -> tuple[str, dict[
     return f"{expr} {_CMP[op]} :v{i}", params
 
 
+# The records of the schemas `:sids` in the collections `:cids`, without hidden documents'
+# (shared with app.records.resolve).
+SCOPED = (
+    "SELECT r.*, d.title, d.source_updated_at AS doc_time FROM records r "
+    "JOIN documents d ON d.id = r.document_id AND NOT d.hidden "
+    "WHERE r.schema_id IN :sids AND r.collection_id IN :cids"
+)
+EXPANDING = [bindparam("sids", expanding=True), bindparam("cids", expanding=True)]
+
+
+def row_of(r) -> Row:
+    return Row(
+        record_id=r.id,
+        schema_id=r.schema_id,
+        document_id=r.document_id,
+        title=r.title,
+        updated_at=r.doc_time,
+        key=r.key,
+        values=r.values,
+        provenance=r.provenance,
+    )
+
+
 def describe(filters: list[dict[str, Any]]) -> str:
     """Filters as text, for traces and the audit log: "risk_tier eq 'High' AND x missing"."""
     return " AND ".join(
@@ -171,11 +194,7 @@ async def run(
         conditions.append(sql)
         params |= p
     params |= {"sids": [s.id for s in schemas], "cids": list(collection_ids)}
-    base = (
-        "SELECT r.*, d.title, d.source_updated_at AS doc_time FROM records r "
-        "JOIN documents d ON d.id = r.document_id AND NOT d.hidden "
-        "WHERE r.schema_id IN :sids AND r.collection_id IN :cids"
-    )
+    base = SCOPED
     if latest_only:  # one record per entity: the one in its most recent document
         base = (
             f"SELECT DISTINCT ON (x.key) x.* FROM ({base}) x "
@@ -183,7 +202,7 @@ async def run(
         )
     where = " AND ".join(conditions) or "TRUE"
     matched = f"SELECT * FROM ({base}) r WHERE {where}"
-    expanding = [bindparam("sids", expanding=True), bindparam("cids", expanding=True)]
+    expanding = EXPANDING
 
     total = await db.scalar(
         text(f"SELECT count(*) FROM ({matched}) m").bindparams(*expanding), params
@@ -213,17 +232,5 @@ async def run(
         text(f"SELECT * FROM ({matched}) m ORDER BY {order} LIMIT :lim").bindparams(*expanding),
         params,
     )
-    result.rows = [
-        Row(
-            record_id=r.id,
-            schema_id=r.schema_id,
-            document_id=r.document_id,
-            title=r.title,
-            updated_at=r.doc_time,
-            key=r.key,
-            values=r.values,
-            provenance=r.provenance,
-        )
-        for r in rows
-    ]
+    result.rows = [row_of(r) for r in rows]
     return result

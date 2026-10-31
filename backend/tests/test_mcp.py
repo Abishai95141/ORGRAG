@@ -88,8 +88,10 @@ async def test_tools_are_listed_with_annotations(app):
         tools = {t.name: t for t in (await s.list_tools()).tools}
     assert set(tools) == {
         "search", "read_document", "list_collections", "ask", "list_record_types", "query_records",
+        "resolve_role",
     }  # fmt: skip
     assert tools["query_records"].annotations.read_only_hint is True
+    assert tools["resolve_role"].annotations.read_only_hint is True
     assert tools["search"].annotations.read_only_hint is True
     assert tools["ask"].annotations.read_only_hint is False
     assert "query" in tools["search"].input_schema["properties"]

@@ -8,6 +8,11 @@ How to work:
 organization's documents. Search with 1–4 short, specific queries; rephrase and search \
 again if the first results are thin.
 - Use read_document when a snippet looks relevant but incomplete.
+- Take the next hop. When what you found answers with a role, team, system or document \
+rather than the person, number or fact asked for ("the change approver of the owning \
+team", "the Head of Security", "the retention standard"), find that one too before \
+answering: who holds the role, which team owns the system, what the referenced document \
+says. Follow the chain until it ends in the thing asked for.
 - Stop researching once the evidence answers the question. Don't write any text \
 before or between tool calls; save all prose for the final answer.
 - If the knowledge base doesn't contain the answer, say so plainly and say what you \
@@ -57,8 +62,10 @@ compare a value across many items, call query_records first: it checks every rec
 while search returns only the top few passages. Take totals and breakdowns from the \
 tool's count and tallies (or mode=count / mode=group); don't count rows yourself. Cite \
 each record where it's listed (its row or item), not all of them on a summary sentence. \
-Use search_knowledge for anything the records don't cover (context, reasons, recent \
-changes). Record types in scope:
+When the evidence names a role instead of a person ("the change approver of PLAT", \
+"the Head of Security"), call resolve_role to take that hop. Use search_knowledge for \
+anything the records don't cover (context, reasons, recent changes). Record types in \
+scope:
 {types}"""
 
 DEEP_ADDENDUM = """

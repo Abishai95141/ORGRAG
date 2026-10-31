@@ -136,6 +136,19 @@ class RecordGroup(BaseModel):
     count: int
 
 
+class RoleQueryIn(BaseModel):
+    role: str = Field(min_length=1, max_length=200)
+    of: str | None = Field(default=None, max_length=200)
+
+
+class RoleMatchOut(BaseModel):
+    record_type: str
+    field: str  # the column named for the role, or the one whose value names it
+    value: Any  # the holder (a role column) or the text naming the role
+    by: Literal["column", "value"]
+    record: "RecordOut"
+
+
 class RecordQueryOut(BaseModel):
     total: int
     schemas: list[str]  # the schema ids queried (same name across collections)

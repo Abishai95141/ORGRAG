@@ -2,6 +2,15 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
 
+## 2026-11-01 (evening) — People and roles: the next hop
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D52 | **"Take the next hop" in the system prompt**: when the evidence answers with a role, team, system or document instead of the thing asked for, find that too before answering (IRCoT-style). | Quick-mode multi-hop misses stopped at a role ("the Head of Security", "PLAT's change approver"). | 25 multi-hop questions, quick mode, substring facts: 57/64 → 58/64 alone (within noise: fixed q21, q058, q104; lost q055, q063). | Prompt line. |
+| D53 | **`resolve_role` over structured records** (agent tool, `POST /records/resolve`, MCP), rather than a separate people table: directories, rotas and registers already become records, so a role is a column named for it or a value naming it, narrowed by `of` (team, system, code). Aliases in the same row resolve together (PLAT and Platform). | Roadmap §4.3 asked for people, aliases and role assertions; the records hold them for any register an admin activates, with offsets and permissions already handled. | With records on and the tool: **62/64 facts, 23/25 questions** (from 57/64, 19/25); q21 and q24 now pass. Attribution from the traces: most hops went through `query_records` (catalog → team → directory); `resolve_role` fired on q24 ("Head of Security") and fixed it. Left: q100 (on-call medical director by week: a rota in prose) and q106. $0.00137 vs $0.00106 per answer, 6.5 s vs 5.7 s. | Archive record types (both tools go with them). |
+
+Not built from the roadmap item: role assertions with dates from prose ("since March") and nickname aliases written only in prose ("Seun" = Oluwaseun); an admin can capture either with a prose record type (LangExtract, D41).
+
 ## 2026-11-01 (later still) — Track B merged: knowledge gaps, audit log, Slack bot; review fixes
 
 Three features were built in parallel on their own branches (gaps and document requests, roadmap §6 #2; the per-org audit log, §6 #4; the Slack bot), merged with records, migrations chained 0013 → 0014 → 0015 → 0016 (round-trip checked). Each branch got an independent review; what it confirmed was fixed here.

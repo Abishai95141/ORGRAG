@@ -419,3 +419,57 @@ async def _run_jobs():
         while job := await claim_next(db):
             await HANDLERS[job.kind](db, job)
             await finish(db, job)
+
+
+DIRECTORY = """# Team directory and change approvers
+
+| Code | Team | Engineering manager | Change approver | Delegate |
+|---|---|---|---|---|
+| PLAT | Platform | Oluwaseun Adeyemi | Oluwaseun Adeyemi | Kofi Mensah |
+| DP | Data Plane | Priya Raman | Lin Zhou | Mei Tanaka |
+| SEC | Security | Tomasz Wierzbicki (Head of Security) | Tomasz Wierzbicki | Security on-call |
+"""
+
+
+@pytest.mark.integration
+async def test_resolve_role_finds_role_columns_and_values_naming_a_role(app):
+    """The next hop of a multi-hop question: who is 'the change approver' of PLAT, who is
+    'the Head of Security'."""
+    from app.core.db import SessionLocal
+    from app.records import query as records_query
+    from app.records.resolve import resolve
+
+    admin = await _signup(app, f"rr{uuid.uuid4().hex[:6]}")
+    org = await _org(admin, "Roles Co")
+    slug = org["slug"]
+    general = _general(org, (await admin.get(f"/api/orgs/{slug}/collections")).json())
+    await _ingest(admin, slug, general, {"directory.md": DIRECTORY})
+    found = (
+        await admin.post(f"/api/orgs/{slug}/collections/{general}/record-schemas/suggest")
+    ).json()
+    (directory,) = [s for s in found if s["origin"] == "rows_table"]
+    await admin.patch(
+        f"/api/orgs/{slug}/record-schemas/{directory['id']}", json={"status": "active"}
+    )
+    await _run_jobs()
+
+    async with SessionLocal() as db:
+        schemas = await records_query.schemas_in_scope(db, [uuid.UUID(general)])
+
+        async def holders(role, of=None):
+            return [
+                (m.by, m.value) for m in await resolve(db, schemas, [uuid.UUID(general)], role, of)
+            ]
+
+        # A column named for the role, narrowed to the row mentioning the code or the name.
+        assert await holders("change approver", "PLAT") == [("column", "Oluwaseun Adeyemi")]
+        assert await holders("Change Approver", "data plane") == [("column", "Lin Zhou")]
+        # A value that names the role.
+        assert await holders("Head of Security") == [
+            ("value", "Tomasz Wierzbicki (Head of Security)")
+        ]
+        # Word-bounded: "Security" matches the team and the delegate cell, not other rows.
+        assert {v for _, v in await holders("security on-call")} == {"Security on-call"}
+        assert await holders("chief of staff") == []
+        # Another collection's records are out of scope.
+        assert await resolve(db, schemas, [uuid.uuid4()], "change approver", "PLAT") == []
