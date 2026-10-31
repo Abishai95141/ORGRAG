@@ -31,7 +31,7 @@ retrieval, a tool-calling chat loop, streamed citations) and changing three thin
 | Access control | `access/access.py` ACL lists on every chunk | Org scope + collection visibility (`org` / `restricted`) resolved into an allow-list of collection ids before every query |
 | Document sets | `DocumentSet` | `Collection` |
 | Personas ("Agents") | `Persona` table, prompt + tools + document sets | `Agent` — instructions, default collections, quick/deep mode |
-| Chat loop + tools | `chat/llm_loop.py`, `tools/` (internal_search, web_search…) | `app/agent/engine.py` — Claude tool loop over `search_knowledge`, `read_document`, `list_collections` |
+| Chat loop + tools | `chat/llm_loop.py`, `tools/` (internal_search, web_search…) | `app/agent/engine.py` — Claude tool loop over `search_knowledge`, `read_document`, `list_collections`, plus `query_records` and `scan` for complete lists |
 | Deep research | `deep_research/dr_loop.py` | Deep mode: structured plan → iterative search/read/reflect → cited synthesis |
 | Streaming protocol | NDJSON `Packet`s with `Placement` | Server-Sent Events with a small typed event vocabulary (see `API.md`) |
 | Citations | `chat/citation_processor.py` | Global citation registry per answer; model cites `[n]`; UI resolves to source cards |
@@ -80,7 +80,7 @@ retrieval/              hybrid.py (vector + keyword + RRF + scoring), rerank.py,
 llm/                    client.py (Anthropic client, provider-neutral structured calls, error mapping),
                         nvidia.py (OpenAI-compatible streaming + reranker), models.py (catalogue)
 agent/                  engine.py, tools.py, prompts.py, events.py, citations.py,
-                        records_tool.py (query_records)
+                        records_tool.py (query_records), scan_tool.py (scan)
 records/                tables.py (tables and field lines with offsets), values.py (typing),
                         suggest.py, extract.py (deterministic + LangExtract), query.py, jobs.py
 slackbot/               client.py (Slack Web API), signing.py, mrkdwn.py, scope.py, answer.py
@@ -190,6 +190,12 @@ user question
                   search_knowledge(queries[], collections?, orgs?, after?)
                   query_records(record_type, filters, mode) — when record types are active
                   resolve_role(role, of?)     — the next hop: who holds a role
+                  scan(question, filter)      — every matching document, one check each
+                     │   SQL filter (scope, title, edit dates, must_mention) ──▶ ≤ limit?
+                     │       no ─▶ count by collection and date, "narrow it" (+1 turn)
+                     │       yes ▼
+                     │   Haiku per document, 8 at once ─▶ {match, evidence, answer}
+                     │   quote found in the text? ─▶ its chunk registered as [n]
                   read_document(ref)          — expand to neighbour chunks
                   list_collections()
                        │  model decides when evidence suffices
@@ -244,6 +250,36 @@ Search returns the top few passages, so "which vendors…", "how many incidents�
   it ("Tomasz Wierzbicki (Head of Security)"), narrowed to rows mentioning a team, system
   or code. With the prompt's "take the next hop" rule, multi-hop answers follow a role to
   the person instead of stopping at "the Head of Security".
+
+## Exhaustive scans
+
+Records need a schema; most "which incidents blamed X / every contract that says Y"
+questions have none. `scan` (`agent/scan_tool.py`, roadmap §4.2) answers them the
+LOTUS/DocETL way: take every document a cheap filter matches, ask a fast model one
+structured question per document, keep the matches. Slower than search (≈1 s per
+document, 8 in parallel), but complete, and it says how many documents it checked.
+
+* **Same scope as search.** The filter starts from the request's collection allow-list
+  and `NOT hidden`, the rule `retrieval/hybrid.py` applies; collection names only
+  narrow it (an unknown or unreadable name is an error, not "everything").
+  `must_mention` terms are full-text matches on the title or any chunk (the `tsv` GIN
+  index), so the prefilter costs no model call.
+* **Refuse rather than truncate.** More than `limit` matching documents (default 100,
+  `SCAN_MAX_DOCUMENTS` 200) checks nothing and returns the count by collection and
+  edit-date range. A truncated scan's list looks complete, the failure scan exists to
+  fix; a refusal costs one SQL count, and the engine gives that turn back once.
+* **Grounded matches only.** Each check returns `{match, evidence, answer}`; the
+  evidence must be the document's own words (folded comparison, `...` allowed between
+  pieces), or the match is dropped and counted. The chunk containing the quote is
+  registered in the answer's citation registry, so `[n]` opens on the passage.
+* **Long documents** are read through their most relevant chunks (RRF of vector and
+  keyword rank within the document, plus the opening) up to 12,000 characters.
+* **Cost and connections.** Checks report usage through `structured_call(on_usage=…)`
+  into the answer's `usage`, so its cost includes the scan. The read transaction is
+  committed before the checks start, so no connection is held while the model reads.
+* Search results that fill top-k say so and name scan, since the prompt alone wasn't
+  enough (docs/LOG.md D59). The MCP `scan` tool runs the same function within the key's
+  collections and logs its matches like a search.
 
 ## Tracing
 

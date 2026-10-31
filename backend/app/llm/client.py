@@ -2,6 +2,7 @@
 client, provider-neutral structured calls, and error mapping for both providers."""
 
 import json
+from collections.abc import Callable
 from functools import lru_cache
 from typing import Any
 
@@ -82,6 +83,9 @@ def describe_error(exc: Exception) -> tuple[str, str]:
     return "Something went wrong while generating the answer.", "internal_error"
 
 
+UsageHook = Callable[[str, dict[str, int]], None]
+
+
 async def structured_call(
     *,
     model: str,
@@ -91,9 +95,12 @@ async def structured_call(
     effort: str = "low",
     max_tokens: int = 4000,
     think: bool = True,
+    on_usage: UsageHook | None = None,
 ) -> dict[str, Any]:
     """One-shot call that returns a JSON object matching `schema`. Claude enforces the
-    schema with structured outputs; NVIDIA models are asked for JSON and parsed."""
+    schema with structured outputs; NVIDIA models are asked for JSON and parsed.
+    `on_usage(model, usage)` gets the call's token usage, with the model that actually
+    ran, so a caller can add it to an answer's cost."""
     provider, model = resolve_model(model)
     if provider in nvidia.OPENAI_COMPATIBLE:
         text = await nvidia.complete(
@@ -105,6 +112,7 @@ async def structured_call(
             ),
             prompt=prompt,
             max_tokens=max_tokens,
+            on_usage=on_usage,
         )
         return nvidia.extract_json(text)
 
@@ -120,6 +128,16 @@ async def structured_call(
         **request_extras(),
     ) as stream:
         message = await stream.get_final_message()
+    if on_usage is not None and (u := getattr(message, "usage", None)) is not None:
+        on_usage(
+            model,
+            {
+                "input": getattr(u, "input_tokens", 0) or 0,
+                "output": getattr(u, "output_tokens", 0) or 0,
+                "cache_read": getattr(u, "cache_read_input_tokens", 0) or 0,
+                "cache_write": getattr(u, "cache_creation_input_tokens", 0) or 0,
+            },
+        )
     if message.stop_reason == "refusal":
         raise ValueError("refused")
     text = next((b.text for b in message.content if b.type == "text"), "")

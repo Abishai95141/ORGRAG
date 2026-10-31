@@ -357,7 +357,7 @@ function leadSentence(content: string) {
 function answerShortfall(steps: TraceStep[], cited: SourceRef[], content = ""): "short" | "fine" | "about-attachment" {
   if (cited.some((s) => s.origin === "attachment")) return "about-attachment";
   // The same rule as the gaps report (app/gaps/signals.py): listing collections or graph entities isn't research.
-  const researched = steps.some((s) => (s.kind === "search" && !s.detail.listing) || s.kind === "read" || s.kind === "records");
+  const researched = steps.some((s) => (s.kind === "search" && !s.detail.listing) || s.kind === "read" || s.kind === "records" || s.kind === "scan");
   // A records lookup that found records answered from exact data even when it cites nothing (counts, group-bys).
   const fromRecords = steps.some((s) => s.kind === "records" && (s.detail.found ?? 0) > 0);
   const uncited = !cited.some((s) => s.origin === "knowledge") && !fromRecords;

@@ -68,6 +68,17 @@ anything the records don't cover (context, reasons, recent changes). Record type
 scope:
 {types}"""
 
+SCAN_ADDENDUM = """
+For a question that needs every document matching a condition (which incidents, \
+postmortems, contracts or reports say X; every document that mentions Y), use scan when \
+no record type covers it: scan checks each matching document one by one and returns all \
+the matches, where search returns only the top few passages. If a record type covers the \
+question, query_records is exact and cheaper. Scan is slower and costs a model call per \
+document, so narrow it (collections, must_mention, title_contains, dates) and phrase its \
+question about a single document. Don't use it for a fact, a definition or a summary that \
+one or a few documents give: search for those. In the answer, say how many documents the \
+scan checked, and cite each match on its own line or row."""
+
 DEEP_ADDENDUM = """
 This is a deep research request. Work through the research plan: cover each \
 sub-question with its own searches, read the most important documents in full, and \
@@ -112,6 +123,7 @@ def build_system(
     graph: bool = False,
     native_citations: bool = False,
     records: str = "",
+    scan: bool = False,
 ) -> str:
     rule = CITE_NATIVELY if native_citations else CITE_BY_NUMBER
     parts = [BASE_SYSTEM.replace("{citation_rule}", rule), ATTACHMENTS_NOTE]
@@ -119,6 +131,8 @@ def build_system(
         parts.append(WEB_ADDENDUM)
     if records:
         parts.append(RECORDS_ADDENDUM.replace("{types}", records))
+    if scan:
+        parts.append(SCAN_ADDENDUM)
     if graph:
         parts.append(GRAPH_ADDENDUM)
     if deep:

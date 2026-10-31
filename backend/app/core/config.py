@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     fast_path_min_top: float = 0.7
     fast_path_min_gap: float = 0.2
     sufficiency_model: str = "claude-haiku-5-5"
+    # The agent's `scan` tool (app/agent/scan_tool.py): one cheap model call per document
+    # matching a filter, for "which / every" questions no record type covers. A filter
+    # matching more than SCAN_MAX_DOCUMENTS documents is refused with its count.
+    scan_tool: bool = True
+    scan_model: str = "claude-haiku-5-5"
+    scan_max_documents: int = Field(default=200, ge=1, le=1000)
 
     embedding_provider: Literal["fastembed", "voyage", "hash"] = "fastembed"
     embedding_model: str = "BAAI/bge-small-en-v1.5"

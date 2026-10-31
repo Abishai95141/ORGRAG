@@ -662,6 +662,7 @@ async def test_requests_attach_to_their_gap_and_fulfilling_addresses_it(app):
     [
         ([{"kind": "search", "detail": {"queries": ["leave"]}}], True),
         ([{"kind": "records", "detail": {"record_type": "vendor_record"}}], True),
+        ([{"kind": "scan", "detail": {"queries": ["Is it a PHI vendor?"], "scanned": 60}}], True),
         ([{"kind": "read", "detail": {}}], True),
         # "What collections are there?" lists; it doesn't look for an answer.
         ([{"kind": "search", "detail": {"listing": True}}], False),

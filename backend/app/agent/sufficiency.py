@@ -37,8 +37,9 @@ SCHEMA: dict[str, Any] = {
 }
 
 
-async def check(question: str, evidence: str) -> dict[str, Any] | None:
-    """{"sufficient": bool, "missing": [...]}, or None if the check couldn't run."""
+async def check(question: str, evidence: str, on_usage=None) -> dict[str, Any] | None:
+    """{"sufficient": bool, "missing": [...]}, or None if the check couldn't run.
+    `on_usage(model, usage)` counts the call in the answer's cost."""
     if not evidence.strip():
         return None
     try:
@@ -52,6 +53,7 @@ async def check(question: str, evidence: str) -> dict[str, Any] | None:
             schema=SCHEMA,
             effort="low",
             max_tokens=4000,  # adaptive thinking at low effort: measured, it matters
+            on_usage=on_usage,
         )
     except Exception as exc:  # the check is advice; the answer goes on without it
         log.warning("Sufficiency check failed: %s", exc)

@@ -1140,6 +1140,7 @@ async def main_async(args) -> None:
     from app.core.config import get_settings
 
     get_settings().fast_path = overrides["fast_path"] = args.fast_path
+    overrides["scan"] = engine.get_settings().scan_tool  # SCAN_TOOL=false: no scan tool
     if args.cmd == "retrieval":
         rows = [r.__dict__ for r in await run_retrieval(questions)]
         summary = summarize_retrieval(rows)

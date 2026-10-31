@@ -88,10 +88,12 @@ async def test_tools_are_listed_with_annotations(app):
         tools = {t.name: t for t in (await s.list_tools()).tools}
     assert set(tools) == {
         "search", "read_document", "list_collections", "ask", "list_record_types", "query_records",
-        "resolve_role",
+        "resolve_role", "scan",
     }  # fmt: skip
     assert tools["query_records"].annotations.read_only_hint is True
     assert tools["resolve_role"].annotations.read_only_hint is True
+    assert tools["scan"].annotations.read_only_hint is True
+    assert {"question", "must_mention", "limit"} <= set(tools["scan"].input_schema["properties"])
     assert tools["search"].annotations.read_only_hint is True
     assert tools["ask"].annotations.read_only_hint is False
     assert "query" in tools["search"].input_schema["properties"]
@@ -197,3 +199,51 @@ async def test_records_through_mcp_follow_the_key_role(app):
         assert _data(await s.call_tool("list_record_types", {}))["record_types"] == []
         denied = await s.call_tool("query_records", {"record_type": "vendor_record"})
         assert denied.is_error and "No record type" in denied.content[0].text
+
+
+async def test_scan_through_mcp_follows_the_key_role_and_is_audited(app, monkeypatch):
+    from app.agent import scan_tool
+    from app.core.config import get_settings
+    from tests.test_scan import FakeChecks
+
+    admin, slug, admin_key, member_key = await _setup(app)
+    question = "Does this document say how much parental leave staff get?"
+    fake = FakeChecks(
+        {
+            "Leave policy": {
+                "match": True,
+                "evidence": "Staff get sixteen weeks of parental leave.",
+                "answer": "sixteen weeks",
+            },
+            "Merger plan": {
+                "match": True,
+                "evidence": "Project Heron: parental leave.",
+                "answer": "Project Heron",
+            },
+        }
+    )
+    monkeypatch.setattr(get_settings(), "anthropic_api_key", "test-key")
+    monkeypatch.setattr(scan_tool, "structured_call", fake)
+
+    async with mcp_session(app, admin_key["key"]) as s:
+        out = _data(await s.call_tool("scan", {"question": question}))
+        assert out["checked"] == 2 and out["complete"] and out["documents_matching_filter"] == 2
+        assert {m["title"] for m in out["matches"]} == {"Leave policy", "Merger plan"}
+        assert out["cost_usd"] == pytest.approx(0.00024)  # two checks
+        bad = await s.call_tool("scan", {"question": question, "updated_after": "soon"})
+        assert bad.is_error and "YYYY-MM-DD" in bad.content[0].text
+
+    # The member key can't read Board: its document is never checked.
+    fake.prompts.clear()
+    async with mcp_session(app, member_key["key"]) as s:
+        out = _data(await s.call_tool("scan", {"question": question, "must_mention": ["leave"]}))
+        assert [m["title"] for m in out["matches"]] == ["Leave policy"]
+        assert out["matches"][0]["evidence"] == "Staff get sixteen weeks of parental leave."
+        assert "Checked 1 document" in out["note"] and set(fake.prompts) == {"Leave policy"}
+        capped = _data(await s.call_tool("scan", {"question": question, "limit": 1}))
+        assert capped["checked"] == 1  # exactly at the limit: still scanned
+    # Each scan's matches are in the audit log like a search's results.
+    reads = (await admin.get(f"/api/orgs/{slug}/audit/access?q=scan")).json()["items"]
+    scans = [e for e in reads if (e["query"] or "").startswith("scan: ")]
+    assert len(scans) == 3 and all(e["kind"] == "search" and e["channel"] == "mcp" for e in scans)
+    assert {d["title"] for e in scans for d in e["documents"]} == {"Leave policy", "Merger plan"}

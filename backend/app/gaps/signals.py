@@ -43,11 +43,12 @@ COVERED_LABEL = "Sources cover the question"
 
 # Only the trace steps read here leave the database: traces carry up to 8000 characters
 # of reasoning per step, which gap detection never needs.
-# Searching, reading or querying records for the answer; listing collections or graph
-# entities (detail.listing) doesn't count, so "what collections exist?" isn't a gap.
+# Searching, reading, querying records or scanning documents for the answer; listing
+# collections or graph entities (detail.listing) doesn't count, so "what collections
+# exist?" isn't a gap.
 RESEARCHED = (
     '$[*] ? ((@.kind == "search" && !(exists(@.detail.listing))) '
-    '|| @.kind == "read" || @.kind == "records")'
+    '|| @.kind == "read" || @.kind == "records" || @.kind == "scan")'
 )
 REPORTED_MISSING = '$[*] ? (@.kind == "reflect" && exists(@.detail.missing))'
 # A records lookup that found records answered from exact data, even when the answer
