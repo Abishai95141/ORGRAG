@@ -50,7 +50,7 @@ The current harness covers retrieval recall, MRR, per-fact correctness, abstenti
 
 These are correctness and security bugs in what already exists. All are verified in code, and two were reproduced by me (C1, S1).
 
-**Progress (2026-10-31):** C1, C2, S1 (with S2), S3, S5, I1, O3/F1, O5 and F2 are fixed and tested; details in [AUDIT.md](AUDIT.md#fixed-since-the-audit). Still open from this list: **I2** (job lease), **P2** (short DB sessions per chat run) and **S4** (secret encryption).
+**Progress (2026-10-31):** everything in this section is fixed and tested: C1, C2, S1 (with S2), S3, S4, S5, I1, I2, P2, O3/F1, O5 and F2. Details are in [AUDIT.md](AUDIT.md#fixed-since-the-audit). Next on Track B: the MCP server.
 
 | # | Problem | Fix | Effort |
 |---|---|---|---|

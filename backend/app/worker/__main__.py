@@ -18,7 +18,15 @@ from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.models import Source
 from app.worker.jobs import HANDLERS
-from app.worker.queue import claim_next, enqueue_sync, finish, requeue_stale
+from app.worker.queue import (
+    claim_next,
+    defer,
+    enqueue_sync,
+    exclusive,
+    finish,
+    heartbeat,
+    requeue_stale,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("strata.worker")
@@ -34,20 +42,32 @@ async def job_loop(n: int, stop: asyncio.Event) -> None:
             if job is None:
                 pass
             else:
-                handler = HANDLERS.get(job.kind)
-                log.info("[loop %d] running %s %s (attempt %d)", n, job.kind, job.id, job.attempts)
-                try:
-                    if handler is None:
-                        raise RuntimeError(f"No handler for job kind {job.kind}")
-                    await handler(db, job)
-                    await finish(db, job)
-                except Exception as exc:
-                    log.exception("Job %s failed", job.id)
-                    await db.rollback()
-                    await finish(db, await db.get(type(job), job.id), error=str(exc)[:2000])
+                await run_job(n, db, job)
                 continue
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(stop.wait(), timeout=poll)
+
+
+async def run_job(n: int, db, job) -> None:
+    handler = HANDLERS.get(job.kind)
+    async with exclusive(job) as acquired:
+        if not acquired:
+            log.info("[loop %d] %s %s waits: its source is busy", n, job.kind, job.id)
+            await defer(db, job)
+            return
+        log.info("[loop %d] running %s %s (attempt %d)", n, job.kind, job.id, job.attempts)
+        beat = asyncio.create_task(heartbeat(job.id))
+        try:
+            if handler is None:
+                raise RuntimeError(f"No handler for job kind {job.kind}")
+            await handler(db, job)
+            await finish(db, job)
+        except Exception as exc:
+            log.exception("Job %s failed", job.id)
+            await db.rollback()
+            await finish(db, await db.get(type(job), job.id), error=str(exc)[:2000])
+        finally:
+            beat.cancel()
 
 
 async def scheduler(stop: asyncio.Event) -> None:

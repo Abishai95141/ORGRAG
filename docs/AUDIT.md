@@ -9,7 +9,7 @@ A read-only audit of everything outside the HTTP API layer. The API layer was au
 
 Line numbers refer to the code as of 2026-10-31.
 
-**Status:** 11 findings are fixed (see [Fixed since the audit](#fixed-since-the-audit)); the rest are open.
+**Status:** 14 findings are fixed (see [Fixed since the audit](#fixed-since-the-audit)); the rest are open.
 
 ## Summary
 
@@ -25,7 +25,7 @@ Line numbers refer to the code as of 2026-10-31.
 
 ## Fixed since the audit
 
-Each fix has a regression test; the full backend suite (175 tests) passes. The rows below keep the original evidence for reference.
+Each fix has a regression test; the full backend suite (186 tests) passes. The rows below keep the original evidence for reference.
 
 | ID | What changed | Test |
 |---|---|---|
@@ -38,6 +38,9 @@ Each fix has a regression test; the full backend suite (175 tests) passes. The r
 | **O3**, **F1** | Stop calls `POST /orgs/{slug}/messages/{id}/cancel`, which cancels the run: generation and spend stop, and the partial answer is saved as `stopped`. Runs send a heartbeat (`messages.updated_at`, migration 0004); the worker marks answers whose heartbeat is over 90 s old as interrupted. Runs are capped at `CHAT_RUN_TIMEOUT_SECONDS` (default 900). | `tests/test_agent_nvidia.py` |
 | O5 | With `COOKIE_SECURE=true` the API refuses the built-in or a short `SECRET_KEY`. Compose binds Postgres and the API to 127.0.0.1. `web/.dockerignore` excludes `.env*`. | `tests/test_ranking_units.py` |
 | F2 | A polite live region announces each answer's progress (researching, writing, ready, stopped), and an alert region announces failures. | checked in the browser |
+| **I2** | Running jobs send a heartbeat (`jobs.heartbeat_at`, migration 0005); only jobs whose heartbeat stopped for 3 minutes are re-queued, so a long sync is never run twice. Jobs for one source hold a Postgres advisory lock on a dedicated connection (released if the worker dies); a job that finds its source busy is deferred without spending an attempt. | `tests/test_worker_queue.py` |
+| **P2** | No database connection is held while the model generates. The run loads in one short session, each tool call gets its own, and the answer is saved in another. The request's session is released before it waits on the answer. | `tests/test_agent_nvidia.py` (counts checked-out connections during generation) |
+| **S4** | Connector secrets are encrypted at rest with Fernet (`app/core/crypto.py`, migration 0006 encrypts existing rows). Keys come from `SECRETS_ENCRYPTION_KEYS`, which can list several so keys can be rotated with `python -m app.core.crypto rotate`; without it, a key is derived from `SECRET_KEY`. A secret no key can decrypt reads as "not set" instead of breaking the sources page. | `tests/test_crypto.py` |
 
 ### Fix first
 1. **S1:** SSRF in the website crawler. Anyone can sign up, create an org and crawl internal URLs.

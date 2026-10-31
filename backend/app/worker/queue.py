@@ -1,14 +1,28 @@
 """Postgres-backed job queue. Producers insert rows; workers claim with
-FOR UPDATE SKIP LOCKED so any number of workers can run safely."""
+FOR UPDATE SKIP LOCKED so any number of workers can run safely.
 
+A running job bumps `heartbeat_at` every `HEARTBEAT_SECONDS`; only jobs whose
+heartbeat stopped (a dead worker) are re-queued, so a long sync is never run twice.
+Jobs for the same source also take a Postgres advisory lock on a dedicated
+connection, so a sync and a graph extraction (or two syncs) never overlap; the lock
+goes away with the connection if the worker dies."""
+
+import asyncio
+import contextlib
+import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db import SessionLocal, engine
 from app.models import Job, Source
 
 MAX_ATTEMPTS = 3
+HEARTBEAT_SECONDS = 30
+STALE_AFTER = timedelta(minutes=3)
+LOCKED_RETRY = timedelta(seconds=30)
 
 
 async def enqueue_sync(db: AsyncSession, source: Source, *, full: bool = True) -> None:
@@ -52,7 +66,8 @@ async def enqueue_graph(db: AsyncSession, source: Source) -> None:
 
 _CLAIM = text(
     """
-    UPDATE jobs SET status = 'running', started_at = now(), attempts = attempts + 1
+    UPDATE jobs SET status = 'running', started_at = now(), heartbeat_at = now(),
+                    attempts = attempts + 1
     WHERE id = (
         SELECT id FROM jobs
         WHERE status = 'queued' AND run_after <= now()
@@ -86,11 +101,62 @@ async def finish(db: AsyncSession, job: Job, error: str | None = None) -> None:
     await db.commit()
 
 
-async def requeue_stale(db: AsyncSession, older_than: timedelta = timedelta(minutes=30)) -> int:
-    """Jobs left 'running' by a crashed worker go back to the queue."""
+async def requeue_stale(db: AsyncSession, stale_after: timedelta = STALE_AFTER) -> int:
+    """Jobs whose worker died (no heartbeat for `stale_after`) go back to the queue."""
     result = await db.execute(
-        text("UPDATE jobs SET status = 'queued' WHERE status = 'running' AND started_at < :cutoff"),
-        {"cutoff": datetime.now(UTC) - older_than},
+        text(
+            "UPDATE jobs SET status = 'queued' WHERE status = 'running' "
+            "AND coalesce(heartbeat_at, started_at) < :cutoff"
+        ),
+        {"cutoff": datetime.now(UTC) - stale_after},
     )
     await db.commit()
     return result.rowcount or 0
+
+
+async def heartbeat(job_id: uuid.UUID) -> None:
+    """Runs alongside a job until cancelled, in its own short sessions."""
+    while True:
+        await asyncio.sleep(HEARTBEAT_SECONDS)
+        with contextlib.suppress(Exception):  # a missed beat is fine; the next one retries
+            async with SessionLocal() as db:
+                await db.execute(
+                    update(Job)
+                    .where(Job.id == job_id, Job.status == "running")
+                    .values(heartbeat_at=datetime.now(UTC))
+                )
+                await db.commit()
+
+
+def _lock_key(job: Job) -> str | None:
+    source_id = (job.payload or {}).get("source_id")
+    return f"source:{source_id}" if source_id else None
+
+
+@contextlib.asynccontextmanager
+async def exclusive(job: Job) -> AsyncIterator[bool]:
+    """Hold the job's per-source lock for the duration; yields False if another job
+    for the same source holds it."""
+    key = _lock_key(job)
+    if key is None:
+        yield True
+        return
+    async with engine.connect() as conn:
+        got = (
+            await conn.execute(text("SELECT pg_try_advisory_lock(hashtext(:k))"), {"k": key})
+        ).scalar()
+        await conn.commit()
+        try:
+            yield bool(got)
+        finally:
+            if got:
+                await conn.execute(text("SELECT pg_advisory_unlock(hashtext(:k))"), {"k": key})
+                await conn.commit()
+
+
+async def defer(db: AsyncSession, job: Job) -> None:
+    """Put a job back without spending an attempt (its source is busy)."""
+    job.status = "queued"
+    job.attempts = max(0, job.attempts - 1)
+    job.run_after = datetime.now(UTC) + LOCKED_RETRY
+    await db.commit()

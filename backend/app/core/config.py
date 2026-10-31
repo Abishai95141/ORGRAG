@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/strata"
 
     secret_key: str = DEV_SECRET_KEY
+    # Fernet keys for connector secrets at rest, comma-separated; the first encrypts.
+    # Empty derives one from SECRET_KEY (see app.core.crypto).
+    secrets_encryption_keys: str | None = None
     session_cookie: str = "strata_session"
     session_days: int = 14
     cookie_secure: bool = False

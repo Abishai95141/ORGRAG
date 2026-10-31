@@ -203,7 +203,7 @@ def _paginate(body: str, page: int | None, anchor: str | None = None) -> tuple[s
 
 @dataclass
 class ToolBox:
-    db: AsyncSession
+    db: AsyncSession | None  # a short session bound for each tool call by the engine
     scope: RetrievalScope
     registry: CitationRegistry
     top_k: int = 8

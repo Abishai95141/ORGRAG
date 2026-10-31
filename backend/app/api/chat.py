@@ -347,6 +347,9 @@ async def send_message(
         "assistant_message_id": str(assistant.id),
         "mode": conv.mode,
     }
+    # Give the request's connection back before waiting on the answer, which can take
+    # minutes; the run uses its own short sessions (audit P2).
+    await ctx.db.close()
 
     if not stream:
         while (item := await queue.get()) is not None:

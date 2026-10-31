@@ -324,3 +324,37 @@ async def test_reaper_closes_out_answers_whose_run_died(app):
         await db.refresh(alive)
     assert dead.status == "error" and dead.content == INTERRUPTED
     assert alive.status == "streaming"
+
+
+async def test_no_database_connection_is_held_while_the_model_generates(app, monkeypatch):
+    """Audit P2: a slow model mustn't pin a pooled connection (and an open transaction)."""
+    from app.core.db import engine as db_engine
+
+    held: list[int] = []
+
+    class Measuring(FakeNvidia):
+        def stream_chat(self, **kwargs):
+            if "You are Strata" in kwargs["messages"][0]["content"]:
+                held.append(db_engine.pool.checkedout())
+            return super().stream_chat(**kwargs)
+
+    answer = "Staff get sixteen weeks of leave under the policy [1]."
+    fake = Measuring(
+        [_tool_turn("search_knowledge", '{"queries": ["leave"]}'), _answer_turn(answer)]
+    )
+    from app.agent import engine
+    from app.core.config import get_settings
+
+    admin = await _signup(app, "pool")
+    slug = (await _org(admin, "Pool Co"))["slug"]
+    cols = (await admin.get(f"/api/orgs/{slug}/collections")).json()
+    await _ingest(admin, slug, cols[0]["id"], {"leave.md": "# Leave\n\nSixteen weeks."})
+    monkeypatch.setattr(get_settings(), "nvidia_api_key", "nv-test")
+    monkeypatch.setattr(engine.nvidia, "stream_chat", fake.stream_chat)
+    conv = (await admin.post(f"/api/orgs/{slug}/conversations", json={})).json()
+    r = await admin.post(
+        f"/api/orgs/{slug}/conversations/{conv['id']}/messages?stream=false",
+        json={"content": "How much leave?"},
+    )
+    assert r.status_code == 200 and r.json()["message"]["content"] == answer
+    assert held == [0, 0], held  # both model turns started with no connection checked out

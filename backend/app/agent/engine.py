@@ -11,6 +11,7 @@ Event flow:  step(plan) → step(search/read/reflect)* + reasoning* + sources* �
 """
 
 import asyncio
+import contextlib
 import copy
 import logging
 import time
@@ -234,7 +235,7 @@ class AgentRun:
             ).first()
         )
         self.tools = ToolBox(
-            db,
+            None,  # bound per tool call by _tool_session
             scope,
             self.registry,
             top_k=self.settings.retrieval_top_k,
@@ -324,30 +325,45 @@ class AgentRun:
         await self.em.queue.put(("error", {"detail": detail, "code": code}))
 
     async def _execute(self) -> None:
-        async with SessionLocal() as db:
-            try:
+        # No database connection is held while the model generates (audit P2): loading,
+        # each tool call and the final save each use their own short session.
+        try:
+            llm = get_settings().llm_configured
+            async with SessionLocal() as db:
                 await self._load(db)
-                if not self.scope.collections and not self.attachments and not self.web_enabled:
-                    await self.em.delta(
-                        "There's no knowledge I can search in this scope yet. Add a source "
-                        "under **Sources**, or ask an admin for access to a collection."
-                    )
-                elif get_settings().llm_configured:
-                    await self._run_llm(db)
-                elif self.scope.collections:
-                    await self._run_retrieval_only(db)
-                else:
-                    await self.em.delta(
-                        "**Answer generation is off** — set `NVIDIA_API_KEY` or "
-                        "`ANTHROPIC_API_KEY` so Strata can read attached files and the web."
-                    )
-                await self.em.finish_answer()
+                history = await self._history(db) if llm else []
+            if not self.scope.collections and not self.attachments and not self.web_enabled:
+                await self.em.delta(
+                    "There's no knowledge I can search in this scope yet. Add a source "
+                    "under **Sources**, or ask an admin for access to a collection."
+                )
+            elif llm:
+                await self._run_llm(history)
+            elif self.scope.collections:
+                await self._run_retrieval_only()
+            else:
+                await self.em.delta(
+                    "**Answer generation is off** — set `NVIDIA_API_KEY` or "
+                    "`ANTHROPIC_API_KEY` so Strata can read attached files and the web."
+                )
+            await self.em.finish_answer()
+            async with SessionLocal() as db:
                 message = await self._persist(db, status="complete")
                 await self.em.queue.put(("done", {"message": message_payload(message)}))
-            except Exception as exc:
-                log.exception("Agent run failed")
-                await self._fail(exc)
+        except Exception as exc:
+            log.exception("Agent run failed")
+            await self._fail(exc)
         await self.em.queue.put(None)
+
+    @contextlib.asynccontextmanager
+    async def _tool_session(self):
+        """A session for one tool call (tool calls run one at a time)."""
+        async with SessionLocal() as db:
+            self.tools.db = db
+            try:
+                yield
+            finally:
+                self.tools.db = None
 
     # ── retrieval helpers ────────────────────────────────────────────────
     async def _search(self, step_id: str, args: dict[str, Any]):
@@ -365,11 +381,12 @@ class AgentRun:
         )
         return outcome
 
-    async def _run_retrieval_only(self, db) -> None:
+    async def _run_retrieval_only(self) -> None:
         step = await self.em.step_start(
             "search", "Searching knowledge", {"queries": [self.req.question]}
         )
-        outcome = await self._search(step, {"queries": [self.req.question]})
+        async with self._tool_session():
+            outcome = await self._search(step, {"queries": [self.req.question]})
         if not outcome.refs:
             await self.em.delta(
                 "I couldn't find anything relevant in the knowledge base for that question."
@@ -472,7 +489,7 @@ class AgentRun:
             )
         return "\n\n".join(parts)
 
-    async def _run_llm(self, db) -> None:
+    async def _run_llm(self, history: list[dict[str, Any]]) -> None:
         deep = self.req.mode == "deep"
         provider, model = resolve_model(self.settings.model)
         system = build_system(
@@ -492,7 +509,6 @@ class AgentRun:
             user_content = f"{self.req.question}\n\n<research_plan>\n{bullets}\n</research_plan>"
         if attachment_context:
             user_content = f"{attachment_context}\n\n{user_content}"
-        history = await self._history(db)
         definitions = tool_definitions(web=self.web_enabled, graph=self.graph_enabled)
         if provider in nvidia.OPENAI_COMPATIBLE:
             self.provider = provider
@@ -708,6 +724,10 @@ class AgentRun:
     async def _run_tool(self, name: str, args: dict[str, Any]) -> tuple[str, bool]:
         """Run one tool call. Returns (content, is_error); input problems are reported
         back to the model so it can correct itself."""
+        async with self._tool_session():
+            return await self._dispatch_tool(name, args)
+
+    async def _dispatch_tool(self, name: str, args: dict[str, Any]) -> tuple[str, bool]:
         try:
             if name == "search_knowledge":
                 step = await self.em.step_start(

@@ -3,6 +3,7 @@ name: strata
 x-backend-env: &backend-env
   DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/strata
   SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+  SECRETS_ENCRYPTION_KEYS: ${SECRETS_ENCRYPTION_KEYS:-}
   NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   LLM_MODEL: ${LLM_MODEL:-}

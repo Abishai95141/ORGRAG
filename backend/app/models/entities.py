@@ -23,6 +23,7 @@ from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config import get_settings
+from app.core.crypto import EncryptedJSON
 from app.core.db import Base
 
 ROLES = ("owner", "admin", "member", "viewer")
@@ -133,7 +134,8 @@ class Source(Base):
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     config: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
-    secrets: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
+    # Encrypted at rest (app.core.crypto); never returned to clients.
+    secrets: Mapped[dict[str, Any]] = mapped_column(EncryptedJSON, default=dict, nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="idle", nullable=False)
     error: Mapped[str | None] = mapped_column(Text)
     progress: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
@@ -258,6 +260,8 @@ class Job(Base):
     run_after: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     created_at: Mapped[datetime] = _created()
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Bumped while running (app.worker.queue.heartbeat); a stale one means the worker died.
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
