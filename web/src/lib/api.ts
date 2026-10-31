@@ -1,13 +1,18 @@
 import type {
+  AccessEntry,
+  AccessFilters,
   Agent,
   ApiKey,
   Attachment,
+  AuditEvent,
   Collection,
   ConnectorSpec,
   Conversation,
+  CursorPage,
   DocumentDetail,
   DocumentRow,
   DocumentSort,
+  EventFilters,
   GraphStats,
   Health,
   Insights,
@@ -290,4 +295,17 @@ export const api = {
     request<void>(`${o(slug)}/messages/${messageId}/feedback`, { method: "POST", json: { feedback } }),
 
   insights: (slug: string, days = 30) => request<Insights>(`${o(slug)}/insights?days=${days}`),
+
+  // audit log
+  auditAccess: (slug: string, filters: AccessFilters, cursor?: string | null) =>
+    request<CursorPage<AccessEntry>>(`${o(slug)}/audit/access?${query({ ...filters, cursor, limit: 50 })}`),
+  auditEvents: (slug: string, filters: EventFilters, cursor?: string | null) =>
+    request<CursorPage<AuditEvent>>(`${o(slug)}/audit/events?${query({ ...filters, cursor, limit: 50 })}`),
+  /** A download link: the browser streams the file straight to disk (the export is recorded). */
+  auditExportUrl: (
+    slug: string,
+    log: "access" | "events",
+    format: "csv" | "jsonl",
+    filters: AccessFilters | EventFilters,
+  ) => `/api${o(slug)}/audit/export?${query({ ...filters, log, format })}`,
 };

@@ -2,7 +2,7 @@ import logging
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_CLAUDE_MODEL = "claude-opus-5-5"
@@ -127,6 +127,10 @@ class Settings(BaseSettings):
     otel_exporter_otlp_headers: str | None = None
     # Attach question, answer and tool-argument text to spans (off: metadata only).
     trace_content: bool = False
+
+    # Audit log (data access and admin actions): the worker deletes entries older than
+    # this; 0 keeps them forever.
+    audit_retention_days: int = Field(default=365, ge=0)
 
     worker_poll_seconds: float = 2.0
     worker_concurrency: int = 2

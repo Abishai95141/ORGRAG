@@ -37,6 +37,7 @@ from app.agent.engine import direct_search
 from app.agent.tools import paginate
 from app.api.chat import DEFAULT_TITLE, begin_answer, wait_for_answer
 from app.api.scope import key_collection_ids
+from app.core import audit
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.deps import OrgContext, api_key_context, find_api_key
@@ -194,6 +195,10 @@ async def search(
             query=query,
             limit=limit,
         )
+        refs = [r.to_source_ref() for r in found]
+        audit.record_reads(
+            ctx.db, audit.Actor.of(ctx), "search", refs, query=query, origin_org_id=ctx.org_id
+        )
         ctx.db.add(
             SearchEvent(
                 org_id=ctx.org_id,
@@ -205,7 +210,7 @@ async def search(
             )
         )
         await ctx.db.commit()
-    return SearchResults(results=[_passage(r.to_source_ref()) for r in found])
+    return SearchResults(results=[_passage(r) for r in refs])
 
 
 @server.tool(annotations=READ_ONLY)
@@ -226,6 +231,14 @@ async def read_document(
             raise ToolError("No such document")
         collection = await ctx.db.get(Collection, doc.collection_id)
         window, page_no, pages = paginate(doc.content, page)
+        audit.record_reads(
+            ctx.db,
+            audit.Actor.of(ctx),
+            "read",
+            [audit.document_ref(doc, collection)],
+            origin_org_id=ctx.org_id,
+        )
+        await ctx.db.commit()
         return DocumentPage(
             document_id=str(doc.id),
             title=doc.title,

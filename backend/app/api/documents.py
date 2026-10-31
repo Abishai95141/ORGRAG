@@ -11,10 +11,19 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import audit
 from app.core.config import get_settings
 from app.core.deps import OrgContext, admin_ctx, org_context
 from app.core.errors import not_found
-from app.models import Chunk, Conversation, Document, DocumentFeedback, Message, Source
+from app.models import (
+    Chunk,
+    Collection,
+    Conversation,
+    Document,
+    DocumentFeedback,
+    Message,
+    Source,
+)
 from app.retrieval.access import visible_collections
 from app.schemas.common import (
     MAX_OFFSET,
@@ -148,7 +157,17 @@ async def list_documents(
 
 @router.get("/documents/{document_id}", response_model=DocumentDetail)
 async def get_document(document_id: uuid.UUID, ctx: OrgContext = Depends(org_context)):
+    """The full text. Each read is recorded in the org's audit log."""
     doc = await _get_document(ctx, document_id)
+    collection = await ctx.db.get(Collection, doc.collection_id)
+    audit.record_reads(
+        ctx.db,
+        audit.Actor.of(ctx),
+        "read",
+        [audit.document_ref(doc, collection)],
+        origin_org_id=ctx.org_id,
+    )
+    await ctx.db.commit()
     return DocumentDetail(
         **_row(doc, await _chunk_count(ctx.db, doc)).model_dump(),
         content=doc.content,
@@ -163,9 +182,19 @@ async def curate_document(
     """Admin curation: `boost` (-3..3) scales the document's ranking; `hidden` removes
     it from search and answers without deleting it."""
     doc = await _get_document(ctx, document_id)
-    if body.boost is not None:
+    if body.boost is not None and body.boost != doc.boost:
+        audit.record_event(
+            ctx,
+            "document.boosted",
+            "document",
+            doc.id,
+            doc.title,
+            boost=audit.change(doc.boost, body.boost),
+        )
         doc.boost = body.boost
-    if body.hidden is not None:
+    if body.hidden is not None and body.hidden != doc.hidden:
+        action = "document.hidden" if body.hidden else "document.unhidden"
+        audit.record_event(ctx, action, "document", doc.id, doc.title)
         doc.hidden = body.hidden
     await ctx.db.commit()
     return DocumentDetail(
@@ -247,6 +276,14 @@ async def document_feedback(
 async def delete_document(document_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)):
     doc = await _get_document(ctx, document_id)
     source = await ctx.db.get(Source, doc.source_id)
+    audit.record_event(
+        ctx,
+        "document.deleted",
+        "document",
+        doc.id,
+        doc.title,
+        source=source.name if source else None,
+    )
     await ctx.db.delete(doc)
     await ctx.db.commit()
     if source and source.kind == "upload":

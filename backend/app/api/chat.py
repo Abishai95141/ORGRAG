@@ -12,6 +12,7 @@ from app.agent import runs
 from app.agent.engine import ChatRequest, message_payload, run_chat
 from app.agent.prompts import TITLE_SYSTEM
 from app.api.scope import key_collection_ids
+from app.core import audit
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.deps import OrgContext, org_context
@@ -365,8 +366,10 @@ async def begin_answer(
         web_search=body.web_search,
     )
     # The run owns its own task and DB session: it finishes and persists even if
-    # the client disconnects mid-stream.
-    runs.register(assistant.id, _spawn(run_chat(req, queue)))
+    # the client disconnects mid-stream. The task inherits who's asking (user, API key
+    # or MCP) for the audit log.
+    with audit.acting_as(audit.Actor.of(ctx)):
+        runs.register(assistant.id, _spawn(run_chat(req, queue)))
     start = {
         "user_message": message_payload(user_message),
         "assistant_message_id": str(assistant.id),

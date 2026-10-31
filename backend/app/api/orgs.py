@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.serializers import org_out, org_summaries
+from app.core import audit
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import OrgContext, admin_ctx, current_user, org_context, owner_ctx
@@ -85,6 +86,9 @@ async def create_org(
     except IntegrityError as exc:  # another request took the slug in the meantime
         raise conflict("That URL is already taken", "slug_taken") from exc
     db.add(Membership(user_id=user.id, org_id=org.id, role="owner"))
+    audit.add_event(
+        db, org.id, audit.Actor.of_user(user), "org.created", "organization", org.id, org.name
+    )
     db.add(
         Collection(
             org_id=org.id,
@@ -108,6 +112,7 @@ async def update_org(body: OrgPatch, ctx: OrgContext = Depends(admin_ctx)):
     """`settings` is a partial update: omitted keys keep their value. `description: null`
     clears it."""
     org = ctx.org
+    before = _org_fields(org)
     if body.name is not None:
         org.name = body.name.strip()
     if "description" in body.model_fields_set:
@@ -123,8 +128,21 @@ async def update_org(body: OrgPatch, ctx: OrgContext = Depends(admin_ctx)):
         merged = current.model_dump()
         merged.update(body.settings.model_dump(exclude_none=True))
         org.settings = OrgSettings(**merged).model_dump()
+    if diff := audit.changes(before, _org_fields(org)):
+        audit.record_event(ctx, "org.updated", "organization", org.id, org.name, changes=diff)
     await ctx.db.commit()
     return await org_out(ctx.db, org, ctx.user.id)
+
+
+def _org_fields(org: Organization) -> dict:
+    """The editable fields, settings flattened as `settings.<key>` (for the audit log)."""
+    settings = OrgSettings(**(org.settings or {})).model_dump()
+    return {
+        "name": org.name,
+        "description": org.description,
+        "hue": org.hue,
+        **{f"settings.{k}": v for k, v in settings.items()},
+    }
 
 
 @router.delete("/orgs/{slug}", status_code=204)
@@ -174,9 +192,18 @@ async def update_member(user_id: uuid.UUID, body: RolePatch, ctx: OrgContext = D
         raise forbidden("Only owners can change ownership")
     if m.role == "owner" and body.role != "owner" and await _owner_count(ctx.db, ctx.org_id) <= 1:
         raise conflict("An organization needs at least one owner", "last_owner")
+    user = await ctx.db.get(User, user_id)
+    if m.role != body.role:
+        audit.record_event(
+            ctx,
+            "member.role_changed",
+            "member",
+            user_id,
+            user.email,
+            role=audit.change(m.role, body.role),
+        )
     m.role = body.role
     await ctx.db.commit()
-    user = await ctx.db.get(User, user_id)
     return MemberOut(user=UserOut.model_validate(user), role=m.role, joined_at=m.joined_at)
 
 
@@ -195,9 +222,19 @@ async def remove_member(user_id: uuid.UUID, ctx: OrgContext = Depends(org_contex
             raise forbidden("Only owners can remove an owner")
         if await _owner_count(ctx.db, ctx.org_id) <= 1:
             raise conflict("Transfer ownership before leaving", "last_owner")
+    user, role = await ctx.db.get(User, user_id), m.role
     await ctx.db.delete(m)
-    await ctx.db.execute(
+    keys = await ctx.db.execute(
         delete(ApiKey).where(ApiKey.org_id == ctx.org_id, ApiKey.user_id == user_id)
+    )
+    audit.record_event(
+        ctx,
+        "member.left" if user_id == ctx.user.id else "member.removed",
+        "member",
+        user_id,
+        user.email if user else None,
+        role=role,
+        keys_revoked=keys.rowcount,
     )
     await ctx.db.execute(
         delete(CollectionAccess).where(
@@ -252,6 +289,9 @@ async def create_invite(body: InviteCreate, ctx: OrgContext = Depends(admin_ctx)
         created_by=ctx.user.id,
     )
     ctx.db.add(invite)
+    await ctx.db.flush()
+    # Never the token: it is the invitation itself.
+    audit.record_event(ctx, "invite.created", "invite", invite.id, email, role=body.role)
     await ctx.db.commit()
     return invite
 
@@ -261,6 +301,7 @@ async def revoke_invite(invite_id: uuid.UUID, ctx: OrgContext = Depends(admin_ct
     invite = await ctx.db.get(Invitation, invite_id)
     if invite is None or invite.org_id != ctx.org_id:
         raise not_found("Invite")
+    audit.record_event(ctx, "invite.revoked", "invite", invite.id, invite.email, role=invite.role)
     await ctx.db.delete(invite)
     await ctx.db.commit()
     return Response(status_code=204)
@@ -302,11 +343,23 @@ async def accept_invite(
     if invite.email.lower() != user.email.lower():
         raise forbidden(f"This invite was sent to {invite.email}")
     # Idempotent under double-submit: an existing membership is kept as is.
-    await db.execute(
+    joined = await db.scalar(
         insert(Membership)
         .values(user_id=user.id, org_id=org.id, role=invite.role)
         .on_conflict_do_nothing()
+        .returning(Membership.user_id)
     )
+    if joined is not None:
+        audit.add_event(
+            db,
+            org.id,
+            audit.Actor.of_user(user),
+            "member.joined",
+            "member",
+            user.id,
+            user.email,
+            role=invite.role,
+        )
     invite.accepted_at = datetime.now(UTC)
     await db.commit()
     return (await org_summaries(db, user.id, [org.id]))[0]

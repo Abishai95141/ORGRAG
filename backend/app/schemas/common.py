@@ -695,3 +695,71 @@ class AccessRequestOut(BaseModel):
     status: Literal["pending", "approved", "dismissed"]
     created_at: datetime
     decided_at: datetime | None
+
+
+# ── audit log ────────────────────────────────────────────────────────────────
+AccessKind = Literal["chat", "search", "read", "shared"]
+AuditChannel = Literal["app", "api", "mcp"]
+AuditLog = Literal["access", "events"]
+ExportFormat = Literal["csv", "jsonl"]
+
+
+class AuditActor(BaseModel):
+    """Who acted, as recorded at the time. With an API key, `user_*` is its creator."""
+
+    type: Literal["user", "api_key"]
+    user_id: uuid.UUID | None  # null once the user no longer exists
+    name: str
+    email: str
+    api_key_id: uuid.UUID | None = None
+    api_key_name: str | None = None
+
+
+class AccessedDocument(BaseModel):
+    id: uuid.UUID
+    title: str
+    collection: str | None
+    cited: bool  # cited by the answer (chat, shared), not only retrieved
+
+
+class AccessEntryOut(BaseModel):
+    """A request that returned this org's documents. Only this org's documents are
+    listed; `cross_org` says it was made from another organization's workspace, which
+    stays unnamed."""
+
+    id: uuid.UUID
+    created_at: datetime
+    kind: AccessKind
+    channel: AuditChannel
+    actor: AuditActor
+    query: str | None
+    cross_org: bool
+    message_id: uuid.UUID | None  # the answer (chat, shared); null when cross_org
+    documents: list[AccessedDocument]
+    document_count: int
+    cited_count: int
+
+
+class AuditEventOut(BaseModel):
+    id: uuid.UUID
+    created_at: datetime
+    action: str
+    channel: AuditChannel
+    actor: AuditActor
+    target_type: str
+    target_id: str | None
+    target_label: str | None
+    details: dict[str, Any]
+
+
+class CursorPage[T](BaseModel):
+    """Newest first. Pass `next_cursor` back as `?cursor=` for the next page; null at
+    the end. Used where the log is too long to count or offset into."""
+
+    items: list[T]
+    next_cursor: str | None
+    limit: int
+
+
+AccessPage = CursorPage[AccessEntryOut]
+AuditEventPage = CursorPage[AuditEventOut]

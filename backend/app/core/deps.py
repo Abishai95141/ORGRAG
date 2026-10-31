@@ -107,6 +107,8 @@ class OrgContext:
     db: AsyncSession
     # Set when the caller authenticated with an API key (bound to this org).
     api_key: ApiKey | None = None
+    # The request came through the MCP server (attributed as such in the audit log).
+    via_mcp: bool = False
 
     @property
     def org_id(self) -> uuid.UUID:
@@ -162,7 +164,7 @@ async def api_key_context(db: AsyncSession, key: ApiKey) -> OrgContext | None:
     if row is None:
         return None
     org, role, user = row
-    return OrgContext(org=org, user=user, role=_capped(role, key), db=db, api_key=key)
+    return OrgContext(org=org, user=user, role=_capped(role, key), db=db, api_key=key, via_mcp=True)
 
 
 def require_role(minimum: str):
