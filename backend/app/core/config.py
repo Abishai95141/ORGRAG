@@ -120,6 +120,10 @@ class Settings(BaseSettings):
     # Longest a chat answer may run before it's stopped (and its spend with it).
     chat_run_timeout_seconds: int = 900
 
+    # Knowledge gaps: questions group into one gap when their embeddings' average cosine
+    # similarity reaches this. Empty uses a default for EMBEDDING_PROVIDER (app/gaps).
+    gap_similarity: float | None = None
+
     # Tracing (app/core/telemetry.py). Langfuse keys win over a generic OTLP endpoint;
     # neither set means tracing is off.
     langfuse_public_key: str | None = None

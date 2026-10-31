@@ -580,6 +580,124 @@ and `[n]` markers resolved against `sources`.
 }
 ```
 
+## Knowledge gaps
+
+`GET /orgs/{slug}/gaps?days=30&limit=50` `[admin]` → `Gaps`: questions the knowledge base
+didn't answer in the last `days` (1–365, calendar days in UTC like Insights), grouped by
+meaning, biggest first (`limit` 1–100 clusters).
+
+A question counts when its answer is `complete` and
+- **unanswered** — the agent searched or read the knowledge base but cites none of it (it
+  abstained, said it isn't there, or cited only the web);
+- **incomplete** — the sufficient-context check's last verdict in the trace (a `reflect`
+  step with `detail.missing`) still names missing facts; a later check that found them
+  clears it;
+- **downvoted** — the asker gave it a thumbs-down;
+- **no_results** — a direct search (`POST /search`, MCP `search`) found nothing.
+
+Answers that cite a file attached to the conversation, small talk (no search), and
+failed or stopped runs never count; chat questions are counted from their answers, not
+from their search events. The 500 most recent signals of each kind are considered
+(`truncated` says so).
+
+Clustering is deterministic and uses no LLM: identical questions (case, spacing and
+end punctuation folded) are merged and weighted, embedded with the org's embedding
+model (cached in-process per text), then grouped by weighted average-linkage on cosine
+similarity until no two groups average `similarity` or more (`GAP_SIMILARITY`; default
+0.8 for fastembed, 0.7 for Voyage, 0.5 for the hash embedder). A cluster's `label` is
+its most central question. 503 `embedding_error` when the embedding model is down.
+
+Open and fulfilled document requests attach to the cluster their question (or title)
+is most similar to, above the same threshold; a request fulfilled after the cluster's
+last question marks it `addressed`, and addressed clusters sort last.
+
+**Answered elsewhere.** `answered_elsewhere` lists (up to 3) similar questions with a
+good answer in *another* org — complete, citing the knowledge base, not downvoted,
+nothing reported missing, from the last 180 days — or a live verified answer there. A
+hint appears only if the caller is a member of that org, that org allows cross-org reads
+(`allow_cross_org`), and the caller can read every source the answer cites (the shared-
+answer rule: membership of each cited document's org, its collection visible to them,
+not hidden; attachments only for the asker; a verified answer's own collection too).
+It must cite a document outside this org (or be a verified answer). Otherwise nothing
+about the other org is returned — not its name, questions, answers or documents. An API
+key never gets hints: it's bound to its org.
+
+```ts
+type GapReason = "unanswered" | "incomplete" | "downvoted" | "no_results";
+type Gaps = {
+  days: number; since: string;
+  questions: number;          // gap questions considered
+  truncated: boolean;         // more than the cap: only the most recent were clustered
+  similarity: number;         // the clustering threshold used
+  total_clusters: number;
+  clusters: GapCluster[];
+};
+type GapCluster = {
+  id: string;                 // a hash of the label (stable while the label is)
+  label: string;              // the most central question
+  count: number; askers: number;           // questions (repeats included), distinct people
+  first_seen: string; last_seen: string;
+  reasons: Record<GapReason, number>;      // a question can count under two reasons
+  examples: string[];         // up to 5 distinct phrasings, the label first
+  missing: string[];          // facts the coverage check reported missing, most reported first
+  answered_elsewhere: GapHint[];
+  requests: { id: string; title: string; status: DocRequestStatus; document_id: string | null;
+              created_at: string; decided_at: string | null }[];
+  addressed: boolean;
+};
+type GapHint = {
+  kind: "answer" | "verified";
+  org: { name: string; slug: string; hue: number };
+  question: string; answer: string;        // an excerpt, citation markers removed
+  similarity: number; answered_at: string;
+  verified_answer_id: string | null;
+  documents: { id: string; title: string; org_slug: string; collection_name: string | null;
+               source_id: string }[];      // the cited documents outside this org
+};
+```
+
+## Document requests
+
+A member asks the org's admins for a document the knowledge base lacks — from an answer
+that couldn't answer, or from a knowledge gap. Admins fulfil it with the document that
+answers it, or dismiss it, as with access requests. Requesters follow their own.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| POST | `/orgs/{slug}/doc-requests` | `{title: string ≤ 300, note?: ≤ 2000, question?: ≤ 2000, message_id?}` | `201 DocRequest`; `200` with the open request when you already asked for the same title (case, spacing and end punctuation folded) |
+| GET | `/orgs/{slug}/doc-requests?status=pending\|fulfilled\|dismissed\|all&limit=&offset=` `[admin]` | – | `Page<DocRequest>` (default `pending`; newest first) |
+| GET | `/orgs/{slug}/doc-requests/mine?status=…&limit=&offset=` | – | `Page<DocRequest>`: the caller's own (default `all`) |
+| POST | `/orgs/{slug}/doc-requests/{id}/fulfill` `[admin]` | `{document_id, note?: ≤ 2000}` | `DocRequest` (`404` document not in this org, `400 document_hidden`, `400 requester_cannot_read`, `409 not_a_member`, `409 already_decided`) |
+| POST | `/orgs/{slug}/doc-requests/{id}/dismiss` `[admin]` | `{note?: ≤ 2000}` or no body | `DocRequest` (`409 already_decided`) |
+
+`message_id` must be an assistant message in one of the caller's own conversations in
+this org (else 404); the request's `question` is then the user message before it.
+Otherwise `question` is free text, e.g. a gap's `label`. The document that fulfils a
+request must belong to the org, not be hidden from search, and be in a collection the
+requester can read — give them access to a restricted collection first. A request is
+decided once; dismissing it lets the same thing be asked again. Deleting the document
+later leaves the request fulfilled with `document: null`.
+
+```ts
+type DocRequestStatus = "pending" | "fulfilled" | "dismissed";
+type DocRequest = {
+  id: string; title: string; note: string | null; question: string | null;
+  message_id: string | null;
+  conversation_id: string | null;     // only on the caller's own requests
+  status: DocRequestStatus;
+  requester: Person;
+  document: { id: string; title: string; collection_id: string; collection_name: string;
+              source_id: string; url: string | null } | null;  // fulfilled, and the viewer can read it
+  resolution: string | null;          // the admin's note on deciding
+  decided_by: Person | null;
+  created_at: string; decided_at: string | null;
+};
+```
+
+To close the loop, an admin re-asks the question in chat (`/o/{slug}/chat?q=…` in the web
+app prefills it) and verifies the answer, or writes a verified answer directly
+(`POST /orgs/{slug}/verified-answers` with `question` and `answer`).
+
 ## OpenAPI
 
 `/api/openapi.json` declares a `bearer` security scheme (API key or session JWT — the

@@ -195,6 +195,8 @@ export type TraceStep = {
     reasoning?: string;
     plan?: { question: string; rationale: string }[];
     document_title?: string;
+    /** Coverage check: facts the sources didn't state. */
+    missing?: string[];
   };
   started_at: string;
   finished_at: string | null;
@@ -402,4 +404,62 @@ export type RecordQueryResult = {
   schemas: string[];
   rows: RecordRow[];
   groups: { value: RecordValue; count: number }[];
+};
+
+export type GapReason = "unanswered" | "incomplete" | "downvoted" | "no_results";
+
+export type DocRequestStatus = "pending" | "fulfilled" | "dismissed";
+
+/** A similar question that got a good answer in another org the viewer belongs to. */
+export type GapHint = {
+  kind: "answer" | "verified";
+  org: { name: string; slug: string; hue: number };
+  question: string;
+  answer: string;
+  similarity: number;
+  answered_at: string;
+  verified_answer_id: string | null;
+  documents: { id: string; title: string; org_slug: string; collection_name: string | null; source_id: string }[];
+};
+
+export type GapCluster = {
+  id: string;
+  label: string;
+  count: number;
+  askers: number;
+  first_seen: string;
+  last_seen: string;
+  reasons: Record<GapReason, number>;
+  examples: string[];
+  missing: string[];
+  answered_elsewhere: GapHint[];
+  requests: { id: string; title: string; status: DocRequestStatus; document_id: string | null; created_at: string; decided_at: string | null }[];
+  addressed: boolean;
+};
+
+export type Gaps = {
+  days: number;
+  since: string;
+  questions: number;
+  truncated: boolean;
+  similarity: number;
+  total_clusters: number;
+  clusters: GapCluster[];
+};
+
+export type DocRequest = {
+  id: string;
+  title: string;
+  note: string | null;
+  question: string | null;
+  message_id: string | null;
+  /** Only on your own requests. */
+  conversation_id: string | null;
+  status: DocRequestStatus;
+  requester: Person;
+  document: { id: string; title: string; collection_id: string; collection_name: string; source_id: string; url: string | null } | null;
+  resolution: string | null;
+  decided_by: Person | null;
+  created_at: string;
+  decided_at: string | null;
 };

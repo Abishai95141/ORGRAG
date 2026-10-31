@@ -10,6 +10,7 @@ import {
   IconChat,
   IconCheck,
   IconChevronUpDown,
+  IconGap,
   IconInsights,
   IconLayers,
   IconLogout,
@@ -18,6 +19,7 @@ import {
   IconMore,
   IconPeople,
   IconPlus,
+  IconRequest,
   IconSliders,
   IconVerified,
   IconSources,
@@ -46,10 +48,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     { href: `${base}/agents`, label: "Agents", icon: IconAgent, match: `${base}/agents` },
     { href: `${base}/records`, label: "Records", icon: IconTable, match: `${base}/records` },
     { href: `${base}/verified`, label: "Verified answers", icon: IconVerified, match: `${base}/verified` },
+    { href: `${base}/requests`, label: "Requests", icon: IconRequest, match: `${base}/requests` },
     { href: `${base}/members`, label: "Members", icon: IconPeople, match: `${base}/members` },
     ...(isAdmin
       ? [
           { href: `${base}/insights`, label: "Insights", icon: IconInsights, match: `${base}/insights` },
+          { href: `${base}/gaps`, label: "Knowledge gaps", icon: IconGap, match: `${base}/gaps` },
           { href: `${base}/settings`, label: "Settings", icon: IconSliders, match: `${base}/settings` },
         ]
       : []),

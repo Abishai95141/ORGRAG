@@ -453,6 +453,26 @@ export const IconWiki = make(
   </>,
 );
 
+/** Knowledge gap: a page with a line missing. */
+export const IconGap = make(
+  "Gap",
+  <>
+    <path d="M6 2.75h8c.69 0 1.25.56 1.25 1.25v12c0 .69-.56 1.25-1.25 1.25H6c-.69 0-1.25-.56-1.25-1.25V4c0-.69.56-1.25 1.25-1.25Z" />
+    <path d="M7.5 6.75h5M7.5 13.25h3" />
+    <path d="M7.5 10h5" strokeDasharray="1.25 1.75" />
+  </>,
+);
+
+/** Document request: a page with a plus, asked for. */
+export const IconRequest = make(
+  "Request",
+  <>
+    <path d="M11.25 2.75H6c-.69 0-1.25.56-1.25 1.25v12c0 .69.56 1.25 1.25 1.25h8c.69 0 1.25-.56 1.25-1.25V6.75l-4-4Z" />
+    <path d="M11.25 2.75v4h4" />
+    <path d="M10 9.5v4.5M7.75 11.75h4.5" />
+  </>,
+);
+
 export function Spinner({ size = 16, className }: { size?: number; className?: string }) {
   return (
     <svg viewBox="0 0 20 20" width={size} height={size} className={className} aria-hidden="true">

@@ -20,7 +20,9 @@ from app.api import (
     auth,
     chat,
     collections,
+    doc_requests,
     documents,
+    gaps,
     graph,
     insights,
     mcp,
@@ -208,10 +210,12 @@ for module in (
     chat,
     attachments,
     insights,
+    gaps,
     api_keys,
     verified,
     sharing,
     records,
+    doc_requests,
     meta,
 ):
     app.include_router(
