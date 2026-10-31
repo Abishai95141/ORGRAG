@@ -329,4 +329,6 @@ def test_every_route_documents_its_response():
     for path, ops in spec["paths"].items():
         for method, op in ops.items():
             assert op.get("tags"), f"{method} {path} has no tag"
-            assert set(op["responses"]) & {"200", "201", "202", "204"}, f"{method} {path}"
+            # Browser flows (the Slack install and OAuth callback) succeed with a redirect.
+            success = {"200", "201", "202", "204", "303", "307"}
+            assert set(op["responses"]) & success, f"{method} {path}"

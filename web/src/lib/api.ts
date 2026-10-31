@@ -43,6 +43,11 @@ import type {
   AccessRequest,
   Share,
   SharedAnswer,
+  SlackBotChannel,
+  SlackChannel,
+  SlackLink,
+  SlackLinkPreview,
+  SlackOverview,
   VerifiedAnswer,
   VerifiedAnswerInput,
   VerifiedStatus,
@@ -291,6 +296,28 @@ export const api = {
   accessRequests: (slug: string) => request<AccessRequest[]>(`${o(slug)}/access-requests`),
   approveAccess: (slug: string, id: string) => request<AccessRequest>(`${o(slug)}/access-requests/${id}/approve`, { method: "POST" }),
   dismissAccess: (slug: string, id: string) => request<AccessRequest>(`${o(slug)}/access-requests/${id}/dismiss`, { method: "POST" }),
+
+  // slack bot
+  slack: (slug: string) => request<SlackOverview>(`${o(slug)}/slack`),
+  /** Not fetched: the browser navigates here and is redirected to Slack's authorize page. */
+  slackInstallUrl: (slug: string) => `/api${o(slug)}/slack/install`,
+  disconnectSlack: (slug: string, workspaceId: string) =>
+    request<void>(`${o(slug)}/slack/workspaces/${workspaceId}`, { method: "DELETE" }),
+  slackChannels: (slug: string, workspaceId: string) =>
+    request<SlackChannel[]>(`${o(slug)}/slack/workspaces/${workspaceId}/channels`),
+  slackBotChannels: (slug: string, workspaceId: string) =>
+    request<SlackBotChannel[]>(`${o(slug)}/slack/workspaces/${workspaceId}/bot-channels`),
+  setSlackChannel: (slug: string, workspaceId: string, channelId: string, body: { org_slugs: string[]; channel_name?: string | null }) =>
+    request<SlackChannel>(`${o(slug)}/slack/workspaces/${workspaceId}/channels/${encodeURIComponent(channelId)}`, {
+      method: "PUT",
+      json: body,
+    }),
+  resetSlackChannel: (slug: string, workspaceId: string, channelId: string) =>
+    request<void>(`${o(slug)}/slack/workspaces/${workspaceId}/channels/${encodeURIComponent(channelId)}`, { method: "DELETE" }),
+  slackLink: (token: string) => request<SlackLinkPreview>(`/slack/link/${encodeURIComponent(token)}`),
+  confirmSlackLink: (token: string) => request<SlackLink>(`/slack/link/${encodeURIComponent(token)}`, { method: "POST" }),
+  slackLinks: () => request<SlackLink[]>("/slack/links"),
+  unlinkSlack: (id: string) => request<void>(`/slack/links/${id}`, { method: "DELETE" }),
 
   // knowledge graph
   graphStats: (slug: string) => request<GraphStats>(`${o(slug)}/graph`),

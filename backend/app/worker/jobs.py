@@ -14,6 +14,7 @@ from app.ingestion.pipeline import sync_source
 from app.models import Document, Job, Organization, Source
 from app.records.jobs import enqueue_for_collection, handle_extract_records
 from app.schemas.common import OrgSettings
+from app.slackbot.answer import handle_slack_answer
 from app.worker.queue import enqueue_contextualize, enqueue_graph
 
 log = logging.getLogger("strata.worker")
@@ -120,4 +121,5 @@ HANDLERS = {
     "extract_graph": handle_extract_graph,
     "contextualize": handle_contextualize,
     "extract_records": handle_extract_records,
+    "slack_answer": handle_slack_answer,
 }

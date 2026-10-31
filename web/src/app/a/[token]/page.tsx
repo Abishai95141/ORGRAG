@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, use, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Answer } from "@/components/chat/answer";
@@ -21,20 +21,40 @@ import { relativeTime } from "@/lib/utils";
  * An answer someone shared by link. What it shows is decided per viewer by the API:
  * the answer only if you can read every source it cites; otherwise the question and
  * the collections you'd need, which you can ask an admin for.
+ *
+ * `?source=n` opens citation [n] straight away (the Slack bot links its citations here).
  */
 export default function SharedAnswerPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
+  return (
+    <Suspense>
+      <SharedAnswerView token={token} />
+    </Suspense>
+  );
+}
+
+function SharedAnswerView({ token }: { token: string }) {
   const router = useRouter();
+  const search = useSearchParams();
   const me = useMe();
   const shared = useQuery({ queryKey: ["shared", token], queryFn: () => api.shared(token), retry: false });
   const [open, setOpen] = useState<SourceRef | null>(null);
 
   const unauthenticated = shared.error instanceof ApiError && shared.error.status === 401;
+  const here = `/a/${token}${search.toString() ? `?${search.toString()}` : ""}`;
   useEffect(() => {
-    if (unauthenticated) router.replace(`/login?next=${encodeURIComponent(`/a/${token}`)}`);
-  }, [unauthenticated, router, token]);
+    if (unauthenticated) router.replace(`/login?next=${encodeURIComponent(here)}`);
+  }, [unauthenticated, router, here]);
 
   const data = shared.data;
+  const wanted = Number(search.get("source")) || null;
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current || !wanted || data?.access !== "full") return;
+    opened.current = true;
+    const source = data.sources.find((s) => s.ref === wanted);
+    if (source) setOpen(source);
+  }, [wanted, data]);
   const org = data && me.data?.orgs.find((o) => o.slug === data.org.slug);
 
   return (

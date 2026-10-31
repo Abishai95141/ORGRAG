@@ -32,6 +32,7 @@ from app.api import (
     records,
     search,
     sharing,
+    slack,
     sources,
     verified,
 )
@@ -218,6 +219,7 @@ for module in (
     records,
     doc_requests,
     audit,
+    slack,
     meta,
 ):
     app.include_router(

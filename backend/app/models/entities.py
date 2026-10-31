@@ -710,3 +710,126 @@ class AuditEvent(Base):
     target_id: Mapped[str | None] = mapped_column(String(64))
     target_label: Mapped[str | None] = mapped_column(String(512))
     details: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
+
+
+# ── Slack bot (app/slackbot) ─────────────────────────────────────────────────
+class SlackWorkspace(Base):
+    """A Slack workspace the Strata app is installed in: one row per Slack team, shared
+    by every org that connected it (SlackConnection)."""
+
+    __tablename__ = "slack_workspaces"
+
+    id: Mapped[uuid.UUID] = _pk()
+    team_id: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    team_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    bot_user_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    app_id: Mapped[str | None] = mapped_column(String(32))
+    scopes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    # {"bot_token": "xoxb-…"}, encrypted at rest (app.core.crypto); never returned.
+    secrets: Mapped[dict[str, Any]] = mapped_column(EncryptedJSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = _created()
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+
+class SlackConnection(Base):
+    """An org's admin connected this workspace to the org: its people may ask the org's
+    knowledge from Slack. The earliest connection is the default for unmapped channels."""
+
+    __tablename__ = "slack_connections"
+    __table_args__ = (UniqueConstraint("org_id", "workspace_id"),)
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("slack_workspaces.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    connected_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = _created()
+
+
+class SlackChannel(Base):
+    """Which orgs a channel searches, in order (the first one the asker belongs to holds
+    the conversation). A channel without a row searches the workspace's default org."""
+
+    __tablename__ = "slack_channels"
+    __table_args__ = (UniqueConstraint("workspace_id", "channel_id"),)
+
+    id: Mapped[uuid.UUID] = _pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("slack_workspaces.id", ondelete="CASCADE"), nullable=False
+    )
+    channel_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    channel_name: Mapped[str | None] = mapped_column(String(255))
+    org_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(Uuid), default=list, nullable=False)
+    updated_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = _created()
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+
+class SlackUserLink(Base):
+    """A Slack user confirmed, signed in to Strata, that they are this Strata user.
+    Without one, a Slack user is matched by the email Slack reports for them."""
+
+    __tablename__ = "slack_user_links"
+    __table_args__ = (UniqueConstraint("workspace_id", "slack_user_id"),)
+
+    id: Mapped[uuid.UUID] = _pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("slack_workspaces.id", ondelete="CASCADE"), nullable=False
+    )
+    slack_user_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    slack_user_name: Mapped[str | None] = mapped_column(String(255))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    created_at: Mapped[datetime] = _created()
+
+
+class SlackThread(Base):
+    """The Strata conversation behind one person's questions in one Slack thread, so
+    follow-ups there keep their history. `last_message_id` is the answer last posted:
+    if the conversation went on elsewhere (the web app), the thread starts a new one."""
+
+    __tablename__ = "slack_threads"
+    __table_args__ = (UniqueConstraint("workspace_id", "channel_id", "thread_ts", "user_id"),)
+
+    id: Mapped[uuid.UUID] = _pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("slack_workspaces.id", ondelete="CASCADE"), nullable=False
+    )
+    channel_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    thread_ts: Mapped[str] = mapped_column(String(32), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("conversations.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    last_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("messages.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = _created()
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+
+class SlackEvent(Base):
+    """Slack event ids already queued, so Slack's retries (it re-sends an event when we
+    are slow to acknowledge) don't ask the same question twice. Pruned after a day."""
+
+    __tablename__ = "slack_events"
+
+    event_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    team_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, index=True, nullable=False
+    )

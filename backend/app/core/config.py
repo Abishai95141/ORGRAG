@@ -137,6 +137,11 @@ class Settings(BaseSettings):
     # Audit log (data access and admin actions): the worker deletes entries older than
     # this; 0 keeps them forever.
     audit_retention_days: int = Field(default=365, ge=0)
+    # Slack bot (app/slackbot): the Slack app's OAuth credentials and request-signing
+    # secret. All three are needed; without them the Slack routes answer 503.
+    slack_client_id: str | None = None
+    slack_client_secret: str | None = None
+    slack_signing_secret: str | None = None
 
     worker_poll_seconds: float = 2.0
     worker_concurrency: int = 2
@@ -183,6 +188,10 @@ class Settings(BaseSettings):
         if not self.anthropic_api_key and self.nvidia_api_key:
             return DEFAULT_NVIDIA_MODEL
         return DEFAULT_CLAUDE_MODEL
+
+    @property
+    def slack_configured(self) -> bool:
+        return bool(self.slack_client_id and self.slack_client_secret and self.slack_signing_secret)
 
     @property
     def web_search_provider(self) -> str | None:

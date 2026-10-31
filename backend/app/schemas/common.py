@@ -686,6 +686,85 @@ class AccessRequestIn(BaseModel):
     note: str | None = Field(default=None, max_length=500)
 
 
+# ── Slack bot ─────────────────────────────────────────────────────────────────
+class SlackOrgOut(BaseModel):
+    """An org connected to a workspace, as the caller sees it (only orgs they're in)."""
+
+    slug: str
+    name: str
+    hue: int
+    role: Role  # the caller's role there
+
+
+class SlackWorkspaceOut(BaseModel):
+    id: uuid.UUID
+    team_id: str
+    team_name: str
+    bot_user_id: str
+    connected_at: datetime  # when this org connected it
+    connected_by: PersonOut | None
+    # The org unmapped channels search (the earliest connection); null when the caller
+    # isn't a member of it.
+    default_org: SlackOrgOut | None
+    # Connected orgs the caller belongs to; the others are only counted.
+    orgs: list[SlackOrgOut]
+    other_org_count: int
+
+
+class SlackOverview(BaseModel):
+    configured: bool  # SLACK_CLIENT_ID, SLACK_CLIENT_SECRET and SLACK_SIGNING_SECRET set
+    events_url: str  # for the Slack app's Event Subscriptions
+    redirect_url: str  # for the Slack app's OAuth redirect URLs
+    workspaces: list[SlackWorkspaceOut]
+
+
+class SlackChannelOut(BaseModel):
+    channel_id: str
+    channel_name: str | None
+    orgs: list[SlackOrgOut]  # in search order; only orgs the caller belongs to
+    other_org_count: int
+    updated_by: PersonOut | None
+    updated_at: datetime
+
+
+ChannelName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
+
+
+class SlackChannelIn(BaseModel):
+    # The orgs the channel searches, in order (the first the asker belongs to holds
+    # the conversation). Each must have connected the workspace.
+    org_slugs: list[Slug] = Field(min_length=1, max_length=20)
+    channel_name: ChannelName | None = None
+
+
+class SlackBotChannel(BaseModel):
+    id: str
+    name: str
+    is_private: bool
+    mapped: bool  # has a mapping that includes this org
+
+
+class SlackLinkPreview(BaseModel):
+    team_id: str
+    team_name: str
+    slack_user_id: str
+    slack_user_name: str | None
+    expired: bool
+    # Who this Slack user is linked to now: nobody, the caller, or someone else.
+    linked: Literal["none", "you", "other"]
+    # The caller belongs to an org connected to the workspace (else they can't link).
+    eligible: bool
+
+
+class SlackLinkOut(BaseModel):
+    id: uuid.UUID
+    team_id: str
+    team_name: str
+    slack_user_id: str
+    slack_user_name: str | None
+    created_at: datetime
+
+
 class AccessRequestOut(BaseModel):
     id: uuid.UUID
     collection_id: uuid.UUID

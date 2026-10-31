@@ -81,6 +81,8 @@ async def enqueue_contextualize(db: AsyncSession, source: Source) -> None:
         )
 
 
+# Someone is waiting in Slack for a `slack_answer`, so it's claimed ahead of
+# background work (syncs, graph extraction) queued before it.
 _CLAIM = text(
     """
     UPDATE jobs SET status = 'running', started_at = now(), heartbeat_at = now(),
@@ -88,7 +90,7 @@ _CLAIM = text(
     WHERE id = (
         SELECT id FROM jobs
         WHERE status = 'queued' AND run_after <= now()
-        ORDER BY created_at
+        ORDER BY (kind = 'slack_answer') DESC, created_at
         FOR UPDATE SKIP LOCKED
         LIMIT 1
     )
