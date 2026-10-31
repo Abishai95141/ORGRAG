@@ -46,6 +46,12 @@ function NewChat() {
     if (a) setState((s) => ({ ...s, agentId: a.id, mode: a.mode }));
   }, [agentParam, agents.data]);
 
+  // Deep link from a fulfilled document request: /chat?q=<the question, to ask again>
+  const questionParam = params.get("q");
+  useEffect(() => {
+    if (questionParam) setState((s) => ({ ...s, text: questionParam.slice(0, 20000) }));
+  }, [questionParam]);
+
   const agent = agents.data?.find((a) => a.id === state.agentId) ?? null;
   const starters = useMemo(() => {
     if (agent) return agent.starter_prompts.map((p) => ({ prompt: p, agent }));

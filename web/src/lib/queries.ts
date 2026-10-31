@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
+import type { DocRequestStatus } from "./types";
 
 export const qk = {
   me: ["me"] as const,
@@ -23,6 +24,9 @@ export const qk = {
   apiKeys: (slug: string) => ["org", slug, "api-keys"] as const,
   verified: (slug: string) => ["org", slug, "verified"] as const,
   accessRequests: (slug: string) => ["org", slug, "access-requests"] as const,
+  gaps: (slug: string) => ["org", slug, "gaps"] as const,
+  docRequests: (slug: string) => ["org", slug, "doc-requests"] as const,
+  myDocRequests: (slug: string) => ["org", slug, "doc-requests", "mine"] as const,
   connectors: ["connectors"] as const,
   models: ["models"] as const,
 };
@@ -39,6 +43,15 @@ export const useAgents = (slug: string) => useQuery({ queryKey: qk.agents(slug),
 export const useConversations = (slug: string) =>
   useQuery({ queryKey: qk.conversations(slug), queryFn: () => api.conversations(slug) });
 export const useModels = () => useQuery({ queryKey: qk.models, queryFn: api.models, staleTime: 5 * 60_000 });
+/** Admin only (the API answers 403 to everyone else). */
+export const useGaps = (slug: string, days: number, enabled = true) =>
+  useQuery({ queryKey: [...qk.gaps(slug), days], queryFn: () => api.gaps(slug, days), enabled });
+/** Admin only: everyone's requests in the org. */
+export const useDocRequests = (slug: string, status: DocRequestStatus | "all") =>
+  useQuery({ queryKey: [...qk.docRequests(slug), status], queryFn: () => api.docRequests(slug, status) });
+/** The caller's own document requests (any status). */
+export const useMyDocRequests = (slug: string, enabled = true) =>
+  useQuery({ queryKey: qk.myDocRequests(slug), queryFn: () => api.myDocRequests(slug), enabled });
 export const useConnectors = () =>
   useQuery({ queryKey: qk.connectors, queryFn: api.connectors, staleTime: Infinity });
 

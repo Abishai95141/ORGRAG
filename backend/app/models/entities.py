@@ -573,3 +573,50 @@ class AccessRequest(Base):
     )
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = _created()
+
+
+class DocumentRequest(Base):
+    """A member asking the org's admins for a document the knowledge base lacks (from an
+    answer that couldn't answer, or a knowledge-gap cluster). Admins fulfil it with the
+    document that answers it, or dismiss it (roadmap §6 #2)."""
+
+    __tablename__ = "document_requests"
+    __table_args__ = (
+        # One open request per person per text: asking twice returns the first.
+        Index(
+            "ux_document_requests_pending",
+            "org_id",
+            "user_id",
+            "title_key",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    # The title lowercased with whitespace and end punctuation folded (for de-duplication).
+    title_key: Mapped[str] = mapped_column(String(300), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    # The question that went unanswered: the user message before `message_id`, or a gap
+    # cluster's representative question.
+    question: Mapped[str | None] = mapped_column(Text)
+    message_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("messages.id", ondelete="SET NULL")
+    )
+    # pending | fulfilled | dismissed
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)
+    # The document that answers it (fulfilled); None again if it's deleted later.
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="SET NULL")
+    )
+    resolution: Mapped[str | None] = mapped_column(Text)  # the admin's note on deciding
+    decided_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = _created()

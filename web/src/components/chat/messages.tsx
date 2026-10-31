@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { IconCheck, IconCopy, IconDeep, IconLink, IconPaperclip, IconQuick, IconThumbDown, IconThumbUp, IconVerified, IconWarning, IconX } from "@/components/icons";
+import { IconCheck, IconCopy, IconDeep, IconLink, IconPaperclip, IconQuick, IconRequest, IconThumbDown, IconThumbUp, IconVerified, IconWarning, IconX } from "@/components/icons";
 import { OrgMark, StrataMark } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
+import { RequestDocumentDialog } from "@/components/gaps/request-dialog";
 import { Menu, MenuContent, MenuItem, MenuTrigger, Tooltip } from "@/components/ui";
 import { VerifyDialog } from "@/components/verified/verify-dialog";
 import { api } from "@/lib/api";
+import { useMyDocRequests } from "@/lib/queries";
 import type { Message, MessageAttachment, Mode, SourceRef, TraceStep } from "@/lib/types";
 import { atLeast, cn, formatBytes } from "@/lib/utils";
 import { Answer } from "./answer";
@@ -66,6 +68,7 @@ export function AssistantMessage(props: AssistantProps) {
   const cited = citedRefs(content);
   const shownSources = sources.filter((s) => cited.has(s.ref));
   const orgs = uniqueOrgs(shownSources.length ? shownSources : sources);
+  const shortfall = answerShortfall(steps, shownSources);
 
   return (
     <article
@@ -128,6 +131,7 @@ export function AssistantMessage(props: AssistantProps) {
                 }
               : null
           }
+          request={status === "complete" && shortfall !== "about-attachment" ? { question: props.question, short: shortfall === "short" } : null}
         />
       ) : null}
     </article>
@@ -172,6 +176,7 @@ function MessageToolbar({
   feedback,
   shareToken,
   verify,
+  request,
 }: {
   slug: string;
   id: string;
@@ -180,6 +185,8 @@ function MessageToolbar({
   /** undefined: the answer can't be shared (not complete); null: not shared yet. */
   shareToken?: string | null;
   verify: { question?: string; verifiedAnswerId: string | null; sourceCollections: string[] } | null;
+  /** Can a document be requested from this answer; `short`: it couldn't answer. */
+  request: { question?: string; short: boolean } | null;
 }) {
   const { org } = useCurrentOrg();
   const [copied, setCopied] = useState(false);
@@ -188,6 +195,11 @@ function MessageToolbar({
   const [verifiedId, setVerifiedId] = useState(verify?.verifiedAnswerId ?? null);
   const canVerify = !!verify && atLeast(org.role, "admin");
   const [token, setToken] = useState(shareToken ?? null);
+  // Offered when the answer came up short, or once the asker rates it not helpful.
+  const canRequest = !!request && (request.short || fb === "down");
+  const [requesting, setRequesting] = useState(false);
+  const mine = useMyDocRequests(slug, canRequest);
+  const requested = mine.data?.find((r) => r.message_id === id);
 
   async function copyLink() {
     try {
@@ -290,8 +302,42 @@ function MessageToolbar({
           />
         </>
       ) : null}
+      {!canRequest ? null : requested ? (
+        <Tooltip label={requested.status === "fulfilled" ? "Document added — open your requests" : `Document requested (${requested.status})`}>
+          <Link href={`/o/${slug}/requests`} className={cn(btn, requested.status === "fulfilled" ? "text-ok" : "text-accent")} aria-label="Document requested">
+            <IconRequest size={15} />
+          </Link>
+        </Tooltip>
+      ) : (
+        <>
+          <Tooltip label="Request the missing document">
+            <button type="button" className={btn} onClick={() => setRequesting(true)} aria-label="Request the missing document">
+              <IconRequest size={15} />
+            </button>
+          </Tooltip>
+          <RequestDocumentDialog open={requesting} onOpenChange={setRequesting} messageId={id} question={request?.question} />
+        </>
+      )}
     </div>
   );
+}
+
+/**
+ * Whether an answer came up short, by the rule Knowledge gaps uses: it searched the
+ * knowledge base but cites none of it, or the coverage check's last verdict still
+ * names missing facts. An answer citing an attached file was about that file.
+ */
+function answerShortfall(steps: TraceStep[], cited: SourceRef[]): "short" | "fine" | "about-attachment" {
+  if (cited.some((s) => s.origin === "attachment")) return "about-attachment";
+  const researched = steps.some((s) => s.kind === "search" || s.kind === "read");
+  if (researched && !cited.some((s) => s.origin === "knowledge")) return "short";
+  let missing = false;
+  for (const s of steps) {
+    if (s.kind !== "reflect") continue;
+    if (s.detail.missing?.length) missing = true;
+    else if (s.label === "Sources cover the question") missing = false;
+  }
+  return missing ? "short" : "fine";
 }
 
 export function citedRefs(content: string) {

@@ -5,10 +5,13 @@ import type {
   Collection,
   ConnectorSpec,
   Conversation,
+  DocRequest,
+  DocRequestStatus,
   DocumentDetail,
   DocumentRow,
   DocumentSort,
   GraphStats,
+  Gaps,
   Health,
   Insights,
   Invite,
@@ -290,4 +293,17 @@ export const api = {
     request<void>(`${o(slug)}/messages/${messageId}/feedback`, { method: "POST", json: { feedback } }),
 
   insights: (slug: string, days = 30) => request<Insights>(`${o(slug)}/insights?days=${days}`),
+
+  // knowledge gaps & document requests
+  gaps: (slug: string, days = 30) => request<Gaps>(`${o(slug)}/gaps?days=${days}`),
+  requestDocument: (slug: string, body: { title: string; note?: string; question?: string; message_id?: string }) =>
+    request<DocRequest>(`${o(slug)}/doc-requests`, { method: "POST", json: body }),
+  docRequests: (slug: string, status: DocRequestStatus | "all" = "pending") =>
+    request<Page<DocRequest>>(`${o(slug)}/doc-requests?${query({ status, limit: 200 })}`).then((p) => p.items),
+  myDocRequests: (slug: string) =>
+    request<Page<DocRequest>>(`${o(slug)}/doc-requests/mine?limit=200`).then((p) => p.items),
+  fulfillDocRequest: (slug: string, id: string, body: { document_id: string; note?: string }) =>
+    request<DocRequest>(`${o(slug)}/doc-requests/${id}/fulfill`, { method: "POST", json: body }),
+  dismissDocRequest: (slug: string, id: string, note?: string) =>
+    request<DocRequest>(`${o(slug)}/doc-requests/${id}/dismiss`, { method: "POST", json: { note } }),
 };

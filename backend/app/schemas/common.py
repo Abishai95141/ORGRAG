@@ -695,3 +695,127 @@ class AccessRequestOut(BaseModel):
     status: Literal["pending", "approved", "dismissed"]
     created_at: datetime
     decided_at: datetime | None
+
+
+# ── knowledge gaps & document requests ───────────────────────────────────────
+GapReason = Literal["unanswered", "incomplete", "downvoted", "no_results"]
+DocRequestStatus = Literal["pending", "fulfilled", "dismissed"]
+
+
+class GapReasons(BaseModel):
+    """How many of a gap's questions ended each way (one question can count twice)."""
+
+    unanswered: int = 0  # the agent searched but cites nothing from the knowledge base
+    incomplete: int = 0  # the coverage check still reported facts missing
+    downvoted: int = 0  # thumbs-down from the asker
+    no_results: int = 0  # a direct search with zero hits
+
+
+class GapDocument(BaseModel):
+    id: uuid.UUID
+    title: str
+    org_slug: str
+    collection_name: str | None
+    source_id: uuid.UUID
+
+
+class GapHint(BaseModel):
+    """A similar question that got a good answer in another org the viewer belongs to,
+    citing only sources the viewer can read."""
+
+    kind: Literal["answer", "verified"]
+    org: SharedOrg
+    question: str
+    answer: str  # an excerpt, citation markers removed
+    similarity: float
+    answered_at: datetime
+    verified_answer_id: uuid.UUID | None = None
+    documents: list[GapDocument] = []  # the cited documents outside this org
+
+
+class GapRequestRef(BaseModel):
+    id: uuid.UUID
+    title: str
+    status: DocRequestStatus
+    document_id: uuid.UUID | None
+    created_at: datetime
+    decided_at: datetime | None
+
+
+class GapCluster(BaseModel):
+    id: str  # stable while its label is: a hash of the label
+    label: str  # the most central question
+    count: int  # questions (repeats included)
+    askers: int  # distinct people
+    first_seen: datetime
+    last_seen: datetime
+    reasons: GapReasons
+    examples: list[str]  # distinct phrasings, most asked first (the label first)
+    missing: list[str]  # facts the coverage check reported missing, most reported first
+    answered_elsewhere: list[GapHint] = []
+    requests: list[GapRequestRef] = []  # open and fulfilled document requests about it
+    addressed: bool = False  # a request was fulfilled after the last question
+
+
+class GapsOut(BaseModel):
+    days: int
+    since: datetime
+    questions: int  # gap questions considered
+    truncated: bool  # more than the cap: only the most recent were clustered
+    similarity: float  # the clustering threshold used
+    total_clusters: int
+    clusters: list[GapCluster]
+
+
+DocRequestTitle = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)
+]
+
+
+class DocRequestIn(BaseModel):
+    """`message_id`: an answer in one of your conversations that couldn't answer; its
+    question replaces `question`. `question`: e.g. a knowledge gap's label."""
+
+    title: DocRequestTitle
+    note: str | None = Field(default=None, max_length=2000)
+    question: str | None = Field(default=None, max_length=2000)
+    message_id: uuid.UUID | None = None
+
+
+class DocRequestFulfill(BaseModel):
+    document_id: uuid.UUID
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class DocRequestDismiss(BaseModel):
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class RequestDocument(BaseModel):
+    id: uuid.UUID
+    title: str
+    collection_id: uuid.UUID
+    collection_name: str
+    source_id: uuid.UUID
+    url: str | None
+
+
+class DocRequestOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    note: str | None
+    question: str | None
+    message_id: uuid.UUID | None
+    # Only for the requester's own requests: where the message is.
+    conversation_id: uuid.UUID | None = None
+    status: DocRequestStatus
+    requester: PersonOut
+    # Fulfilled: the document that answers it, when the viewer can read it.
+    document: RequestDocument | None = None
+    resolution: str | None  # the admin's note on deciding
+    decided_by: PersonOut | None = None
+    created_at: datetime
+    decided_at: datetime | None
+
+
+DocRequestPage = Page[DocRequestOut]
