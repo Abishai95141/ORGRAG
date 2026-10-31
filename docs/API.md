@@ -498,7 +498,9 @@ and `[n]` markers resolved against `sources`.
   feedback: { up: number; down: number };
   recent_questions: { query: string; user_name: string; created_at: string; hits: number }[];
   // Model tokens spent by answers in this org's conversations, per model, busiest first.
-  usage: { model: string; answers: number; calls: number; input_tokens: number; output_tokens: number }[];
+  // cost_usd is at list price, priced per call; null for models with no per-token price
+  // (the NVIDIA free tier, the Experiential Labs gateway).
+  usage: { model: string; answers: number; calls: number; input_tokens: number; output_tokens: number; cost_usd: number | null }[];
 }
 ```
 

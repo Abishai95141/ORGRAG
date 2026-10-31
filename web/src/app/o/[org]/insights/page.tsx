@@ -251,6 +251,7 @@ function ModelUsage({ items }: { items: Insights["usage"] }) {
             <th className="py-1.5 text-right font-medium">Model calls</th>
             <th className="py-1.5 text-right font-medium">Input tokens</th>
             <th className="py-1.5 text-right font-medium">Output tokens</th>
+            <th className="py-1.5 text-right font-medium">Cost</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -261,12 +262,19 @@ function ModelUsage({ items }: { items: Insights["usage"] }) {
               <td className="py-2 text-right tabular-nums">{formatNumber(u.calls)}</td>
               <td className="py-2 text-right tabular-nums">{formatNumber(u.input_tokens)}</td>
               <td className="py-2 text-right tabular-nums">{formatNumber(u.output_tokens)}</td>
+              <td className="py-2 text-right tabular-nums" title={u.cost_usd == null ? "No per-token price for this model" : undefined}>
+                {u.cost_usd == null ? "—" : formatCost(u.cost_usd)}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
+}
+
+function formatCost(usd: number) {
+  return usd >= 1 ? `$${usd.toFixed(2)}` : usd >= 0.01 ? `$${usd.toFixed(3)}` : `$${usd.toFixed(4)}`;
 }
 
 function niceTicks(max: number) {

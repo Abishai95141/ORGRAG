@@ -67,6 +67,10 @@ def pytest_collection_modifyitems(config, items):
             [sys.executable, "-m", "alembic", "upgrade", "head"], cwd=BACKEND, env=env, check=True
         )
         return
+    if os.environ.get("REQUIRE_TEST_DB"):  # CI: a missing database is a failure
+        raise pytest.UsageError(
+            f"REQUIRE_TEST_DB is set but Postgres is not reachable at {TEST_DB}"
+        )
     skip = pytest.mark.skip(reason=f"Postgres not reachable at {TEST_DB}")
     for item in needs_db:
         item.add_marker(skip)

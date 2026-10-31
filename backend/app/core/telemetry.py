@@ -163,6 +163,7 @@ def record_usage(target: Span, usage: dict[str, int] | None) -> None:
             "gen_ai.usage.input_tokens": usage.get("input"),
             "gen_ai.usage.output_tokens": usage.get("output"),
             "gen_ai.usage.cache_read_input_tokens": usage.get("cache_read") or None,
+            "gen_ai.usage.cache_creation_input_tokens": usage.get("cache_write") or None,
         },
     )
 

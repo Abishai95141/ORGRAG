@@ -506,6 +506,7 @@ class ModelUsage(BaseModel):
     calls: int
     input_tokens: int
     output_tokens: int
+    cost_usd: float | None = None  # None when the model has no per-token price
 
 
 class InsightsOut(BaseModel):

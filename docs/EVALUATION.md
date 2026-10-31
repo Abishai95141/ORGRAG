@@ -35,7 +35,7 @@ Three labels were corrected after review, each noted in the question's `notes`. 
   A ref stands for a whole document (the agent may have read several parts of it), so the judge sees each cited document in full, up to 12,000 characters.
 - **The judge.** It comes from a different model family than the one answering, because a model grading its own family is biased. Every result records the judge model and a hash of each judge prompt, and `compare` warns when two runs were judged differently (`rejudge` re-scores a saved run with the current judge). Replies are cached by model and prompt in `eval/.data`, so re-scoring is free.
 - **Judge reliability.** `label` walks a person through 50 judge verdicts without showing them (about 30 fact verdicts and 20 claim verdicts, balanced between the judge's yes and no), and `kappa` reports Cohen's κ against the human. The target is κ ≥ 0.7; until it's measured, read judge-based numbers as approximate.
-- **Comparing runs.** `compare a.json b.json` adds a paired bootstrap (10,000 resamples of questions) per category: the difference in pass rate with a 95% interval, and "better", "worse" or "no clear change". Summaries also show p95 latency.
+- **Comparing runs.** `compare a.json b.json` adds a paired bootstrap (10,000 resamples of questions) per category: the difference in pass rate with a 95% interval, and "better", "worse" or "no clear change". Summaries also show p95 latency and, for models with a per-token price, `usd`: the mean cost per answer at list price, counting input, output, cache-read and cache-write tokens (`app/llm/pricing.py`).
 
 Each run is a single sample and the models aren't deterministic. With 150 questions, one question is 0.7 points; the bootstrap says whether a difference is bigger than resampling noise.
 
@@ -201,4 +201,4 @@ EVAL_JUDGE_MODEL=mistralai/mistral-large-4-1t-a52b \
 .venv/bin/python -m eval.harness compare eval/results/a.json eval/results/b.json
 ```
 
-The harness uses its own database (`strata_eval` on the dev Postgres) and needs `NVIDIA_API_KEY` for answers and the judge.
+The harness uses its own database (`strata_eval` on the dev Postgres). An index configuration other than the default (for now, another `EMBEDDING_PROVIDER` / `EMBEDDING_MODEL`) gets its own, `strata_eval_<hash>`, so variants that re-index don't overwrite each other; each result records the `index` it ran on. Answers run on the org model (`--chat-model claude-haiku-5-5` needs `ANTHROPIC_API_KEY`); the judge needs `NVIDIA_API_KEY`, because it must come from a different model family than the answers.

@@ -38,7 +38,7 @@ from app.agent.tools import (
 from app.core import telemetry
 from app.core.config import get_settings
 from app.core.db import SessionLocal
-from app.llm import nvidia
+from app.llm import nvidia, pricing
 from app.llm.client import describe_error, get_client, request_extras, structured_call
 from app.llm.models import resolve_model
 from app.models import (
@@ -186,6 +186,8 @@ class AgentRun:
         totals["calls"] += 1
         for key, value in (usage or {}).items():
             totals[key] = totals.get(key, 0) + value
+        if (spent := pricing.cost(model, usage)) is not None:  # priced per call
+            totals["cost_usd"] = round(totals.get("cost_usd", 0) + spent, 6)
 
     def _trace_attrs(self) -> dict[str, Any]:
         r = self.req
@@ -989,6 +991,7 @@ def _claude_usage(final) -> dict[str, int] | None:
         "input": getattr(u, "input_tokens", 0) or 0,
         "output": getattr(u, "output_tokens", 0) or 0,
         "cache_read": getattr(u, "cache_read_input_tokens", 0) or 0,
+        "cache_write": getattr(u, "cache_creation_input_tokens", 0) or 0,
     }
 
 

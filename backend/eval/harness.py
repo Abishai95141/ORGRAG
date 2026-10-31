@@ -20,7 +20,7 @@ settings, so each run states exactly what was switched on.
 
     .venv/bin/python -m eval.harness retrieval --variant rerank
     .venv/bin/python -m eval.harness answers --variant rerank --limit 10
-    .venv/bin/python -m eval.harness answers --set smoke --chat-model explabs:claude-haiku-5.5
+    .venv/bin/python -m eval.harness answers --set smoke --chat-model claude-haiku-5-5
     .venv/bin/python -m eval.harness compare results/a.json results/b.json
     .venv/bin/python -m eval.harness rejudge results/a.json
     .venv/bin/python -m eval.harness label results/a.json --n 50
@@ -56,8 +56,23 @@ LABELS = HERE / "labels"
 DATA = HERE / ".data"
 JUDGE_CACHE = DATA / "judge-cache.jsonl"
 
+# What the index is built with. A configuration other than the default gets its own
+# database, so a variant that re-indexes (another embedding model; later BM25 and
+# contextual retrieval) never overwrites another's index.
+DEFAULT_INDEX = {"embedding": "fastembed:BAAI/bge-small-en-v1.5"}
+INDEX_CONFIG = {
+    "embedding": f"{os.environ.get('EMBEDDING_PROVIDER', 'fastembed')}:"
+    f"{os.environ.get('EMBEDDING_MODEL', 'BAAI/bge-small-en-v1.5')}",
+}
+INDEX_KEY = (
+    ""
+    if INDEX_CONFIG == DEFAULT_INDEX
+    else hashlib.sha256(json.dumps(INDEX_CONFIG, sort_keys=True).encode()).hexdigest()[:8]
+)
 EVAL_DB = os.environ.get(
-    "EVAL_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:55432/strata_eval"
+    "EVAL_DATABASE_URL",
+    "postgresql+asyncpg://postgres:postgres@localhost:55432/strata_eval"
+    + (f"_{INDEX_KEY}" if INDEX_KEY else ""),
 )
 # Settings are read at import time, so point the app at the eval database first.
 os.environ["DATABASE_URL"] = EVAL_DB
@@ -182,7 +197,7 @@ def ensure_database() -> None:
 async def ingest(force: bool = False) -> None:
     """(Re)build the eval orgs when the corpus changed. One upload source per collection."""
     digest = corpus_hash()
-    marker = DATA / "corpus.hash"
+    marker = DATA / (f"corpus-{INDEX_KEY}.hash" if INDEX_KEY else "corpus.hash")
     async with SessionLocal() as db:
         have = (await db.execute(select(Organization.id))).first()
     if not force and have and marker.exists() and marker.read_text() == digest:
@@ -393,6 +408,8 @@ class AnswerResult:
     message_id: str | None = None
     sources: list[dict[str, Any]] = field(default_factory=list)  # ref, title, chunk_id
     grounding: dict[str, Any] | None = None
+    usage: dict[str, dict[str, Any]] = field(default_factory=dict)  # per model, as stored
+    cost_usd: float | None = None  # None when no model in the run has a price
 
 
 def substring_hits(answer: str, facts: list[dict[str, Any]]) -> list[bool]:
@@ -546,8 +563,12 @@ async def answer_one(
     async with SessionLocal() as db:
         msg = await db.get(Message, msg_id)
         answer, status, sources = msg.content, msg.status, msg.sources
+        usage = msg.usage or {}
     result = AnswerResult(q.id, q.category, answer, status, latency_s=round(latency, 1))
     result.error = error
+    result.usage = usage
+    costs = [u["cost_usd"] for u in usage.values() if u.get("cost_usd") is not None]
+    result.cost_usd = round(sum(costs), 6) if costs else None
     result.message_id = str(msg_id)
     result.sources = [_source_row(s) for s in sources]
     return await score_answer(q, result, with_grounding)
@@ -681,9 +702,17 @@ def summarize_answers(rows: list[dict]) -> dict[str, dict[str, float]]:
             "errors": sum(r["status"] != "complete" for r in v),
             "s": round(sum(r["latency_s"] for r in v) / len(v), 1),
             "p95_s": _p95([r["latency_s"] for r in v]),
+            **_cost(v),
         }
         for c, v in sorted(cats.items())
     }
+
+
+def _cost(rows: list[dict]) -> dict[str, float]:
+    """Mean dollars per answer, when the run's model has a price (older results and
+    unpriced models have no cost column)."""
+    known = [r["cost_usd"] for r in rows if r.get("cost_usd") is not None]
+    return {"usd": round(sum(known) / len(known), 5)} if known else {}
 
 
 def _p95(values: list[float]) -> float:
@@ -699,7 +728,7 @@ def print_table(summary: dict[str, dict[str, Any]]) -> None:
     width = max(8, *(len(c) + 2 for c in cols))
     print(f"{'category':<18}" + "".join(f"{c:>{width}}" for c in cols))
     for cat, vals in summary.items():
-        print(f"{cat:<18}" + "".join(f"{str(vals[c]):>{width}}" for c in cols))
+        print(f"{cat:<18}" + "".join(f"{str(vals.get(c, '—')):>{width}}" for c in cols))
 
 
 def save(kind: str, variant: str, rows: list, summary: dict, extra: dict) -> Path:
@@ -711,7 +740,8 @@ def save(kind: str, variant: str, rows: list, summary: dict, extra: dict) -> Pat
         extra = {**judge_versions(), **extra}
     path.write_text(
         json.dumps(
-            {"kind": kind, "variant": variant, "corpus": corpus_hash(), **extra,
+            {"kind": kind, "variant": variant, "corpus": corpus_hash(), "index": INDEX_CONFIG,
+             **extra,
              "summary": summary, "rows": rows},
             indent=1,
         )
@@ -942,7 +972,7 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=0, help="label: sampling seed")
     p.add_argument("--model", help="build-graph: extraction model (default: the org's)")
     p.add_argument(
-        "--chat-model", help="answers: the org model to chat with, e.g. explabs:claude-haiku-5.5"
+        "--chat-model", help="answers: the org model to chat with, e.g. claude-haiku-5-5"
     )
     args = p.parse_args()
     if args.no_cache:
