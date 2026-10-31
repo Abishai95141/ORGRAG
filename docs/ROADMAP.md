@@ -77,7 +77,7 @@ The full findings, with file:line evidence, are in [AUDIT.md](AUDIT.md).
 
 Ranked by expected value. Each one is measured before it becomes the default.
 
-1. **Latency bundle (S–M).** Target: 2–3× faster.
+1. **Latency bundle (S–M).** Target: 2–3× faster. *(2026-10-31: caching and concurrency done; see LOG.md.)*
    - Prompt caching for the system prompt, tools and conversation prefix. Cache reads cost 0.1× and cut latency on long prompts.
    - Run independent sub-queries concurrently.
    - A **fast path**: simple lookups get one retrieve-and-answer pass with no agent loop.
@@ -157,7 +157,14 @@ Deprioritised: expert finding (identities don't align across orgs), actions with
 - **Tracing:** OpenTelemetry, exported to Langfuse or any OTLP collector: one trace per answer with model turns (tokens), tools, retrieval and rerank, plus worker jobs; text only with `TRACE_CONTENT=true`. Token usage is also stored per answer and shown per org and model in Insights.
 - **Verified answers:** built. Indexed as boosted documents in their collection, with an owner, an expiry and re-verification; verifying can't widen access to restricted sources.
 - **Answer permalinks:** built. Permissions are checked per viewer, who sees the answer only if they can read every cited source, with access requests that admins approve.
-- **CI eval gate:** the repo has no CI yet; wiring the smoke set into it is open.
+- **CI eval gate:** CI exists now (lint, tests on two Postgres setups, web build); wiring the smoke set into it is open.
+
+**Progress, weeks 3–5 (2026-10-31):** decisions and numbers in [LOG.md](LOG.md), status per step in [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md#status-2026-10-31).
+- **Claude Haiku 5.5 runs every LLM job** (chat, graph extraction, eval answers) on the Anthropic API. Smoke set: 14/15, citation recall 0.65 → 0.76 with step 1, median 4.9 s, $0.0011 per answer.
+- **Latency:** prompt caching and concurrent tool calls are in. Rerank-once was dropped after measuring (the rerank calls already run in parallel); the fast path is open.
+- **BM25:** pg_textsearch on Postgres 17, read top-k from its index; on where installed. Equal quality within noise here, chosen for scale.
+- **Contextual Retrieval:** built, off by default (+0.006 recall@5, not significant on this short-document corpus).
+- **Eval:** cost per answer recorded; smoke runs judged by Sonnet 5.5, full runs by the free Nemotron; answer-only runs judged later.
 
 
 | When | Track A: quality and platform | Track B: product |

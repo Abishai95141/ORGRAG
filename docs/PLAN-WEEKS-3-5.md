@@ -5,9 +5,22 @@ This is the build plan for [ROADMAP.md](ROADMAP.md) §3 (quality and speed upgra
 - **The small rerankers won't be faster on CPU.** mxbai-rerank-base-v2 and Qwen3-Reranker-0.6B are 0.5–0.6B-parameter models; scoring 40 pairs on CPU is an estimated 5–20 s, against ~0.5 s for the NVIDIA reranker we use. The speed win is reranking **once** (we currently score up to 6 queries × 40 = 240 pairs). The CPU models are only an option for a future GPU worker.
 - **granite-embedding-small-r2's headline gain is on long documents** (LongEmbed 61.9 vs 32.1). Our chunks are ≤ 2,600 characters (~512 tokens), where it ties bge-small on MTEB retrieval (53.9 vs 53.9). It's still worth testing (tables 75.5 vs 69.9), but as an A/B test with a gate, not as a sure win.
 
+## Status (2026-10-31)
+
+| Step | State |
+|---|---|
+| 0. Foundations | Done, except the Haiku 150-question baseline (running) and κ labelling (needs a person). |
+| 1. Latency | Prompt caching and concurrent tool calls done; rerank-once dropped after measuring; fast path not started (smoke p50 is already 4.9 s). |
+| 2a. BM25 | Done; on where the index exists. |
+| 2b. Contextual Retrieval | Built; off until long documents (step 3) can show a significant gain. |
+| 2c. Embedding A/B | Not started. |
+| 3–6 | Not started. |
+
+Every decision, with its evidence and how to reverse it, is in [LOG.md](LOG.md#2026-10-31--weeks-35-start-claude-haiku-55-latency-bm25-contextual-retrieval).
+
 ## How every change is judged
 
-- **Model:** answers on **Claude Haiku 5.5** (`claude-haiku-5-5`) through the Anthropic API, so caching and citations are available. Judged by **Nemotron 3 Ultra** on the free NVIDIA tier (a different model family, as the eval requires).
+- **Model:** answers on **Claude Haiku 5.5** (`claude-haiku-5-5`) through the Anthropic API, so caching and citations are available. Smoke runs are judged by **Claude Sonnet 5.5** (~30 s, ~$0.30), full runs by **Nemotron 3 Ultra** on the free NVIDIA tier. Sonnet and Nemotron agreed on 96–100% of verdicts on the same answers (see [EVALUATION.md](EVALUATION.md#scoring)).
 - **Baseline first** (step 0), then one change at a time, each compared with `eval.harness compare` (paired bootstrap per category). A change ships when no category gets worse and its own metric improves.
 - **Smoke set (15) on every change; full set (150) before each merge.** Full runs cost about $0.20–0.40 each on Haiku at $0.10 / $0.50 per million input / output tokens, so the $200 credit covers this plan's eval runs, Contextual Retrieval indexing and the LangExtract spike with a wide margin.
 - **Per-answer cost** (input, output, cache read and write) is recorded in every eval row and in `messages.usage`.
@@ -31,16 +44,16 @@ This is the build plan for [ROADMAP.md](ROADMAP.md) §3 (quality and speed upgra
 1. **Native Haiku path.**
    - `ANTHROPIC_API_KEY` set, and org model `claude-haiku-5-5`, so `_claude_loop` runs on the Anthropic SDK rather than the gateway.
    - Fixes needed for Haiku 5.5:
-     - `request_extras()` sends `fallbacks: "default"`, which does nothing on Haiku. A list would return 400, so send it only to models that support it.
+     - `request_extras()` sends `fallbacks: "default"`, which does nothing on Haiku. A list would return 400, so send it only to models that support it. **Checked:** Haiku 5.5 accepts `"default"` (and every other option the agent loop sends), so no change was needed.
      - Thinking is on by default and billed as output; keep adaptive thinking for answers.
      - API version 2026-10-21 rejects sampling parameters, so no `temperature` anywhere on the Claude path.
 2. **Usage and cost.**
    - Record `cache_creation_input_tokens` alongside `cache_read` in `_claude_usage`.
    - Add cost per answer to the eval's `AnswerResult` and summaries.
-3. **Baselines on Haiku.** Smoke, then all 150 questions, saved as `answers-haiku-baseline.json`.
+3. **Baselines on Haiku.** Smoke, then all 150 questions, saved as `answers-haiku-baseline.json`. **Smoke done** (14/15; see [EVALUATION.md](EVALUATION.md#answers-on-claude-haiku-55-smoke-set-2026-10-31)); the 150 are running.
 4. **Judge agreement (needs you, about 20 min).** `eval.harness label` on the Haiku baseline; κ ≥ 0.7 before we trust small judge-based differences.
-5. **Eval databases per index configuration.** Embedding model, contextual-retrieval prompt version and BM25 on/off become part of `corpus_hash`, so variants that change the index don't overwrite each other.
-6. **CI.** A GitHub Actions workflow running ruff, the backend tests (twice: with and without pg_textsearch, see step 2), `tsc` and `next build`. The eval smoke set runs only when the API keys are present as secrets.
+5. **Eval databases per index configuration.** Embedding model, contextual-retrieval prompt version and BM25 on/off become part of `corpus_hash`, so variants that change the index don't overwrite each other. **Done** for the embedding and Contextual Retrieval (`strata_eval_<hash>`, `-ctx` result names). BM25 needs no database of its own: it's a query-time switch (`KEYWORD_RANKING`) on one index.
+6. **CI.** A GitHub Actions workflow running ruff, the backend tests (twice: with and without pg_textsearch, see step 2), `tsc` and `next build`. The eval smoke set runs only when the API keys are present as secrets. **Done**, except the smoke-set job (not yet wired).
 
 ## Step 1 — Latency bundle (week 3)
 

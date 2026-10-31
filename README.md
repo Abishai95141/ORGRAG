@@ -201,6 +201,8 @@ web/       Next.js app, design system, icons and illustrations
 docs/      ARCHITECTURE.md · API.md (the contract) · DESIGN.md
            EVALUATION.md (measured quality) · AUDIT.md · API_AUDIT.md
            RESEARCH.md (techniques, tools, landscape) · ROADMAP.md (the plan)
+           PLAN-WEEKS-3-5.md (current build plan) · LOG.md (decisions and evals)
+postgres/  Postgres 17 image with pgvector and pg_textsearch
 ```
 
 ## License

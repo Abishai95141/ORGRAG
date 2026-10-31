@@ -44,6 +44,31 @@ Each run is a single sample and the models aren't deterministic. With 150 questi
 
 ## Results
 
+Decisions behind each result, and costs, are in [LOG.md](LOG.md).
+
+### Answers on Claude Haiku 5.5, smoke set (2026-10-31)
+
+Quick mode, 15 questions. The Haiku baseline is the native Anthropic API with no prompt caching; step 1 adds prompt caching and concurrent tool calls.
+
+| Run | Judge | Pass | Faithfulness | Citation recall | Citation precision | Mean / p95 | $ per answer |
+|---|---|---|---|---|---|---|---|
+| Haiku baseline | Nemotron 3 Ultra | 14/15 | 0.940 | 0.654 | 0.990 | 6.9 / 12.3 s | 0.00148 |
+| Haiku baseline | Sonnet 5.5 | 14/15 | 0.969 | 0.690 | 1.000 | 6.9 / 12.3 s | 0.00148 |
+| Haiku + step 1 | Sonnet 5.5 | 14/15 | 0.982 | 0.763 | 0.973 | 5.2 / 9.7 s (p50 4.9) | 0.00111 |
+
+Against the Nemotron answers above (citation recall 0.337, 30.7 s mean), Haiku roughly doubles citation recall and answers 4–6× faster. Step 1 changed no question's outcome. The only failure is q100, the multi-hop rota question. The full 150-question Haiku run and the Sonnet comparison runs are in [LOG.md](LOG.md#evals-and-metrics) until they're judged.
+
+### Retrieval: Contextual Retrieval and BM25 (2026-10-31)
+
+135 answerable questions, reranked unless noted. Neither change is statistically significant here; see [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md#2a-bm25-with-pg_textsearch) for why BM25 is on and Contextual Retrieval is off.
+
+| | recall@5 | recall@10 | MRR |
+|---|---|---|---|
+| ts_rank_cd (baseline) | 0.937 | 0.967 | 0.942 |
+| + Contextual Retrieval | 0.943 | 0.975 | 0.943 |
+| BM25 (separate server; its own ts_rank_cd run: 0.939 / 0.970 / 0.942) | 0.936 | 0.970 | 0.948 |
+| BM25, no reranker (ts_rank_cd, no reranker: 0.839 / 0.926 / 0.841) | 0.855 | 0.937 | 0.847 |
+
 ### Retrieval, 150 questions (2026-10-31)
 
 Default configuration (hybrid fusion, NVIDIA reranker, low recency bias), 135 answerable questions:
