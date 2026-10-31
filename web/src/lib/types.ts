@@ -319,3 +319,58 @@ export type ApiKey = {
   expires_at: string | null;
   created_at: string;
 };
+
+// ── Slack bot ──────────────────────────────────────────────────────────────
+/** An org connected to a Slack workspace, as the caller sees it (only orgs they're in). */
+export type SlackOrg = { slug: string; name: string; hue: number; role: Role };
+
+export type SlackWorkspace = {
+  id: string;
+  team_id: string;
+  team_name: string;
+  bot_user_id: string;
+  connected_at: string;
+  connected_by: Person | null;
+  /** The org unmapped channels search (the first to connect); null if you're not in it. */
+  default_org: SlackOrg | null;
+  orgs: SlackOrg[];
+  other_org_count: number;
+};
+
+export type SlackOverview = {
+  configured: boolean;
+  events_url: string;
+  redirect_url: string;
+  workspaces: SlackWorkspace[];
+};
+
+export type SlackChannel = {
+  channel_id: string;
+  channel_name: string | null;
+  /** In search order; only orgs you belong to. */
+  orgs: SlackOrg[];
+  other_org_count: number;
+  updated_by: Person | null;
+  updated_at: string;
+};
+
+export type SlackBotChannel = { id: string; name: string; is_private: boolean; mapped: boolean };
+
+export type SlackLinkPreview = {
+  team_id: string;
+  team_name: string;
+  slack_user_id: string;
+  slack_user_name: string | null;
+  expired: boolean;
+  linked: "none" | "you" | "other";
+  eligible: boolean;
+};
+
+export type SlackLink = {
+  id: string;
+  team_id: string;
+  team_name: string;
+  slack_user_id: string;
+  slack_user_name: string | null;
+  created_at: string;
+};

@@ -29,6 +29,9 @@ for _key in (
     "LLM_MODEL",
     "GRAPH_EXTRACTION_MODEL",
     "GRAPH_EXTRACTION_FALLBACK_MODEL",
+    "SLACK_CLIENT_ID",
+    "SLACK_CLIENT_SECRET",
+    "SLACK_SIGNING_SECRET",
 ):
     os.environ[_key] = ""
 os.environ["RERANK_PROVIDER"] = "none"

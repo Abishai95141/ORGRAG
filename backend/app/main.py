@@ -28,6 +28,7 @@ from app.api import (
     orgs,
     search,
     sharing,
+    slack,
     sources,
     verified,
 )
@@ -210,6 +211,7 @@ for module in (
     api_keys,
     verified,
     sharing,
+    slack,
     meta,
 ):
     app.include_router(

@@ -43,6 +43,19 @@ async def visible_collections(
     return list((await db.execute(stmt.order_by(Collection.name))).scalars())
 
 
+async def org_wide_collection_ids(db: AsyncSession, org_ids: list[uuid.UUID]) -> list[uuid.UUID]:
+    """Collections every member of their org can read (visibility "org"): what may be
+    searched for an answer shown where others read it too, such as a Slack channel.
+    Restricted collections are left out whoever asks, admins included. Callers pass
+    this as a scope's `collection_ids`, so it's intersected with what the asker can read."""
+    if not org_ids:
+        return []
+    rows = await db.execute(
+        select(Collection.id).where(Collection.org_id.in_(org_ids), Collection.visibility == "org")
+    )
+    return list(rows.scalars())
+
+
 async def resolve_scope(
     db: AsyncSession,
     *,

@@ -23,6 +23,10 @@ export const qk = {
   apiKeys: (slug: string) => ["org", slug, "api-keys"] as const,
   verified: (slug: string) => ["org", slug, "verified"] as const,
   accessRequests: (slug: string) => ["org", slug, "access-requests"] as const,
+  slack: (slug: string) => ["org", slug, "slack"] as const,
+  slackChannels: (slug: string, workspaceId: string) => ["org", slug, "slack", workspaceId, "channels"] as const,
+  slackBotChannels: (slug: string, workspaceId: string) => ["org", slug, "slack", workspaceId, "bot-channels"] as const,
+  slackLinks: ["slack-links"] as const,
   connectors: ["connectors"] as const,
   models: ["models"] as const,
 };
@@ -41,6 +45,11 @@ export const useConversations = (slug: string) =>
 export const useModels = () => useQuery({ queryKey: qk.models, queryFn: api.models, staleTime: 5 * 60_000 });
 export const useConnectors = () =>
   useQuery({ queryKey: qk.connectors, queryFn: api.connectors, staleTime: Infinity });
+export const useSlack = (slug: string) => useQuery({ queryKey: qk.slack(slug), queryFn: () => api.slack(slug) });
+export const useSlackChannels = (slug: string, workspaceId: string) =>
+  useQuery({ queryKey: qk.slackChannels(slug, workspaceId), queryFn: () => api.slackChannels(slug, workspaceId) });
+export const useSlackLinks = (enabled = true) =>
+  useQuery({ queryKey: qk.slackLinks, queryFn: api.slackLinks, enabled });
 
 const ACTIVE = new Set(["queued", "syncing"]);
 

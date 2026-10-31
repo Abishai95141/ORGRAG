@@ -350,6 +350,83 @@ type AccessRequest = {
 };
 ```
 
+## Slack bot
+
+People mention `@Strata` in a channel, or message it directly, and get a cited answer in
+the thread, answered as their Strata user with that user's permissions. An org admin
+connects a workspace (OAuth v2); a workspace can be connected to several orgs, each by
+an admin of that org. Needs `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` and
+`SLACK_SIGNING_SECRET` (else `503 slack_not_configured`); setup is in the README.
+
+- **Who asks.** A Slack user is the Strata user they linked (below), else the Strata user
+  whose email matches the one Slack reports (`users.info`) and who belongs to an org
+  connected to the workspace. Nobody: the bot replies, only to them (ephemeral; a DM if
+  that can't be shown), with a signed link to `{PUBLIC_URL}/slack/link/{token}` (valid an
+  hour) where they confirm, signed in, that the Slack account is theirs.
+- **What it searches.** A DM: every connected org the asker belongs to. A channel: its
+  mapping's orgs (in order), or unmapped, the workspace's default org (the first to
+  connect); only orgs that connected the workspace, and of those only the ones the asker
+  belongs to. Non-first orgs with `allow_cross_org: false` are skipped, as in chat.
+- **Channels are public to their members.** In a channel only collections with
+  `visibility: "org"` are searched (an allow-list in the retrieval scope, intersected with
+  what the asker can read); restricted collections are searched only in DMs. The reply
+  footer says so when it left something out.
+- **The answer** runs the chat path (`stream=false`) in a Strata conversation per thread
+  and person, so it's in the asker's history, Insights and citations. A follow-up in the
+  thread continues that conversation, unless it went on in the web app (then a new one
+  starts). The reply replaces a "Searching…" placeholder, in Slack mrkdwn, split into
+  several messages when long; `[n]` link to `{PUBLIC_URL}/a/{token}?source=n`, a
+  permalink for the answer that checks each reader's permissions when opened (see
+  *Shared answers*). Errors are posted in the thread.
+
+```ts
+type SlackOrg = { slug: string; name: string; hue: number; role: Role };   // only orgs you belong to
+type SlackWorkspace = {
+  id: string; team_id: string; team_name: string; bot_user_id: string;
+  connected_at: string; connected_by: Person | null;    // this org's connection
+  default_org: SlackOrg | null;      // what unmapped channels search; null if you're not in it
+  orgs: SlackOrg[]; other_org_count: number;   // connected orgs; others are only counted
+};
+type SlackChannel = {
+  channel_id: string; channel_name: string | null;
+  orgs: SlackOrg[]; other_org_count: number;    // in search order
+  updated_by: Person | null; updated_at: string;
+};
+type SlackLink = { id: string; team_id: string; team_name: string; slack_user_id: string; slack_user_name: string | null; created_at: string };
+```
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/orgs/{slug}/slack` `[admin]` | – | `{configured: boolean, events_url, redirect_url, workspaces: SlackWorkspace[]}` (the URLs to enter in the Slack app) |
+| GET | `/orgs/{slug}/slack/install` `[admin, session only]` | – | `307` to Slack's authorize page with a signed `state` bound to the org and admin (10 minutes) |
+| GET | `/slack/oauth/callback?code=&state=` | – (Slack redirects the admin's browser here) | `303` to `/o/{slug}/settings/slack?connected={team}` or `?slack_error={code}`. The browser must be signed in as the admin who started (`wrong_user`), still an admin (`not_admin`); `oauth.v2.access` errors pass through (e.g. `access_denied`, `invalid_code`); Enterprise Grid org installs are refused (`enterprise_install`). A forged or expired state is `400 invalid_state`. The bot token is stored encrypted and never returned |
+| DELETE | `/orgs/{slug}/slack/workspaces/{id}` `[admin]` | – | `204`: the org stops answering there and leaves every channel's scope (a channel left with no org answers nothing rather than falling back). The last org to leave revokes the token (`auth.revoke`) and the workspace, its mappings and links are deleted |
+| GET | `/orgs/{slug}/slack/workspaces/{id}/channels` `[admin]` | – | `SlackChannel[]` that search this org |
+| GET | `/orgs/{slug}/slack/workspaces/{id}/bot-channels` `[admin]` | – | `{id, name, is_private, mapped}[]`: channels the bot was added to, from Slack (`502 slack_error` if Slack fails) |
+| PUT | `/orgs/{slug}/slack/workspaces/{id}/channels/{channel_id}` `[admin]` | `{org_slugs: string[] (1–20, in order), channel_name?}` | `SlackChannel` |
+| DELETE | `/orgs/{slug}/slack/workspaces/{id}/channels/{channel_id}` `[admin]` | – | `204`: back to the default org |
+| POST | `/slack/events` | Slack Events API (signed) | `200` |
+| GET | `/slack/link/{token}` `[session]` | – | `{team_id, team_name, slack_user_id, slack_user_name, expired, linked: "none" \| "you" \| "other", eligible}` (`404 link_not_found` for a forged token or a disconnected workspace) |
+| POST | `/slack/link/{token}` `[session]` | – | `201 SlackLink` (`200` if already yours; `400 link_expired`; `409 slack_user_linked` when linked to someone else; `403` when none of your orgs connected the workspace) |
+| GET | `/slack/links` `[session]` | – | `SlackLink[]`: Slack accounts linked to you |
+| DELETE | `/slack/links/{id}` `[session]` | – | `204` (the Slack user is matched by email again) |
+
+**Channel mappings.** `channel_id` is a Slack channel id (`C…`/`G…`, else `400
+invalid_channel`). Every org must be one you belong to (`400 unknown_org`) that connected
+the workspace (`400 org_not_connected`). Adding an org to a channel's scope takes an admin
+of that org (403); removing orgs takes an admin of an org already in the scope (403). Orgs
+in the scope you don't belong to are kept, after yours. The first org in the list that
+the asker belongs to holds the conversation.
+
+**Events.** Every request must carry a valid `X-Slack-Signature` (`v0=` HMAC-SHA256 of
+`v0:{timestamp}:{raw body}` with the signing secret) and an `X-Slack-Request-Timestamp`
+within five minutes, else `401 invalid_signature`; nothing is read before that.
+`url_verification` returns `{challenge}`. `app_mention` (in channels) and `message` in a
+DM with the bot (`channel_type: "im"`) are queued as a `slack_answer` job and acknowledged
+at once; bots, the bot itself, edits and other subtypes are ignored. Each `event_id` is
+queued once, so Slack's retries (`X-Slack-Retry-Num`) are acknowledged without asking
+again. `app_uninstalled`, and `tokens_revoked` for the bot, delete the workspace.
+
 ## Search (no LLM)
 
 `POST /orgs/{slug}/search` body

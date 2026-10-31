@@ -13,6 +13,7 @@ from app.ingestion.contextual import contextualize_source
 from app.ingestion.pipeline import sync_source
 from app.models import Document, Job, Organization, Source
 from app.schemas.common import OrgSettings
+from app.slackbot.answer import handle_slack_answer
 from app.worker.queue import enqueue_contextualize, enqueue_graph
 
 log = logging.getLogger("strata.worker")
@@ -116,4 +117,5 @@ HANDLERS = {
     "sync_source": handle_sync_source,
     "extract_graph": handle_extract_graph,
     "contextualize": handle_contextualize,
+    "slack_answer": handle_slack_answer,
 }

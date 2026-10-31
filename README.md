@@ -56,6 +56,10 @@ what changed.
   sees restricted sources.
 - **Answer links.** Share an answer by link; each person who opens it sees it only if
   they can read every source it cites, and can request access otherwise.
+- **A Slack bot.** Mention `@Strata` in a channel or DM it, and get a cited answer in the
+  thread, with the asker's own Strata permissions. Channels only search collections the
+  whole organization can see; restricted collections are searched only in DMs. A Slack
+  Connect channel can search several organizations. See [Slack bot](#slack-bot).
 - **Tracing.** OpenTelemetry traces for every answer (model turns, tokens, tools,
   retrieval) to Langfuse or any OTLP collector, and token spend per org in Insights.
 - **A consistent, documented API.** Org API keys with capped roles, one error shape with
@@ -180,6 +184,69 @@ explains how to enable the agent.
 
 If you already ran Strata before this version, run `make migrate` (or restart the
 `api` container, which migrates on start) to add the new tables.
+
+### Slack bot
+
+Optional. Slack must reach Strata over HTTPS, so set `PUBLIC_URL` to the public address
+of the web app (it proxies `/api`); for local development, a tunnel such as `cloudflared`
+or `ngrok` in front of port 3000 works. Answers are written by the worker, so it must be
+running (`make worker`, or the `worker` container).
+
+1. At [api.slack.com/apps](https://api.slack.com/apps), **Create New App → From an app
+   manifest**, pick your workspace, and paste the manifest below with
+   `strata.example.com` replaced by your `PUBLIC_URL` host.
+2. From **Basic Information → App Credentials**, copy the Client ID, Client Secret and
+   Signing Secret into `.env` as `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` and
+   `SLACK_SIGNING_SECRET`, and restart the API and worker. Slack verifies the events URL
+   when you save it, so do this before (or re-save) the Event Subscriptions page.
+3. In Strata, an admin opens **Settings → Slack → Connect a workspace** and approves the
+   app. Several organizations can connect the same workspace, each from its own settings.
+   To install into workspaces other than the app's own, turn on **Manage Distribution**.
+4. In Slack, invite the bot to channels (`/invite @Strata`). Unmapped channels search the
+   organization that connected first; under **Settings → Slack → Channel scopes** an
+   admin can point a channel at other connected organizations (a Slack Connect channel
+   shared with a client, say).
+
+People whose Slack email matches their Strata email are recognized automatically; anyone
+else gets a private link to connect their account the first time they ask.
+
+```yaml
+display_information:
+  name: Strata
+  description: Cited answers from your organization's knowledge
+features:
+  app_home:
+    home_tab_enabled: false
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
+  bot_user:
+    display_name: Strata
+    always_online: true
+oauth_config:
+  redirect_urls:
+    - https://strata.example.com/api/slack/oauth/callback
+  scopes:
+    bot:
+      - app_mentions:read   # mentions in channels
+      - channels:read       # the channel picker in Settings → Slack
+      - groups:read         # … including private channels
+      - chat:write          # answers in threads
+      - im:history          # direct messages to the bot
+      - im:write            # the account link, when it can't be shown in the channel
+      - users:read
+      - users:read.email    # match the asker to their Strata account
+settings:
+  event_subscriptions:
+    request_url: https://strata.example.com/api/slack/events
+    bot_events:
+      - app_mention
+      - message.im
+      - app_uninstalled
+      - tokens_revoked
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
+```
 
 ### Troubleshooting
 

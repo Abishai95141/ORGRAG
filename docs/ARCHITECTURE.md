@@ -79,6 +79,7 @@ retrieval/              hybrid.py (vector + keyword + RRF + scoring), rerank.py,
 llm/                    client.py (Anthropic client, provider-neutral structured calls, error mapping),
                         nvidia.py (OpenAI-compatible streaming + reranker), models.py (catalogue)
 agent/                  engine.py, tools.py, prompts.py, events.py, citations.py
+slackbot/               client.py (Slack Web API), signing.py, mrkdwn.py, scope.py, answer.py
 worker/                 __main__.py (job loop + scheduler), jobs.py
 alembic/                migrations
 ```
@@ -94,6 +95,9 @@ users ──< memberships >── organizations ──< invitations
    collection_access (restricted collections → users)
 jobs (org_id, kind, payload, status, progress)
 search_events (org_id, user_id, query, latency_ms, hits) — powers Insights
+slack_workspaces ──< slack_connections >── organizations
+       ├──< slack_channels (channel_id → org_ids)   ├──< slack_user_links (→ users)
+       └──< slack_threads (→ conversations)          slack_events (event_id dedupe)
 ```
 
 Every row that holds tenant data has `org_id` and an index on it. `chunks` has
@@ -180,6 +184,49 @@ job <kind>  (worker; its own trace, org_id, job id, attempt)
 * Token usage per model is also saved on each answer (`messages.usage`) and summed per
   org in Insights, so spend per org needs no tracing backend.
 
+## Slack
+
+People ask from Slack (a mention in a channel, or a DM to the bot) and get a cited answer
+in the thread, with the permissions they have in Strata. A workspace is installed once
+(`slack_workspaces`, bot token encrypted like connector secrets) and connected to orgs by
+their admins (`slack_connections`); a Slack Connect channel shared between companies maps
+to several orgs (`slack_channels.org_ids`).
+
+```
+Slack ──POST /api/slack/events──▶ API: verify signature → dedupe event_id → enqueue slack_answer → 200
+                                         (slack_events)        (jobs, claimed ahead of syncs)
+worker: slack_answer
+  1. who:   slack_user_links, else users.info email ↔ a member of a connected org
+            (nobody → ephemeral link to /slack/link/{signed token})
+  2. scope: place orgs (DM: all connected; channel: mapping or the default org)
+            ∩ the asker's memberships; channel → org-wide collections only
+  3. answer: begin_answer → run_chat → wait_for_answer, in the thread's conversation
+  4. reply: placeholder → chat.update with mrkdwn, [n] → /a/{share token}?source=n
+```
+
+* **Channels are public to their members.** An answer posted in a channel is read by
+  everyone there, so a channel's retrieval scope is narrowed to collections with
+  `visibility = 'org'` (`org_wide_collection_ids` in `retrieval/access.py`), passed as the
+  run's `collection_ids` and intersected with what the asker can read. It is the same
+  SQL allow-list every search applies, so neither the model nor the question can reach a
+  restricted collection from a channel, admins included. Restricted collections are
+  searched only in DMs, and the reply's footer says so when it mattered.
+* **Identity.** A confirmed link wins; otherwise the email Slack reports is matched on
+  every question (so a changed Slack email isn't trusted forever), and only to members
+  of orgs connected to the workspace. Links are made by the Strata user, signed in,
+  from a one-hour signed token the bot sent only to that Slack user.
+* **Multi-org channels.** Every org in a channel's scope must have connected the workspace
+  (checked when mapped and again when answering); adding an org takes an admin of it.
+  The asker searches only the orgs they belong to, and the footer names the others.
+* **History.** One Strata conversation per thread and person. A thread keeps it only
+  while nothing else was added to it: once it went on in the web app, where restricted
+  collections may be in scope, the thread starts a new one so that history can't be
+  carried into a channel.
+* **Delivery.** The job records its progress (placeholder, finished reply, messages
+  posted) in its payload, so when Slack is unreachable the queue's retry reposts the
+  reply instead of running the model again.
+* `app/slackbot/client.py` is the only code that calls Slack; tests replace its transport.
+
 ## Ingestion
 
 1. `sources` row created → `jobs` row `sync_source` enqueued.
@@ -199,7 +246,7 @@ All iconography and illustration is a hand-built SVG set in `web/src/components/
 and `web/src/components/illustrations` — no icon library. See `docs/DESIGN.md`.
 
 ```
-app/(auth)/login, signup, invite/[token]
+app/(auth)/login, signup, invite/[token], slack/link/[token]
 app/onboarding                       create first org
 app/o/[org]/chat, chat/[id]           conversation + agent trace + sources rail
 app/o/[org]/sources, sources/[id]     connectors, sync status, documents
@@ -208,4 +255,5 @@ app/o/[org]/agents                    agent builder
 app/o/[org]/members                   members, roles, invites
 app/o/[org]/insights                  usage analytics
 app/o/[org]/settings                  org profile, model, retrieval settings
+app/o/[org]/settings/slack            Slack workspaces and channel scopes
 ```

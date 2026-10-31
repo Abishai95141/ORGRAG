@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { IconCheck, IconCopy, IconKey, IconTrash, IconWarning } from "@/components/icons";
 import { OrgMark } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
+import { SettingsNav } from "@/components/layout/settings-nav";
 import { Badge, Button, Card, Field, Input, PageHeader, Segmented, Select, Skeleton, Switch, Textarea, Tooltip } from "@/components/ui";
 import { confirmAction } from "@/components/ui/confirm";
 import { api, ApiError } from "@/lib/api";
@@ -72,6 +73,7 @@ export default function SettingsPage() {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-3xl px-5 py-10 sm:px-8">
         <PageHeader eyebrow={org.name} title="Settings" />
+        <SettingsNav slug={org.slug} />
 
         {!full.data || !settings ? (
           <Skeleton className="h-96 rounded-[14px]" />

@@ -96,20 +96,27 @@ class EncryptedJSON(TypeDecorator):
         return None if value is None else decrypt(value)
 
 
+# Tables with an EncryptedJSON `secrets` column: connector secrets, Slack bot tokens.
+SECRET_TABLES = ("sources", "slack_workspaces")
+
+
 async def _rotate_all() -> int:
     from sqlalchemy import text
 
     from app.core.db import SessionLocal
 
+    count = 0
     async with SessionLocal() as db:
-        rows = (await db.execute(text("SELECT id, secrets FROM sources"))).all()
-        for row in rows:
-            await db.execute(
-                text("UPDATE sources SET secrets = CAST(:s AS jsonb) WHERE id = :id"),
-                {"s": json.dumps(rotate(row.secrets)), "id": row.id},
-            )
+        for table in SECRET_TABLES:
+            rows = (await db.execute(text(f"SELECT id, secrets FROM {table}"))).all()
+            for row in rows:
+                await db.execute(
+                    text(f"UPDATE {table} SET secrets = CAST(:s AS jsonb) WHERE id = :id"),
+                    {"s": json.dumps(rotate(row.secrets)), "id": row.id},
+                )
+            count += len(rows)
         await db.commit()
-    return len(rows)
+    return count
 
 
 if __name__ == "__main__":
@@ -118,4 +125,5 @@ if __name__ == "__main__":
 
     if sys.argv[1:] != ["rotate"]:
         sys.exit("usage: python -m app.core.crypto rotate")
-    print(f"Re-encrypted secrets for {asyncio.run(_rotate_all())} source(s) with the primary key")
+    count = asyncio.run(_rotate_all())
+    print(f"Re-encrypted {count} secret(s) (sources, Slack workspaces) with the primary key")
