@@ -184,6 +184,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   feedback={m.feedback}
                   question={rows.slice(0, i).findLast((r) => r.role === "user")?.content}
                   verifiedAnswerId={m.verified_answer_id}
+                  shareToken={m.share_token ?? null}
                   agentName={agent?.name}
                   focused={rail && !liveActive && (focusedId ? focusedId === m.id : m.id === lastAssistant?.id)}
                   onFocus={() => setFocusedId(m.id)}

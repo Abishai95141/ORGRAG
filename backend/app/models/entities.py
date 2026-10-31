@@ -514,3 +514,55 @@ class VerifiedAnswer(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
+
+
+class SharedAnswer(Base):
+    """A permalink to one answer. Anyone signed in can open the link, but what they
+    see is decided per viewer: the answer only if they can read every source it
+    cites; otherwise which collections they'd need (roadmap §6 #7)."""
+
+    __tablename__ = "shared_answers"
+
+    id: Mapped[uuid.UUID] = _pk()
+    token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    message_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("messages.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    created_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = _created()
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AccessRequest(Base):
+    """A member asking to read a restricted collection (from a shared answer they
+    couldn't open). Admins approve (adds a grant) or dismiss it."""
+
+    __tablename__ = "access_requests"
+    __table_args__ = (
+        Index(
+            "ux_access_requests_pending",
+            "collection_id",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    collection_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("collections.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)
+    decided_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = _created()

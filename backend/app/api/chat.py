@@ -24,6 +24,7 @@ from app.models import (
     Membership,
     Message,
     Organization,
+    SharedAnswer,
     VerifiedAnswer,
 )
 from app.schemas.common import (
@@ -155,11 +156,21 @@ async def get_conversation(conversation_id: uuid.UUID, ctx: OrgContext = Depends
             )
         ).all()
     )
+    shared = dict(
+        (
+            await ctx.db.execute(
+                select(SharedAnswer.message_id, SharedAnswer.token).where(
+                    SharedAnswer.message_id.in_([m.id for m in messages]),
+                    SharedAnswer.revoked_at.is_(None),
+                )
+            )
+        ).all()
+    )
     return ConversationDetail(
         conversation=ConversationOut.model_validate(conv),
         messages=[
             MessageOut.model_validate(m).model_copy(
-                update={"verified_answer_id": verified.get(m.id)}
+                update={"verified_answer_id": verified.get(m.id), "share_token": shared.get(m.id)}
             )
             for m in messages
         ],

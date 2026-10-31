@@ -1,4 +1,5 @@
 from app.models.entities import (
+    AccessRequest,
     Agent,
     ApiKey,
     ChatAttachment,
@@ -18,12 +19,14 @@ from app.models.entities import (
     MessageCitation,
     Organization,
     SearchEvent,
+    SharedAnswer,
     Source,
     User,
     VerifiedAnswer,
 )
 
 __all__ = [
+    "AccessRequest",
     "Agent",
     "ApiKey",
     "ChatAttachment",
@@ -43,6 +46,7 @@ __all__ = [
     "MessageCitation",
     "Organization",
     "SearchEvent",
+    "SharedAnswer",
     "Source",
     "User",
     "VerifiedAnswer",

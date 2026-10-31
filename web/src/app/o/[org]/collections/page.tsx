@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconCheck, IconLock, IconMore, IconPencil, IconPeople, IconPlus, IconTrash } from "@/components/icons";
+import { IconCheck, IconLock, IconMore, IconPencil, IconPeople, IconPlus, IconTrash, IconX } from "@/components/icons";
 import { Avatar, FanArt, Glyph, GLYPHS, GlyphTile } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
 import { Badge, Button, Card, Dialog, EmptyState, Field, Input, Menu, MenuContent, MenuItem, MenuTrigger, PageHeader, Segmented, Skeleton, Textarea } from "@/components/ui";
 import { confirmAction } from "@/components/ui/confirm";
 import { api, ApiError } from "@/lib/api";
 import { qk, useCollections, useMembers } from "@/lib/queries";
-import type { Collection } from "@/lib/types";
-import { atLeast, cn, formatNumber } from "@/lib/utils";
+import type { AccessRequest, Collection } from "@/lib/types";
+import { atLeast, cn, formatNumber, relativeTime } from "@/lib/utils";
 
 export default function CollectionsPage() {
   const { org } = useCurrentOrg();
@@ -45,6 +45,8 @@ export default function CollectionsPage() {
             ) : null
           }
         />
+
+        {isAdmin ? <AccessRequests /> : null}
 
         {collections.isLoading ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -249,5 +251,54 @@ function CollectionDialog({ value, onClose }: { value: Collection | "new" | null
         ) : null}
       </div>
     </Dialog>
+  );
+}
+
+/** Members asking to read restricted collections (from shared answers they couldn't open). */
+function AccessRequests() {
+  const { org } = useCurrentOrg();
+  const qc = useQueryClient();
+  const requests = useQuery({ queryKey: qk.accessRequests(org.slug), queryFn: () => api.accessRequests(org.slug) });
+  const decide = useMutation({
+    mutationFn: ({ r, approve }: { r: AccessRequest; approve: boolean }) =>
+      approve ? api.approveAccess(org.slug, r.id) : api.dismissAccess(org.slug, r.id),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: qk.accessRequests(org.slug) });
+      qc.invalidateQueries({ queryKey: qk.collections(org.slug) });
+      toast(r.status === "approved" ? `${r.user.name || r.user.email} can now read ${r.collection_name}` : "Request dismissed");
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn't update the request"),
+  });
+  if (!requests.data?.length) return null;
+  return (
+    <Card className="mb-4 p-5">
+      <h2 className="text-[14px] font-semibold">Access requests</h2>
+      <p className="mt-0.5 text-[12.5px] text-ink-3">People asking to read a restricted collection. Approving adds them to it.</p>
+      <ul className="mt-3 divide-y divide-line">
+        {requests.data.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center gap-3 py-2.5 text-[13px]">
+            <Avatar name={r.user.name || r.user.email} hue={r.user.avatar_hue} size={24} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate">
+                <span className="font-medium">{r.user.name || r.user.email}</span> wants to read{" "}
+                <span className="font-medium">{r.collection_name}</span>
+              </p>
+              <p className="truncate text-[12px] text-ink-3">
+                {relativeTime(r.created_at)}
+                {r.note ? ` · “${r.note}”` : ""}
+              </p>
+            </div>
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="ghost" onClick={() => decide.mutate({ r, approve: false })} disabled={decide.isPending}>
+                <IconX size={14} /> Dismiss
+              </Button>
+              <Button size="sm" variant="primary" onClick={() => decide.mutate({ r, approve: true })} disabled={decide.isPending}>
+                <IconCheck size={14} /> Approve
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

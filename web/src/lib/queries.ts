@@ -22,6 +22,7 @@ export const qk = {
   orgDocuments: (slug: string, params: Record<string, unknown>) => ["org", slug, "documents", params] as const,
   apiKeys: (slug: string) => ["org", slug, "api-keys"] as const,
   verified: (slug: string) => ["org", slug, "verified"] as const,
+  accessRequests: (slug: string) => ["org", slug, "access-requests"] as const,
   connectors: ["connectors"] as const,
   models: ["models"] as const,
 };

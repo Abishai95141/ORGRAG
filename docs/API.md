@@ -183,6 +183,7 @@ type Message = {
   status: "complete" | "streaming" | "error" | "stopped";
   created_at: string;
   verified_answer_id?: string | null;  // conversation detail: set when verified
+  share_token?: string | null;         // conversation detail: the active permalink
 };
 ```
 
@@ -312,6 +313,42 @@ to 90; `owner_id` (default: the caller) must be a member (400 `invalid_owner`).
 documents, or a restricted collection whose readers don't include everyone who can read
 the target collection — verifying can't widen who sees restricted content. Conversation
 detail marks a verified answer with `verified_answer_id` on its `Message`.
+
+## Shared answers (permalinks)
+
+A link to one answer, `{PUBLIC_URL}/a/{token}`. Opening it requires signing in, and
+**every viewer's permissions are checked when they open it**: they get the answer only
+if they can read every source it cites (the answer is made of those sources). Otherwise
+they get the question and what they'd need, and can request access. Web sources are
+public; a conversation attachment counts as readable only by the asker.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| POST | `/orgs/{slug}/messages/{id}/share` | – | `{token, url, created_at}` (one active link per answer; the asker's own `complete` answers only, else 404 / 400 `answer_incomplete`) |
+| DELETE | `/orgs/{slug}/messages/{id}/share` | – | `204` (turns the link off for everyone; sharing again makes a new token) |
+| GET | `/shared/{token}` `[session]` | – | `SharedAnswer`; `404 share_not_found` when turned off |
+| POST | `/orgs/{slug}/collections/{id}/access-requests` | `{note?: string ≤ 500}` | `201 AccessRequest` (a pending request is returned as is; `409 already_has_access`) |
+| GET | `/orgs/{slug}/access-requests?status=pending\|approved\|dismissed\|all` `[admin]` | – | `AccessRequest[]` |
+| POST | `/orgs/{slug}/access-requests/{id}/approve` `[admin]` | – | `AccessRequest` (grants read access to the collection; `409 already_decided`, `409 not_a_member`) |
+| POST | `/orgs/{slug}/access-requests/{id}/dismiss` `[admin]` | – | `AccessRequest` |
+
+```ts
+type SharedAnswer = {
+  token: string;
+  access: "full" | "restricted" | "none";  // none: not a member of the answer's org
+  org: { name: string; slug: string; hue: number };
+  author_name: string | null; question: string | null;   // null when access is "none"
+  answer: string | null; sources: SourceRef[];             // only when access is "full"
+  missing: { kind: "org" | "collection" | "attachment" | "hidden"; org_name: string;
+             org_slug: string | null; collection_id: string | null; collection_name: string | null;
+             requested: boolean }[];                      // what the viewer can't read
+  answered_at: string | null; shared_at: string;
+};
+type AccessRequest = {
+  id: string; collection_id: string; collection_name: string; user: Person; note: string | null;
+  status: "pending" | "approved" | "dismissed"; created_at: string; decided_at: string | null;
+};
+```
 
 ## Search (no LLM)
 

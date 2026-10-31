@@ -27,6 +27,7 @@ from app.api import (
     meta,
     orgs,
     search,
+    sharing,
     sources,
     verified,
 )
@@ -208,6 +209,7 @@ for module in (
     insights,
     api_keys,
     verified,
+    sharing,
     meta,
 ):
     app.include_router(

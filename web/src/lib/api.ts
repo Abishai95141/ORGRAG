@@ -24,6 +24,9 @@ import type {
   Source,
   SourceRef,
   User,
+  AccessRequest,
+  Share,
+  SharedAnswer,
   VerifiedAnswer,
   VerifiedAnswerInput,
   VerifiedStatus,
@@ -242,6 +245,16 @@ export const api = {
   reverify: (slug: string, id: string, expires_in_days: number | null) =>
     request<VerifiedAnswer>(`${o(slug)}/verified-answers/${id}/reverify`, { method: "POST", json: { expires_in_days } }),
   deleteVerified: (slug: string, id: string) => request<void>(`${o(slug)}/verified-answers/${id}`, { method: "DELETE" }),
+
+  // answer permalinks & access requests
+  shareMessage: (slug: string, messageId: string) => request<Share>(`${o(slug)}/messages/${messageId}/share`, { method: "POST" }),
+  unshareMessage: (slug: string, messageId: string) => request<void>(`${o(slug)}/messages/${messageId}/share`, { method: "DELETE" }),
+  shared: (token: string) => request<SharedAnswer>(`/shared/${encodeURIComponent(token)}`),
+  requestAccess: (slug: string, collectionId: string, note?: string) =>
+    request<AccessRequest>(`${o(slug)}/collections/${collectionId}/access-requests`, { method: "POST", json: { note } }),
+  accessRequests: (slug: string) => request<AccessRequest[]>(`${o(slug)}/access-requests`),
+  approveAccess: (slug: string, id: string) => request<AccessRequest>(`${o(slug)}/access-requests/${id}/approve`, { method: "POST" }),
+  dismissAccess: (slug: string, id: string) => request<AccessRequest>(`${o(slug)}/access-requests/${id}/dismiss`, { method: "POST" }),
 
   // knowledge graph
   graphStats: (slug: string) => request<GraphStats>(`${o(slug)}/graph`),

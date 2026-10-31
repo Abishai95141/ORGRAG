@@ -212,6 +212,42 @@ export type Message = {
   status: "complete" | "streaming" | "error" | "stopped";
   created_at: string;
   verified_answer_id?: string | null;
+  share_token?: string | null;
+};
+
+export type Share = { token: string; url: string; created_at: string };
+
+export type MissingAccess = {
+  kind: "org" | "collection" | "attachment" | "hidden";
+  org_name: string;
+  org_slug: string | null;
+  collection_id: string | null;
+  collection_name: string | null;
+  requested: boolean;
+};
+
+export type SharedAnswer = {
+  token: string;
+  access: "full" | "restricted" | "none";
+  org: { name: string; slug: string; hue: number };
+  author_name: string | null;
+  question: string | null;
+  answer: string | null;
+  sources: SourceRef[];
+  missing: MissingAccess[];
+  answered_at: string | null;
+  shared_at: string;
+};
+
+export type AccessRequest = {
+  id: string;
+  collection_id: string;
+  collection_name: string;
+  user: Person;
+  note: string | null;
+  status: "pending" | "approved" | "dismissed";
+  created_at: string;
+  decided_at: string | null;
 };
 
 export type Person = { id: string; name: string; email: string; avatar_hue: number };

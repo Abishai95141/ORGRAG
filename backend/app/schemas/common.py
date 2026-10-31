@@ -441,6 +441,8 @@ class MessageOut(Out):
     created_at: datetime
     # Set when an admin verified this answer (conversation detail only).
     verified_answer_id: uuid.UUID | None = None
+    # The active permalink token, if the answer is shared (conversation detail only).
+    share_token: str | None = None
 
 
 class ConversationDetail(BaseModel):
@@ -636,3 +638,59 @@ class VerifiedAnswerPatch(BaseModel):
 
 class ReverifyIn(BaseModel):
     expires_in_days: int | None = Field(default=90, ge=1, le=3650)
+
+
+# ── shared answers & access requests ──────────────────────────────────────────
+class ShareOut(BaseModel):
+    token: str
+    url: str
+    created_at: datetime
+
+
+class SharedOrg(BaseModel):
+    name: str
+    slug: str
+    hue: int
+
+
+class MissingAccess(BaseModel):
+    """Something the viewer would need to read to see a shared answer."""
+
+    kind: Literal["org", "collection", "attachment", "hidden"]
+    org_name: str
+    org_slug: str | None = None  # only for orgs the viewer belongs to
+    collection_id: uuid.UUID | None = None  # kind "collection" in an org the viewer is in
+    collection_name: str | None = None
+    requested: bool = False  # the viewer already has a pending request
+
+
+class SharedAnswerOut(BaseModel):
+    """`access: "full"`: the viewer can read every cited source, so they get the answer.
+    `"restricted"`: they're in the org but can't read everything it cites (question and
+    `missing` only). `"none"`: they aren't in the answer's org (org name only)."""
+
+    token: str
+    access: Literal["full", "restricted", "none"]
+    org: SharedOrg
+    author_name: str | None = None
+    question: str | None = None
+    answer: str | None = None
+    sources: list[dict[str, Any]] = []
+    missing: list[MissingAccess] = []
+    answered_at: datetime | None = None
+    shared_at: datetime
+
+
+class AccessRequestIn(BaseModel):
+    note: str | None = Field(default=None, max_length=500)
+
+
+class AccessRequestOut(BaseModel):
+    id: uuid.UUID
+    collection_id: uuid.UUID
+    collection_name: str
+    user: PersonOut
+    note: str | None
+    status: Literal["pending", "approved", "dismissed"]
+    created_at: datetime
+    decided_at: datetime | None

@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { IconCheck, IconCopy, IconDeep, IconPaperclip, IconQuick, IconThumbDown, IconThumbUp, IconVerified, IconWarning } from "@/components/icons";
+import { IconCheck, IconCopy, IconDeep, IconLink, IconPaperclip, IconQuick, IconThumbDown, IconThumbUp, IconVerified, IconWarning, IconX } from "@/components/icons";
 import { OrgMark, StrataMark } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
-import { Tooltip } from "@/components/ui";
+import { Menu, MenuContent, MenuItem, MenuTrigger, Tooltip } from "@/components/ui";
 import { VerifyDialog } from "@/components/verified/verify-dialog";
 import { api } from "@/lib/api";
 import type { Message, MessageAttachment, Mode, SourceRef, TraceStep } from "@/lib/types";
@@ -53,6 +53,7 @@ type AssistantProps = {
   /** The question this answers (prefills "Verify this answer"). */
   question?: string;
   verifiedAnswerId?: string | null;
+  shareToken?: string | null;
   agentName?: string | null;
   focused?: boolean;
   onFocus?: () => void;
@@ -117,6 +118,7 @@ export function AssistantMessage(props: AssistantProps) {
           id={props.id}
           content={content}
           feedback={props.feedback ?? null}
+          shareToken={status === "complete" ? (props.shareToken ?? null) : undefined}
           verify={
             status === "complete"
               ? {
@@ -132,7 +134,7 @@ export function AssistantMessage(props: AssistantProps) {
   );
 }
 
-function SourceStrip({ sources, onOpenSource }: { sources: SourceRef[]; onOpenSource: (s: SourceRef) => void }) {
+export function SourceStrip({ sources, onOpenSource }: { sources: SourceRef[]; onOpenSource: (s: SourceRef) => void }) {
   return (
     <div className="mt-5 grid gap-2 sm:grid-cols-2">
       {sources.slice(0, 6).map((s) => (
@@ -168,12 +170,15 @@ function MessageToolbar({
   id,
   content,
   feedback,
+  shareToken,
   verify,
 }: {
   slug: string;
   id: string;
   content: string;
   feedback: "up" | "down" | null;
+  /** undefined: the answer can't be shared (not complete); null: not shared yet. */
+  shareToken?: string | null;
   verify: { question?: string; verifiedAnswerId: string | null; sourceCollections: string[] } | null;
 }) {
   const { org } = useCurrentOrg();
@@ -182,6 +187,24 @@ function MessageToolbar({
   const [verifying, setVerifying] = useState(false);
   const [verifiedId, setVerifiedId] = useState(verify?.verifiedAnswerId ?? null);
   const canVerify = !!verify && atLeast(org.role, "admin");
+  const [token, setToken] = useState(shareToken ?? null);
+
+  async function copyLink() {
+    try {
+      const url = token ? `${window.location.origin}/a/${token}` : (await api.shareMessage(slug, id)).url;
+      if (!token) setToken(url.split("/a/").pop() ?? null);
+      await navigator.clipboard.writeText(url).catch(() => {});
+      toast("Link copied — each person sees the answer only if they can read its sources");
+    } catch {
+      toast.error("Couldn't create a link");
+    }
+  }
+
+  async function stopSharing() {
+    await api.unshareMessage(slug, id).catch(() => {});
+    setToken(null);
+    toast("Link turned off");
+  }
 
   async function copy() {
     await navigator.clipboard.writeText(content.replace(/\[(\d+(?:,\s*\d+)*)\]/g, "")).catch(() => {});
@@ -218,6 +241,31 @@ function MessageToolbar({
           <IconThumbDown size={15} />
         </button>
       </Tooltip>
+      {shareToken === undefined ? null : token ? (
+        <Menu>
+          <Tooltip label="Shared by link">
+            <MenuTrigger asChild>
+              <button type="button" className={cn(btn, "text-accent")} aria-label="Shared by link">
+                <IconLink size={15} />
+              </button>
+            </MenuTrigger>
+          </Tooltip>
+          <MenuContent align="start">
+            <MenuItem icon={<IconCopy size={15} />} onSelect={copyLink}>
+              Copy link
+            </MenuItem>
+            <MenuItem icon={<IconX size={15} />} onSelect={stopSharing}>
+              Stop sharing
+            </MenuItem>
+          </MenuContent>
+        </Menu>
+      ) : (
+        <Tooltip label="Copy link to this answer">
+          <button type="button" className={btn} onClick={copyLink} aria-label="Copy link to this answer">
+            <IconLink size={15} />
+          </button>
+        </Tooltip>
+      )}
       {verifiedId ? (
         <Tooltip label="Verified answer — open in Verified answers">
           <Link href={`/o/${slug}/verified?focus=${verifiedId}`} className={cn(btn, "text-accent")} aria-label="Verified answer">
