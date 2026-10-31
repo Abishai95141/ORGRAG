@@ -33,6 +33,23 @@ async def enqueue_sync(db: AsyncSession, source: Source, *, full: bool = True) -
         pending.payload = payload
 
 
+async def enqueue_graph(db: AsyncSession, source: Source) -> None:
+    """Queue knowledge-graph extraction for a source unless one is already waiting."""
+    pending = (
+        await db.execute(
+            select(Job.id).where(
+                Job.kind == "extract_graph",
+                Job.status == "queued",
+                Job.payload["source_id"].astext == str(source.id),
+            )
+        )
+    ).first()
+    if pending is None:
+        db.add(
+            Job(org_id=source.org_id, kind="extract_graph", payload={"source_id": str(source.id)})
+        )
+
+
 _CLAIM = text(
     """
     UPDATE jobs SET status = 'running', started_at = now(), attempts = attempts + 1

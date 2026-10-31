@@ -1,0 +1,1197 @@
+{
+ "kind": "answers",
+ "variant": "default-quick-claude-haiku-5.5",
+ "corpus": "0bc4032267322080",
+ "settings": {
+  "rerank": true,
+  "recency_bias": "low",
+  "model": "explabs:claude-haiku-5.5"
+ },
+ "summary": {
+  "ALL": {
+   "n": 45,
+   "pass": 0.933,
+   "facts_judge": 0.968,
+   "facts_substring": 0.968,
+   "gold_cited": 0.846,
+   "errors": 0,
+   "s": 8.1
+  },
+  "alias": {
+   "n": 4,
+   "pass": 0.75,
+   "facts_judge": 0.875,
+   "facts_substring": 1.0,
+   "gold_cited": 0.792,
+   "errors": 0,
+   "s": 8.2
+  },
+  "cross_org_vocab": {
+   "n": 8,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 0.955,
+   "gold_cited": 0.844,
+   "errors": 0,
+   "s": 8.5
+  },
+  "list_aggregate": {
+   "n": 6,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 0.95,
+   "gold_cited": 1.0,
+   "errors": 0,
+   "s": 11.3
+  },
+  "multi_hop": {
+   "n": 7,
+   "pass": 0.714,
+   "facts_judge": 0.9,
+   "facts_substring": 0.95,
+   "gold_cited": 0.876,
+   "errors": 0,
+   "s": 8.0
+  },
+  "single_fact": {
+   "n": 12,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 1.0,
+   "gold_cited": 1.0,
+   "errors": 0,
+   "s": 6.2
+  },
+  "superseded": {
+   "n": 4,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 1.0,
+   "gold_cited": 1.0,
+   "errors": 0,
+   "s": 5.9
+  },
+  "unanswerable": {
+   "n": 4,
+   "pass": 1.0,
+   "facts_judge": null,
+   "facts_substring": null,
+   "gold_cited": 0.0,
+   "errors": 0,
+   "s": 10.5
+  }
+ },
+ "rows": [
+  {
+   "id": "q01",
+   "category": "single_fact",
+   "answer": "You can push a prod deploy on a Friday afternoon, but only with approval from the on-call engineering manager. Friday deploys aren't in the normal window, which is Monday through Thursday, 09:00\u201316:00 Pacific [1].\n\nToday is the last business day of October, so the month-end billing freeze applies to Ledger. No normal changes to Ledger are allowed from the last business day of the month until invoices are sent, usually on the 2nd [2]. If your deploy touches Ledger, it's blocked today regardless of approval.\n\nOther points:\n- **Normal changes** (such as schema migrations, infrastructure config, or auth and billing logic) also need sign-off from the owning team's change approver. Changes to Restricted services need Security sign-off too [2][3].\n- **Canary:** every deploy goes to a 5% canary cell first and is promoted automatically after 20 minutes if error rates and p95 latency stay within 10% of baseline [1].\n- **Rollbacks** are always allowed, at any time, without approval, including during freezes [1][2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Northwind Engineering Handbook",
+    "Production change approval policy",
+    "Engineering team directory and change approvers"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 7.9,
+   "error": null
+  },
+  {
+   "id": "q02",
+   "category": "single_fact",
+   "answer": "The nightly hotel limit for London is **$350**. The expense and travel policy sets hotels at up to $250 per night in most cities, and $350 in New York, San Francisco, London and Tokyo [1].\n\nBook the hotel through Navan so the company can find you in an emergency [1]. Expenses go in Ramp within 30 days, with an itemized receipt for anything over $25 [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Expense and travel policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 7.2,
+   "error": null
+  },
+  {
+   "id": "q03",
+   "category": "single_fact",
+   "answer": "Patients with household income **under 250% of the federal poverty level** qualify for the sliding-fee program. It reduces visit costs by **40\u2013100%** [1]. The source gives that range but doesn't say which income levels get which percentage, so I can't tell you where a given patient falls within it.\n\nSome other points that may help:\n\n- **Self-pay rates before any discount:** new patient $165, established patient $120, telehealth $79, annual physical $195 [1].\n- **Prompt-pay discount:** self-pay patients who pay in full at the time of service get 20% off [1]. The source doesn't say whether this stacks with the sliding-fee reduction.\n- **Applying:** front desk staff can start the application at check-in [1].\n- **Payment plans:** if a balance is still owed, plans of up to 12 months with no interest are available for balances over $200 [1].\n- **No denial of care:** no patient is denied care for inability to pay [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Billing and insurance FAQ (for staff)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 7.5,
+   "error": null
+  },
+  {
+   "id": "q04",
+   "category": "single_fact",
+   "answer": "Critical results must reach the ordering clinician within 60 minutes. If that clinician can't be reached within 30 minutes, the result goes to the medical director on call [1]. Each notification is documented in the chart with the time and the person notified [1].\n\nA related rule covers critical values called in by the reference lab: the supervising physician must be notified within 30 minutes [1]. The protocol doesn't say how this fits with the 60-minute rule, so confirm with your clinical lead which applies to your situation.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Clinical escalation protocol"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 5.5,
+   "error": null
+  },
+  {
+   "id": "q05",
+   "category": "single_fact",
+   "answer": "A customer who prepays Growth annually saves **15%**, which is **$2,160 per year** [1]. The Growth list price is $1,200/month, or $14,400/year, so the prepaid price is $12,240 per year [1].\n\nThe policy also says multi-year deals can add an extra 5% per committed year, capped at 10%, on top of the first-year discount. That extra does not count toward the discount approval thresholds [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Pricing and discount policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 5.4,
+   "error": null
+  },
+  {
+   "id": "q06",
+   "category": "single_fact",
+   "answer": "Visit links expire **2 hours after the scheduled end time** [1]. The October 2026 Juniper steering committee confirmed the same rule [2].\n\nThis rule is in the requirements for the new telehealth platform, which is still being rolled out. Halcyon's current platform is Larkspur Telehealth, and the knowledge base doesn't say how long its links stay active after a visit [5].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Telehealth platform: requirements v3",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Business associate record: Larkspur Telehealth"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 6.9,
+   "error": null
+  },
+  {
+   "id": "q07",
+   "category": "single_fact",
+   "answer": "Emergency workspace access lasts **2 hours**. A second engineer from the support or on-call rotation must approve it [1].\n\n**Approval:**\n- Run `nwctl access request --workspace <id> --reason <case-or-incident-id>` [1].\n- A second engineer approves in Teleport. You can't approve your own request, and the approver can't be on the same case [1].\n- The request must reference an open support case or a declared incident. Curiosity or speed alone doesn't qualify [1].\n\n**Limits:**\n- Access is read-only by default. Write access, such as editing a pipeline on the customer's behalf, needs the customer's written consent recorded in the case first [1].\n- If you need more time, submit a new request with an update on the case [1].\n- Standard production sessions last 8 hours, so the emergency window is deliberately shorter [1][2].\n\nAll sessions are recorded, and customer-data access must be tied to a support case or incident ticket [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Emergency access to customer workspaces",
+    "Information security policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 5.6,
+   "error": null
+  },
+  {
+   "id": "q08",
+   "category": "single_fact",
+   "answer": "The Patient Safety Committee is chaired by the Chief Medical Officer, Dr. Kenji Watanabe [1][2]. The committee reviews sentinel events and completed root cause analyses with their action plans, meets monthly, and tracks every action item to closure [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Clinical systems change control",
+    "Sentinel and adverse event reporting policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 4.5,
+   "error": null
+  },
+  {
+   "id": "q09",
+   "category": "single_fact",
+   "answer": "No. Removing the name doesn't make a patient's history safe to paste into a chatbot at Halcyon Health.\n\n- **Removing the name is not enough.** The approved AI tools list says \"de-identified\" is not a loophole, and you should treat any patient details as protected health information (PHI) [1].\n- **Public chatbots are not approved.** The list explicitly bars public chatbots and general-purpose AI assistants on any device, including personal phones [1]. The HIPAA policy also says never to put PHI into AI tools that are not on the approved list [3].\n- **Halcyon Assist is not an exception.** It is the internal assistant, but it is for policy questions only. Do not paste patient details into it, even without names [1].\n\n**What you can use for patient summaries:**\n- **Quillon Ambient** is approved for PHI, but only at the Riverside and Elm Park pilot clinics. It requires patient verbal consent at the start of each visit, and a clinician must review and sign every note [1][2].\n- **Meridian draft replies** are approved for PHI inside Meridian EHR. A clinician must edit or approve each draft before it is sent [1].\n- **Meridian EHR** holds the full clinical record, so the summary should come from there [4].\n\nIf you think a chatbot tool would help your work, contact the Privacy Officer (Margaret Holloway) and the HIPAA Security Officer (Ahmed Siddiqui). A new tool needs a security risk assessment, a signed business associate agreement, an inventory entry, and, for clinical use, a clinical safety review by the CMIO. Turnaround is typically 6\u201310 weeks [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Approved AI tools for Halcyon staff",
+    "HIPAA privacy and PHI handling policy",
+    "Business associate record: Quillon Ambient",
+    "Clinical and business systems inventory"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 7.3,
+   "error": null
+  },
+  {
+   "id": "q10",
+   "category": "single_fact",
+   "answer": "The legacy `/v1/track` ingest endpoint will stop accepting events on **April 30, 2027**, according to the Northwind Pipelines changelog [1]. The same entry notes that SDKs released after March 2025 already use `/v2/events` [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Northwind Pipelines changelog: September\u2013October 2026"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 4.8,
+   "error": null
+  },
+  {
+   "id": "q11",
+   "category": "single_fact",
+   "answer": "**287 workspaces** had duplicate invoices in the October incident (INC-2340), and **$184,300** was refunded [1].\n\n- **Duplicate invoices:** 312 across 287 workspaces. Card customers on auto-pay were affected, and 201 of those invoices were auto-charged [1].\n- **Refunds:** All 201 auto-charges were refunded, totaling $184,300. The other 111 invoices were voided rather than refunded [1].\n\nThe source doesn't say how many workspaces received a refund. The 201 charges may not map one-to-one to the 287 workspaces, so I can't give a refunded-workspace count from these documents.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Slack export: #inc-2340-ledger-double-invoices"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 6.3,
+   "error": null
+  },
+  {
+   "id": "q12",
+   "category": "single_fact",
+   "answer": "**17 lab results** from Bayline Reference Laboratories were filed into the wrong patient's charts at the Riverside and Northgate clinics between July 21 and 23, 2026 [1]. The incident was classified as a Level 2 adverse event. Two patients had follow-up on abnormal results delayed by four and six days, and neither suffered lasting harm [1].\n\nThe root cause analysis identified three main causes [1]:\n\n- **A silent format change by Bayline.** On July 20, Bayline changed its results feed and moved the medical record number (MRN) into a different HL7 segment, without notice [1].\n- **Weak fallback matching at Halcyon.** When the MRN was missing, the interface engine (Switchyard) matched results on last name and year of birth only. That rule had existed since 2021 and had never been used at volume [1].\n- **No monitoring and no contractual notice requirement.** Nobody was alerted that 100% of Bayline results were using the fallback rule, and the Bayline agreement did not require advance notice of feed changes [1].\n\nThe problem was caught on July 23, when a medical assistant at Riverside noticed a potassium result that did not match the patient's history. All 17 results were moved to the correct charts by July 24 [1].\n\nCorrective actions [1]:\n\n- Removing the name-and-birth-year fallback, with unmatched results sent to a manual queue (done, Sept 15).\n- An alert when more than 1% of any lab's results use a fallback match in an hour (done, Sept 30).\n- Amending the lab agreement to require 30 days' notice of feed changes (in progress, due Dec 31).\n- Adding a positive patient identification check before results are released to the patient portal (in progress, due Nov 30).",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 6.0,
+   "error": null
+  },
+  {
+   "id": "q13",
+   "category": "cross_org_vocab",
+   "answer": "Halcyon doesn't have a direct equivalent to a five-business-day postmortem deadline. Its closest rule is a **45-calendar-day** deadline to complete a root cause analysis (RCA) for Level 1 and Level 2 events, counted from when the event becomes known [1].\n\nThe relevant timeline for a sentinel (Level 1) event, which includes severe temporary harm and wrong-patient procedures [1]:\n\n| When | What | Source |\n|---|---|---|\n| Immediately | Make the patient safe and tell the charge nurse on shift | [1] |\n| Within 1 hour | Charge nurse notifies the on-call medical director | [1] |\n| Immediately | Anyone involved or who witnessed the event files a SafeReport | [1] |\n| Within 72 hours | Quality & Patient Safety (QPS) charters the RCA team | [1] |\n| Within 45 calendar days | RCA is completed, with its action plan | [1] |\n\nThe policy also requires the attending clinician to disclose the event to the patient or family [1]. Completed RCAs go to the Patient Safety Committee, chaired by Chief Medical Officer Dr. Kenji Watanabe, which meets monthly [1].\n\nFor example, an RCA for lab results filed to the wrong chart (events July 21\u201323, 2026) was completed August 28, 2026, within that 45-day window [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    false,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Sentinel and adverse event reporting policy",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)"
+   ],
+   "gold_cited": 0.5,
+   "passed": true,
+   "latency_s": 6.6,
+   "error": null
+  },
+  {
+   "id": "q14",
+   "category": "cross_org_vocab",
+   "answer": "The Halcyon Health documents don't use the term \"incident commander\" for clinic patient events. For a patient safety event at a clinic, the **charge nurse on shift** coordinates the immediate response. If the clinic has no charge nurse on shift, the clinic manager takes that role [1]. The charge nurse assigns who stays with the patient, who calls the family, and who secures equipment, medications or records involved [1].\n\nFor a sentinel event, the charge nurse must notify the on-call medical director within 1 hour [1]. The attending clinician discloses the event to the patient or family, with the charge nurse or medical director present [1]. The clinical escalation protocol covers the first clinical steps, such as calling 911 and notifying the on-site clinician [2].\n\nThe \"incident commander\" role that appears in the knowledge base belongs to Northwind Labs, a separate organization. It is the engineering on-call role that runs software incidents, not clinic patient events [8][9].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Sentinel and adverse event reporting policy",
+    "Clinical escalation protocol",
+    "Incident roles FAQ",
+    "Engineering team directory and change approvers"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 6.0,
+   "error": null
+  },
+  {
+   "id": "q15",
+   "category": "cross_org_vocab",
+   "answer": "Halcyon Health gives more fixed leave than Northwind Labs, at least on the minimums the documents state.\n\n- **Halcyon Health:** Annual leave is 20 days a year in years 1\u20133 and 25 days from year 4 [2]. Staff get 9 paid holidays, and up to 56 hours can carry over into the next year [2]. The October 2026 policy replaces the older PTO rules, which had 8 holidays and a 40-hour carry-over [1][2].\n- **Northwind Labs:** Leave is flexible PTO with a minimum of 15 days a year that staff are expected to actually take [6]. The sources I found don't mention a holiday count or carry-over rules for Northwind.\n\nOn the headline numbers, Halcyon's guaranteed minimum is 20 days in years 1\u20133, which is 5 days more than Northwind's 15-day minimum. Halcyon also has a fixed 25 days from year 4. Northwind's flexible model may still offer more in practice, but the documents don't say so. The Northwind welcome guide I found is undated, so it may not reflect current terms. If you need the full Northwind picture, check with its People team.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": true,
+   "contradiction": false,
+   "cited_titles": [
+    "Annual leave policy (effective October 1, 2026)",
+    "PTO and clinic scheduling policy",
+    "Welcome to Northwind Labs"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 8.0,
+   "error": null
+  },
+  {
+   "id": "q16",
+   "category": "cross_org_vocab",
+   "answer": "Halcyon needs a **signed business associate agreement (BAA)** before any patient data goes to a vendor, and a **security risk assessment** should be completed. The documents use \"BAA\" rather than \"DPA,\" so I did not find a separate DPA requirement.\n\n**Required before any PHI is disclosed**\n- **Signed BAA.** A vendor that will create, receive, maintain or transmit PHI on Halcyon's behalf is a business associate, and a signed BAA is required before any PHI is disclosed. This includes test files or \"just a few names\" for a pilot [1].\n- **Security risk assessment.** Systems and vendors handling PHI need one [4][2]. Halcyon's own examples show the assessment is done before go-live or contract execution, e.g., Quillon's was completed in July 2026 [3].\n\n**Also required for new systems**\n- An entry in the clinical and business systems inventory before go-live. The HIPAA Security Officer maintains this list [4].\n- For clinical AI tools, a clinical safety review by the CMIO [2].\n- Contact the Privacy Officer (Margaret Holloway) and the HIPAA Security Officer (Ahmed Siddiqui) [2][4].\n\n**Current example:** Tallgrass Survey Co. passed its security risk assessment in September 2026, but its BAA is still unexecuted, so no PHI may be shared with it yet [1]. Halcyon's approved AI tool guidance also says removing a name does not make data non-identifiable, so treat patient details as PHI [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Business associate record: Tallgrass Survey Co.",
+    "Clinical and business systems inventory",
+    "Approved AI tools for Halcyon staff",
+    "Business associate record: Quillon Ambient"
+   ],
+   "gold_cited": 0.75,
+   "passed": true,
+   "latency_s": 11.1,
+   "error": null
+  },
+  {
+   "id": "q17",
+   "category": "cross_org_vocab",
+   "answer": "Yes, Northwind has an equivalent, but it covers customer workspaces, not patient records. Northwind doesn't handle EHR data, so the two are built for different risks.\n\n**Northwind:** \"Emergency access to customer workspaces\" lets support, solutions and on-call engineers look inside a customer's workspace when an open support case or declared incident requires it [2]. The main differences from Halcyon's process:\n\n| | Halcyon Health (EHR break-the-glass) | Northwind Labs (emergency workspace access) |\n|---|---|---|\n| Trigger | Urgent clinical need to open a chart outside the user's normal patient panel [1] | An open support case or declared incident; every request must cite the case or incident ID [2] |\n| Approval | None in the moment; the user picks a reason and types a justification [1] | A second engineer from support or on-call must approve in Teleport, and cannot be on the same case [2] |\n| Duration | Up to 12 hours, until end of shift [1] | 2 hours, shorter than the standard 8-hour production session [2][4] |\n| Default access | Full chart access for the session | Read-only; write access needs the customer's written consent in the case [2] |\n| Review | Every event logged and reviewed by the Privacy Officer's team within 2 business days; manager confirms unclear reasons [1] | Sessions recorded and kept one year; the customer's audit log shows the access and enterprise admins are emailed within 24 hours; security samples sessions weekly and reviews every write session [2] |\n| Misuse | Treated as a privacy incident, with sanctions up to termination [1] | Prohibited uses include accessing a workspace belonging to someone you know personally [2] |\n\n**Key difference:** Halcyon's design prioritizes speed for patient care, so it has no pre-approval and relies on after-the-fact review. Northwind requires a second engineer to approve before access starts, keeps access read-only by default, and uses a shorter window. Northwind also notifies the customer, which Halcyon's process does not mention.\n\nHalcyon's general HIPAA policy also suspends clinical system access if HIPAA training is more than 14 days overdue, and reviews EHR access logs monthly [3]. Northwind's broader access rules, such as Teleport-based production access and quarterly access reviews, are in its information security policy [4].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Emergency access to customer workspaces",
+    "Break-the-glass access to the EHR",
+    "Information security policy",
+    "HIPAA privacy and PHI handling policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 8.9,
+   "error": null
+  },
+  {
+   "id": "q18",
+   "category": "cross_org_vocab",
+   "answer": "**Halcyon Health: no.** Slack is never allowed for PHI, including DMs [1]. Its HIPAA policy also says PHI may never go in Slack, and it may only be stored in the EHR, the practice management system, and approved systems on the intranet [3]. For patient communication, use the EHR's secure messaging, or `[secure]` encrypted email for outside providers [3].\n\n**Northwind Labs: it depends on the data class.**\n- **Restricted** data (customer event payloads, credentials, encryption keys) never goes in Slack or tickets [2]. The emergency-access policy repeats this: use field names and counts instead of pasting payloads [4].\n- **Confidential** data (financials, contracts, employee data) is shared on a need-to-know basis [2]. The sources I found don't explicitly ban Slack for this class, so check with the owning team if you're unsure.\n- **Internal** and **Public** data have no Slack restrictions beyond normal sharing [2].\n- Northwind's policy allows exceptions only with written approval from the Head of Security, and they expire after 90 days [2]. I found no exception process for Halcyon's Slack rule.\n\nReport suspected incidents or accidental exposure in `#security-help` [2][4]. Northwind's policy says good-faith reports are never penalized [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Clinical and business systems inventory",
+    "HIPAA privacy and PHI handling policy",
+    "Information security policy",
+    "Emergency access to customer workspaces"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 10.5,
+   "error": null
+  },
+  {
+   "id": "q19",
+   "category": "cross_org_vocab",
+   "answer": "Northwind's closest equivalent is a **$1,500 annual learning budget** for courses, books and conferences [7]. Halcyon's clinical staff get **$2,000 per year** for continuing medical education, plus **5 days of paid CME time** [1].\n\n| | Halcyon Health (clinical staff) | Northwind Labs (all new hires) |\n|---|---|---|\n| Annual learning amount | $2,000 for CME [1] | $1,500 for courses, books, conferences [7] |\n| Paid learning time | 5 days paid CME time [1] | None found in the sources |\n\nHalcyon's allowance is $500 a year higher, and it comes with paid time off for CME. Northwind's budget isn't restricted to clinicians; it covers any employee, and its onboarding guide is the only source I found for it.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Welcome to Northwind Labs",
+    "Staff onboarding at Halcyon Health"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 9.4,
+   "error": null
+  },
+  {
+   "id": "q20",
+   "category": "cross_org_vocab",
+   "answer": "At Halcyon, a suspected privacy incident such as a misdirected fax must be reported to the Privacy Officer **within 24 hours**. Report it by emailing privacy@halcyon.example or calling the compliance hotline [1].\n\nThe Privacy Officer handles the separate HHS notification, which is required within 60 days for breaches affecting 500 or more people [1].\n\nI didn't check Northwind's process, so I can't compare the two.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "HIPAA privacy and PHI handling policy"
+   ],
+   "gold_cited": 0.5,
+   "passed": true,
+   "latency_s": 7.2,
+   "error": null
+  },
+  {
+   "id": "q21",
+   "category": "multi_hop",
+   "answer": "You need two sign-offs, plus an ADR if the change alters how long data is kept.\n\n1. **Platform change approver (PLAT):** Oluwaseun Adeyemi, with Kofi Mensah as delegate. Driftwood, the archive where these events live, is owned by PLAT [7][5]. Lifecycle rules on Driftwood buckets are a normal change, which requires the owning team's change approver [1][2].\n2. **Head of Security or security on-call:** Driftwood stores Restricted data, so normal changes to it also need Tomasz Wierzbicki (Head of Security) or the security on-call delegate [1][7][5].\n\nOther requirements:\n\n- **ADR:** Any change that alters how long customer data is kept needs an ADR, linked from the PR [1].\n- **Customer notice:** Shortening retention needs 30 days' notice from the account team for Enterprise contracts that reference a retention period [1].\n- **PR process:** Add the `change:normal` label, fill in the risk and rollback sections, and request the approver as a CODEOWNERS reviewer. Add `@northwind/security` for Restricted services. Approvals expire after 7 days [1].\n- **Freezes:** Normal changes are blocked from December 18, 2026 to January 4, 2027, and from the last business day of each month until invoices go out (usually the 2nd). Rollbacks are always allowed [1].\n\nIf you're proposing a retention change, the current default is 365 days for archived event payloads under the v2 standard, effective September 15, 2026 [2]. The security team owns that standard, and extending archive retention beyond it for an Enterprise customer needs its approval [2][3].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Service catalog",
+    "Engineering team directory and change approvers",
+    "Production change approval policy",
+    "Customer data retention standard (v2)",
+    "Pricing and discount policy"
+   ],
+   "gold_cited": 0.8,
+   "passed": true,
+   "latency_s": 10.7,
+   "error": null
+  },
+  {
+   "id": "q22",
+   "category": "multi_hop",
+   "answer": "The service is **Ledger**, which is owned by the **Identity & Billing (IDB)** team. The duplicate invoices were tied to incident INC-2340, and the Slack export shows Arjun Mehta traced the cause to invoice creation in the month-end invoicing job [2]. A changelog entry confirms the invoice-creation fix [1], and the service catalog lists Ledger as handling invoicing, owned by IDB [4].\n\nIf Harriet Vance is out, **Arjun Mehta** is the delegate who can approve changes to IDB services [3].\n\nTwo things to keep in mind:\n- Ledger stores Confidential data, not Restricted, so the extra Head of Security sign-off doesn't apply to it [4][5]. Normal changes to billing logic still need the owning team's approver or delegate [5].\n- Arjun was the engineer on the incident and wrote the fix, so you may want a second reviewer for any follow-up change, though the documents don't require one.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Service catalog",
+    "Engineering team directory and change approvers",
+    "Production change approval policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 6.8,
+   "error": null
+  },
+  {
+   "id": "q23",
+   "category": "multi_hop",
+   "answer": "**Talk to Workspace Experience (WX) first.** The Parcelwise register says Atlas sends the recipient name, email address and template variables through the Parcelwise API [1]. The service catalog lists Atlas as owned by WX, and it stores customer user names, email addresses and roles [7].\n\nWX contacts:\n- **Camille Ortega**, engineering manager and change approver [8]\n- **Theo Lindqvist**, tech lead for workspace settings and notifications [8]\n- Slack: `#team-wx` [8]\n\nParcelwise does not receive event payloads, and alert emails contain only pipeline names and error counts [1]. If your question covers alert emails, the register doesn't say which system generates that content. Observability (OBS) handles alert routing through Lookout [7], so you may also want to check with them. Ravi Subramanian leads OBS, and Mei Tanaka is the delegate [8].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    false
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor register: Parcelwise",
+    "Service catalog",
+    "Engineering team directory and change approvers"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 9.5,
+   "error": null
+  },
+  {
+   "id": "q24",
+   "category": "multi_hop",
+   "answer": "The sign-off came from the **Head of Security**, who approved security exception **SEC-EX-117** on August 24, 2026. The exception covers the Hollowpine helpdesk (VEN-031) while its DPA remains unsigned [1]. The register names the role, not an individual.\n\n**How long it lasts:** Under the information security policy, exceptions require written approval from the Head of Security and expire after 90 days [5]. Counting 90 days from August 24 puts expiry around **November 22, 2026**, about three weeks from today. That date is my calculation, not one stated in the documents.\n\n**What happens at expiry:** If the DPA is still unsigned, Support Operations must either get the exception renewed or move ticket intake back to email [1].\n\n**Other conditions:**\n- The security review passed only conditionally. AI reply suggestions must stay disabled until the DPA is signed [1].\n- The main open DPA point is Hollowpine's right to use ticket content to train its reply-suggestion model. Redlines have been with legal since August [1].\n- The contract renews January 31, 2027 [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    false,
+    true
+   ],
+   "fact_hits_judge": [
+    false,
+    true
+   ],
+   "abstained": false,
+   "contradiction": true,
+   "cited_titles": [
+    "Vendor register: Hollowpine Helpdesk",
+    "Information security policy"
+   ],
+   "gold_cited": 0.6666666666666666,
+   "passed": false,
+   "latency_s": 6.8,
+   "error": null
+  },
+  {
+   "id": "q25",
+   "category": "multi_hop",
+   "answer": "Changing the send time is a **significant change**, so it needs three approvals:\n\n1. **System steward: Felix Brandt.** Pillbox, the medication reminder scheduler, is owned by Digital Health Engineering, Patient Engagement (DHE-PE), and Brandt is that team's steward [2][3].\n2. **Clinical safety sign-off: Dr. Anjali Rao, CMIO**, or her delegate, Associate CMIO Dr. Benedict Osei [2].\n3. **Review at the weekly Clinical Systems Change Advisory Board (CSCAB)**, which meets Wednesdays at 14:00 Eastern [2].\n\nThe policy lists patient-facing automation such as reminders as a significant change [2]. It also says that any scheduler change, including moving a job to a new runner, requires a written runbook that states how double-sending is prevented. That rule came from the September 2026 incident where duplicate reminders went out [1][2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Clinical systems change control",
+    "Clinical and business systems inventory",
+    "Incident review: duplicate medication reminders (IR-0412)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 6.5,
+   "error": null
+  },
+  {
+   "id": "q26",
+   "category": "multi_hop",
+   "answer": "The fix would need three approvals, because it changes how results are routed:\n\n1. **System steward, Owen Mbeki (Integration Services).** He approves changes to the interface engine, Switchyard, which is owned by the INT team [2][7].\n2. **Clinical safety sign-off from the CMIO, Dr. Anjali Rao**, or her delegate, Associate CMIO Dr. Benedict Osei [2].\n3. **Review at the weekly Clinical Systems Change Advisory Board (CSCAB)**, which meets Wednesdays at 14:00 Eastern [2].\n\nThe change-control policy classes any change to \"medication information, orders or results routing\" as significant, and the root cause analysis says changes to result routing fall under that rule [2][1]. The emergency path, where the on-call medical director can approve, applies only to stopping ongoing patient harm, and the feed was already stopped and restored by July 24 [2][1].\n\nSome of the RCA's corrective actions were already marked done, including removing the name-and-birth-year fallback matching (due Sept 15) and the alert for fallback matches (due Sept 30) [1]. The positive patient identification check, owned by Clinical Informatics (steward Grace Oyelaran), was still in progress with a Nov 30 due date [1][2]. The knowledge base doesn't say whether the completed fixes went through this approval path, so I can't confirm that from the documents.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Clinical systems change control",
+    "Clinical and business systems inventory",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 9.2,
+   "error": null
+  },
+  {
+   "id": "q27",
+   "category": "multi_hop",
+   "answer": "The video vendor behind the new telehealth platform is Coriander Media, and it is covered by a signed BAA. Its contract runs to August 31, 2028.\n\n- **BAA:** Executed August 18, 2026 [2].\n- **Contract renewal:** August 31, 2028, on a 2-year term [2].\n- **Role:** The steering committee confirmed Coriander as the video SDK provider for the new platform, which is called Juniper. The contract was completed in August [4].\n- **Data handling:** Coriander handles live encrypted audio and video, with recording disabled at the account level and US-only data residency [2].\n\nThe current platform, Larkspur Telehealth, is a different matter. Its BAA was executed February 14, 2022, and its full contract is not renewing and ends December 31, 2026 [1]. A month-to-month extension runs through March 31, 2027, and the BAA stays in force for that period and until all data is returned or destroyed [1]. The Juniper pilot starts January 12, 2027, and the network-wide rollout is March 2, 2027 [4].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Business associate record: Coriander Media",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Business associate record: Larkspur Telehealth"
+   ],
+   "gold_cited": 0.6666666666666666,
+   "passed": true,
+   "latency_s": 6.2,
+   "error": null
+  },
+  {
+   "id": "q28",
+   "category": "list_aggregate",
+   "answer": "Three vendors have a signed DPA. Hollowpine does not.\n\n**Signed:**\n- **Parcelwise Ltd.** (transactional email). Signed November 20, 2023, and amended September 2025 for EU standard contractual clauses [1].\n- **Saltmarsh Analytics GmbH** (product analytics for the web app). Signed June 12, 2025 [2].\n- **Cobaltline, Inc.** (hosted log search and retention). Signed April 2, 2025 [3].\n\n**Not signed:**\n- **Hollowpine Software Co.** (customer support ticketing). The DPA is still unsigned. The draft arrived in July 2026, and redlines with legal have been open since August. The main open point is Hollowpine's right to use ticket content to train its reply-suggestion model [4]. Hollowpine is operating under security exception SEC-EX-117, approved August 24, 2026, and AI reply suggestions must stay disabled until the DPA is signed [4].\n\nThe vendor register and the knowledge graph both list these four vendors. The search returns only a limited number of passages, so I can't fully rule out other vendor records that don't appear in the Vendors collection.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor register: Parcelwise",
+    "Vendor register: Saltmarsh Analytics",
+    "Vendor register: Cobaltline",
+    "Vendor register: Hollowpine Helpdesk"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 15.9,
+   "error": null
+  },
+  {
+   "id": "q29",
+   "category": "list_aggregate",
+   "answer": "Three vendor contracts renew on or before March 31, 2027:\n\n| Vendor | Service | Renewal date | Annual cost | Notice period | Notes |\n|---|---|---|---|---|---|\n| Parcelwise Ltd. | Transactional email | Dec 15, 2026 | $31,500 | 30 days (by Nov 15, 2026) | 1-year term, auto-renews [2] |\n| Hollowpine Software Co. | Support ticketing and help center | Jan 31, 2027 | $44,000 | Not stated | DPA is unsigned and the vendor runs under security exception SEC-EX-117 [4] |\n| Cobaltline, Inc. | Hosted log search and retention | Mar 31, 2027 | $96,000 | 60 days (by Jan 30, 2027) | OBS plans to renegotiate in February 2027, comparing ingest-based pricing with the current flat fee [1] |\n\n- **Hollowpine** is the most urgent. Its DPA has been in redlines with legal since August, and the main open point is whether Hollowpine can use ticket content to train its reply-suggestion model. If the DPA is still unsigned when the exception lapses, Support Operations must either renew the exception or move ticket intake back to email [4].\n- **Cobaltline** falls on the last day of March. Its notice deadline is in late January, so the renegotiation timing matters [1].\n\nSaltmarsh Analytics renews June 30, 2027, which is outside your window [3]. My search surfaced four vendor registers, and the knowledge graph returned only Cobaltline for this query. Other contracts may exist that I didn't find, so check the full vendor register before relying on this list.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor register: Parcelwise",
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Cobaltline",
+    "Vendor register: Saltmarsh Analytics"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 12.3,
+   "error": null
+  },
+  {
+   "id": "q30",
+   "category": "list_aggregate",
+   "answer": "Five business associates have an executed BAA on record. Tallgrass Survey Co. is the one pending vendor, and its BAA is not signed.\n\n| Business associate | Record | BAA executed | Contract status |\n|---|---|---|---|\n| Larkspur Telehealth Corp. | BA-005 | February 14, 2022 | Not renewing at December 31, 2026. Month-to-month extension through March 31, 2027, and the BAA stays in force for the extension [1] |\n| Brightwater Billing Services, Inc. | BA-003 | April 1, 2023; updated October 2024 | Renews November 30, 2026, auto-renewing for one year; pricing renegotiation in progress [3] |\n| Polyglen Interpreting, LLC | BA-007 | March 3, 2025 | Renews February 28, 2027 [2] |\n| Quillon Ambient, Inc. | BA-019 | July 30, 2026 | 12-month pilot, renews July 31, 2027 [5] |\n| Coriander Media, Inc. | BA-020 | August 18, 2026 | Renews August 31, 2028 [4] |\n\nTallgrass Survey Co. (BA-021, proposed) has no executed BAA. A draft arrived in August 2026, and the open issue is data retention: Tallgrass wants identifiable responses kept for 5 years, while Halcyon will accept 18 months. No PHI may be shared with Tallgrass until the BAA is signed [6].\n\nThe knowledge base does not include a complete vendor register. The record IDs skip several numbers, so other business associates may exist that I could not find. Check the full vendor inventory before relying on this as a complete list.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Brightwater Billing Services",
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Quillon Ambient",
+    "Business associate record: Coriander Media",
+    "Business associate record: Tallgrass Survey Co."
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 11.7,
+   "error": null
+  },
+  {
+   "id": "q31",
+   "category": "list_aggregate",
+   "answer": "**Two business associate contracts reach a renewal date in this window, and one more has a notice deadline inside it.**\n\n- **Brightwater Billing Services (BA-003): November 30, 2026.** The contract auto-renews for one year unless 60 days' notice is given. Pricing renegotiation is in progress and no notice has been given [1]. That 60-day notice window closed around October 1, 2026, so the renewal will likely proceed. Annual spend is about $265,000 [1].\n- **Larkspur Telehealth (BA-005): December 31, 2026.** It is not renewing on a full term. A month-to-month extension runs through March 31, 2027 to cover the move to a new platform, and the BAA stays in force during the extension and until data is returned or destroyed [2].\n\n**Just outside the window:**\n- **Polyglen Interpreting (BA-007): February 28, 2027.** The notice period is 90 days, so the notice deadline is about November 30, 2026, inside this window. Renewal discussions start in November 2026 [3].\n\n**Not a renewal, but a date in the window:**\n- **Tallgrass Survey Co. (BA-021, proposed):** The BAA is not yet signed. If it is not signed by January 31, 2027, Quality & Patient Safety will look at other survey vendors [6]. No PHI can be shared until the BAA is executed [6].\n\nQuillon Ambient's renewal is July 31, 2027 [5], and Coriander Media's is August 31, 2028 [4], so neither falls in this window.\n\nThis list comes from the business associate records in the Vendors collection. I did not find any other renewal dates in the knowledge base, but the records may not be exhaustive.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Business associate record: Brightwater Billing Services",
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Tallgrass Survey Co.",
+    "Business associate record: Quillon Ambient",
+    "Business associate record: Coriander Media"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 11.6,
+   "error": null
+  },
+  {
+   "id": "q32",
+   "category": "list_aggregate",
+   "answer": "The three big bets picked at the Cycle 5 pitch review (September 8, 2026) were Tributary, Lantern, and Hydrant. Seven pitches came in, and the handbook caps big bets at three [1][2].\n\n1. **Tributary: streaming joins (the Enrich step).** Pitched by Mateo and LZ. The cycle scope covers CDC-backed snapshots, the editor preview, dead-letter routing for unmatched events, and a private beta with design partners in October. The GA target stays January 2027 [1]. The private beta started October 1 with eight design partners, but security sign-off on persisted snapshots is still outstanding and is the main risk [3]. RFC-031 is accepted with conditions, and nothing ships to the beta until Security signs off [6].\n\n2. **Lantern: self-serve billing portal.** Pitched by NH and HV. The original target was beta in December and GA in January 2027, and it depends on the payment-provider migration finishing first [1]. Since then, GA has slipped to March 2027 and beta has moved to February, because the migration won't finish until mid-January and INC-2340 showed the need for an invoice-history view [3].\n\n3. **Hydrant: automatic scaling for ingest gateways per cell.** Pitched by OA. It includes the gateway TLS session ticket change from INC-2291 as a small batch item [1]. The October offsite notes say Hydrant is on track for the end of cycle 5 [3].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Cycle 5 pitch review notes",
+    "Northwind Engineering Handbook",
+    "Leadership offsite notes (October 2026)",
+    "RFC-031: Persisting Tributary snapshots"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 7.5,
+   "error": null
+  },
+  {
+   "id": "q33",
+   "category": "list_aggregate",
+   "answer": "**Mostly yes, though the evidence for one item is indirect.** The postmortem lists four action items. Three are marked done, and a September changelog entry confirms the fourth.\n\n| # | Action item (owner) | Status | Evidence |\n|---|---|---|---|\n| 1 | Validate certificate chains in rotation job (platform, due Aug 28) | Done | Postmortem marks it done [1] |\n| 2 | Lower canary handshake-failure alert threshold (ingest) | Done | Postmortem marks it done [1] |\n| 3 | Cut gateway TLS session ticket lifetime from 4h to 30 min (ingest, due Sep 15) | Shipped | Changelog says it shipped ahead of the due date, on Sept 12 [4] |\n| 4 | Add \"TLS handshake errors\" panel to ingest dashboard (observability) | Done | Postmortem marks it done [1] |\n\nSome caveats:\n\n- **Item 3** is the only one with a dated confirmation. The postmortem was last updated Aug 14, before the change shipped [1][4].\n- **Item 4** is marked done, but the only dashboard change I found is a September changelog entry for p99 gateway latency panels, not the TLS handshake panel [4]. I couldn't confirm the TLS panel directly.\n- **The Q3 board update** says \"all action items are on track\" [2]. That is a status claim rather than proof of delivery, and it doesn't cite specific items.\n- **Done dates** for items 1, 2 and 4 aren't recorded in the postmortem, so I can't confirm they landed by their due dates.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    false
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Q3 2026 board update (confidential)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 9.1,
+   "error": null
+  },
+  {
+   "id": "q34",
+   "category": "superseded",
+   "answer": "Archived customer event data is kept for **365 days** by default. This is set in the current retention standard (v2), effective September 15, 2026, which replaced the earlier 400-day default [2].\n\n- **Hot buffer (Kafka):** event payloads are kept for 7 days before archiving [2].\n- **Archive (Driftwood):** payloads are kept for 365 days. Object-storage lifecycle rules delete them once they pass the period, and per-workspace overrides are stored as bucket tags [2].\n- **Enterprise contracts:** customers can contract for a shorter archive period [1]. They can also contract for longer retention, up to 730 days, with security team approval [2].\n\nThe Pricing and discount policy still refers to a 400-day limit for custom retention, which matches the older v1 standard, not v2 [4]. Treat that policy as possibly out of date.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Customer data retention standard (v2)",
+    "Customer data retention standard (v1)",
+    "Pricing and discount policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 6.9,
+   "error": null
+  },
+  {
+   "id": "q35",
+   "category": "superseded",
+   "answer": "Northwind Labs has **14 days** to complete deletion of a verified GDPR request in all live systems. This comes from the Customer data retention standard v2, effective September 15, 2026, which replaced the older 30-day requirement [1]. The 14-day clock runs from the verified request [1].\n\n- **Live systems:** deleted within 14 days [1].\n- **Backups:** not deleted on that timeline. They age out on the normal 35-day schedule [1].\n- **Internal alert:** support logs every request in the `data-requests` queue, which alerts at day 10 [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Customer data retention standard (v2)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 6.0,
+   "error": null
+  },
+  {
+   "id": "q36",
+   "category": "superseded",
+   "answer": "Primary on-call will pay **$500 per week**, plus **$150 per page outside business hours**. Mid-November shifts fall under the new rates, which take effect for shifts starting on or after Tuesday, November 3, 2026 [1].\n\nThe increase replaces the older runbook figures of $400 per week and $100 per page [1][2]. The new memo also adds a **$1,500 per week cap on out-of-hours page pay**, which is not in the runbook [1]. The October offsite notes confirm the on-call pay increase was approved [3].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "On-call compensation update (October 2026)",
+    "On-call runbook",
+    "Leadership offsite notes (October 2026)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 5.2,
+   "error": null
+  },
+  {
+   "id": "q37",
+   "category": "superseded",
+   "answer": "You can roll over up to **56 hours** of unused annual leave into the next calendar year [1]. The annual leave policy took effect October 1, 2026, and replaces the old PTO rule, which allowed 40 hours [1][2]. The first carry-over under the new limit happens on January 1, 2027 [1].\n\nHours above the limit are paid out in January at your current rate [1]. Full-time staff accrue 6.15 hours per pay period in years 1\u20133 and 7.7 hours from year 4 [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Annual leave policy (effective October 1, 2026)",
+    "PTO and clinic scheduling policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 5.5,
+   "error": null
+  },
+  {
+   "id": "q38",
+   "category": "alias",
+   "answer": "An Enterprise customer can use reference tables of up to **500 million rows per workspace**, according to the streaming joins product spec [1]. The Growth plan limit is 50 million rows [1].\n\nThis is a spec-level target, not a confirmed product limit. The same spec lists the feature as approved for the Q4 cycle [1]. Tributary is in private beta, with GA targeted for January 2027 [3].\n\nThe 500 million figure is also not yet backed by the snapshot design. RFC-031 describes a 50M-row table as the reference point, noting that a restart rebuild takes about 25 minutes [2]. The RFC proposes persisting snapshots to make restores under 90 seconds for a 50M-row table [2]. It also keeps a 2 GiB per-partition memory budget for reference state, with partitions spilling to disk when they exceed it [2]. Its approval was still pending a threat-model sign-off when that document was written [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    false
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Product spec: Streaming joins",
+    "Cycle 5 pitch review notes",
+    "RFC-031: Persisting Tributary snapshots"
+   ],
+   "gold_cited": 1.0,
+   "passed": false,
+   "latency_s": 9.6,
+   "error": null
+  },
+  {
+   "id": "q39",
+   "category": "alias",
+   "answer": "The new telehealth platform, Juniper, is scheduled to reach patients in two phases, starting with a pilot on **January 12, 2027** at Riverside, Elm Park and Northgate clinics. The network-wide launch is **March 2, 2027**, covering all clinics and the telehealth front desk [1].\n\n- **Go/no-go for the pilot:** December 16, 2026. The criteria are join success above 98% for two consecutive weeks, zero open Level 1\u20132 safety findings, and CSCAB approval as a significant change [1].\n- **Current status:** Internal testing showed 98.7% join success across 1,900 test visits, against a goal of above 98% [1].\n- **Larkspur shutdown:** The current vendor, Larkspur Telehealth, is not being renewed past December 31, 2026. A month-to-month extension runs through March 31, 2027 [3][1].\n\nThe dates come from the October 21, 2026 steering committee notes, so they are a plan that depends on the December 16 decision [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Juniper steering committee notes \u2014 October 2026",
+    "Business associate record: Larkspur Telehealth"
+   ],
+   "gold_cited": 0.5,
+   "passed": true,
+   "latency_s": 6.5,
+   "error": null
+  },
+  {
+   "id": "q40",
+   "category": "alias",
+   "answer": "No, the knowledge base has no record of Tomasz Wierzbicki (Head of Security) signing off on LZ's RFC-031. The most recent records show it still pending.\n\n- **RFC status:** The RFC's approval table lists TW (Security) as \"Pending.\" TW wants a threat model for copying Restricted data across tiers before approving, and nothing ships to the private beta until TW signs off [1].\n- **October status:** At the October leadership offsite, Dmitri noted that security sign-off on persisted snapshots was still outstanding and was the main risk to Tomasz's timeline for Tributary [3].\n- **Action item:** Dmitri was tasked with unblocking the RFC-031 security review with Tomasz by the end of October [3]. Today is October 30, so that deadline is now.\n\nThe latest document I found is from early October, so a sign-off after that may not be recorded here. Check with Tomasz or Dmitri to confirm the current status.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": true,
+   "contradiction": false,
+   "cited_titles": [
+    "RFC-031: Persisting Tributary snapshots",
+    "Leadership offsite notes (October 2026)"
+   ],
+   "gold_cited": 0.6666666666666666,
+   "passed": true,
+   "latency_s": 8.5,
+   "error": null
+  },
+  {
+   "id": "q41",
+   "category": "alias",
+   "answer": "The self-serve billing portal (internally called **Lantern**) is now expected to reach general availability in **March 2027**, up from January 2027. The slip was decided at the October 2026 leadership offsite. The payment-provider migration won't finish until mid-January, and the team needs the invoice-history view to handle voided invoices properly after INC-2340 [2].\n\n- **Original plan:** beta in December 2026, GA in January 2027 [1].\n- **Current plan:** beta in February 2027, GA in March 2027 [2].\n\nI found no source dated after the October 1 offsite notes, so this may have changed since then.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Leadership offsite notes (October 2026)",
+    "Cycle 5 pitch review notes"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 8.4,
+   "error": null
+  },
+  {
+   "id": "q42",
+   "category": "unanswerable",
+   "answer": "The knowledge base doesn't have an end-of-Q4 2026 ARR figure, and it can't yet exist. Q4 ends December 31, and today is October 30, 2026. The Q4 forecast is still being finalized for the December board meeting [2].\n\nThe most recent reported figure is from the Q3 2026 board update: ARR reached $18.4M, up 9% quarter over quarter and 41% year over year [1].\n\nKnown Q4 factors:\n- **Logistics renewal:** The $640K renewal flagged as the largest risk in Q3 [1] is not yet signed. The customer gave a verbal commitment on October 9 to renew for two years at an 8% discount [2].\n- **Lantern GA:** Slipped from January to March 2027, so it won't contribute Q4 revenue [2].",
+   "status": "complete",
+   "fact_hits_substring": [],
+   "fact_hits_judge": [],
+   "abstained": true,
+   "contradiction": false,
+   "cited_titles": [
+    "Leadership offsite notes (October 2026)",
+    "Q3 2026 board update (confidential)"
+   ],
+   "gold_cited": 0.0,
+   "passed": true,
+   "latency_s": 6.0,
+   "error": null
+  },
+  {
+   "id": "q43",
+   "category": "unanswerable",
+   "answer": "The knowledge base doesn't state how many weeks of paid parental leave Northwind offers. I found no parental leave policy document, and the onboarding guide's benefits list doesn't mention parental leave [2].\n\nThe only related reference is from the October 2026 leadership offsite. Joanne Pryce presented parental leave benchmarking, but the decision was deferred to the December meeting, and the notes say there is \"no change to the current policy yet\" [1]. The current policy itself isn't in the sources.\n\nFor the actual figure, check with the People team (Joanne Pryce is VP People, per the offsite notes [1]) or ask in `#ask-anything`, which the onboarding guide says People monitors during business hours [2].",
+   "status": "complete",
+   "fact_hits_substring": [],
+   "fact_hits_judge": [],
+   "abstained": true,
+   "contradiction": false,
+   "cited_titles": [
+    "Welcome to Northwind Labs",
+    "Leadership offsite notes (October 2026)"
+   ],
+   "gold_cited": 0.0,
+   "passed": true,
+   "latency_s": 8.1,
+   "error": null
+  },
+  {
+   "id": "q44",
+   "category": "unanswerable",
+   "answer": "The knowledge base doesn't say when the Bayline Reference Laboratories BAA comes up for renewal. I found no Bayline business associate record in the Vendors collection, and no renewal date or term for Bayline anywhere in the documents I searched.\n\nThe only related detail is from the root cause analysis of the July 2026 misfiling event. It says the \"Bayline agreement\" does not require advance notice of feed format changes, and it lists an action to amend the \"lab services agreement\" to require 30 days' notice. That amendment is owned by Lab contracts and Clinical Operations, due December 31, and marked in progress [1]. That is an amendment, not a renewal date.\n\nTo find the renewal date, check with Lab contracts or Clinical Operations, or confirm whether the Bayline agreement is a lab services contract that has its own BAA record.",
+   "status": "complete",
+   "fact_hits_substring": [],
+   "fact_hits_judge": [],
+   "abstained": true,
+   "contradiction": false,
+   "cited_titles": [
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)"
+   ],
+   "gold_cited": 0.0,
+   "passed": true,
+   "latency_s": 10.1,
+   "error": null
+  },
+  {
+   "id": "q45",
+   "category": "unanswerable",
+   "answer": "I couldn't find a daily meal allowance for Halcyon staff traveling for training. After three searches and a check of the knowledge graph, the Halcyon Health documents I can access don't include a travel, per diem, or meal reimbursement policy.\n\nWhat I did find covers related topics:\n\n- **Clinical CME:** Clinical staff receive $2,000 per year for continuing medical education and 5 paid CME days [1]. The documents don't say whether this covers travel or meals.\n- **Training during onboarding:** New hires get a set schedule of HIPAA, EHR and systems training in their first week, but no travel terms are listed [1].\n\nThe right contact is likely the People team, who own the leave and benefits policies. They can be reached at people@halcyon.example [2]. Your clinic manager is another option [2]. It's also worth checking whether a separate expense or travel policy exists outside this knowledge base.",
+   "status": "complete",
+   "fact_hits_substring": [],
+   "fact_hits_judge": [],
+   "abstained": true,
+   "contradiction": false,
+   "cited_titles": [
+    "Staff onboarding at Halcyon Health",
+    "Annual leave policy (effective October 1, 2026)"
+   ],
+   "gold_cited": 0.0,
+   "passed": true,
+   "latency_s": 17.9,
+   "error": null
+  }
+ ]
+}

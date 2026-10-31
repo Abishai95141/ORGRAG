@@ -29,11 +29,19 @@ from app.schemas.common import (
 async def org_summaries(
     db: AsyncSession, user_id: uuid.UUID, org_ids: list[uuid.UUID] | None = None
 ) -> list[OrgSummary]:
+    # Count only within the caller's orgs, not across every tenant's rows.
+    mine = select(Membership.org_id).where(Membership.user_id == user_id)
     member_counts = (
-        select(Membership.org_id, func.count().label("n")).group_by(Membership.org_id).subquery()
+        select(Membership.org_id, func.count().label("n"))
+        .where(Membership.org_id.in_(mine))
+        .group_by(Membership.org_id)
+        .subquery()
     )
     doc_counts = (
-        select(Document.org_id, func.count().label("n")).group_by(Document.org_id).subquery()
+        select(Document.org_id, func.count().label("n"))
+        .where(Document.org_id.in_(mine))
+        .group_by(Document.org_id)
+        .subquery()
     )
     stmt = (
         select(

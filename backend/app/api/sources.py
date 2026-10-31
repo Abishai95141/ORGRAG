@@ -11,12 +11,13 @@ from app.api.serializers import sources_out
 from app.connectors.registry import CONNECTORS, get_connector_class
 from app.connectors.upload import storage_dir
 from app.core.config import get_settings
-from app.core.deps import OrgContext, admin_ctx, member_ctx, org_context
+from app.core.deps import OrgContext, admin_ctx, current_user, member_ctx, org_context
 from app.core.errors import ApiError, bad_request, not_found
 from app.ingestion.parsers import UnsupportedFileType, mime_for
 from app.models import Collection, Document, Source
 from app.retrieval.access import visible_collections
 from app.schemas.common import (
+    MAX_OFFSET,
     ConnectorInfo,
     DocumentPage,
     SourceCreate,
@@ -29,8 +30,10 @@ from app.worker.queue import enqueue_sync
 router = APIRouter(tags=["sources"])
 
 
-@router.get("/connectors", response_model=list[ConnectorInfo])
+@router.get("/connectors", response_model=list[ConnectorInfo], dependencies=[Depends(current_user)])
 async def connector_catalogue():
+    """Source kinds and their config JSON Schemas. Fields marked `"secret": true` are
+    write-only."""
     return [
         ConnectorInfo(
             kind=c.kind,
@@ -142,15 +145,18 @@ async def update_source(
 @router.delete("/orgs/{slug}/sources/{source_id}", status_code=204)
 async def delete_source(source_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)):
     source = await _get_source(ctx, source_id)
-    if source.kind == "upload":
-        shutil.rmtree(Path(get_settings().file_storage_dir) / str(source.id), ignore_errors=True)
     await ctx.db.delete(source)
     await ctx.db.commit()
+    # Files go only once the rows are gone, so a failed delete leaves a working source.
+    if source.kind == "upload":
+        shutil.rmtree(Path(get_settings().file_storage_dir) / str(source.id), ignore_errors=True)
     return Response(status_code=204)
 
 
 @router.post("/orgs/{slug}/sources/{source_id}/sync", response_model=SourceOut)
 async def sync_source(source_id: uuid.UUID, ctx: OrgContext = Depends(admin_ctx)):
+    """Queue a full sync (also prunes documents gone upstream). Returns at once with
+    status `queued`; poll the source for progress."""
     source = await _get_source(ctx, source_id)
     await enqueue_sync(ctx.db, source)
     await ctx.db.commit()
@@ -171,26 +177,34 @@ async def upload_files(
     files: list[UploadFile] = File(...),
     ctx: OrgContext = Depends(member_ctx),
 ):
+    """Add files to an upload source and queue a sync. All files are checked (type,
+    size, count) before any is stored, so a rejected batch stores nothing. A file with
+    the same name replaces the previous one."""
     source = await _get_source(ctx, source_id)
     if source.kind != "upload":
         raise bad_request("Files can only be added to upload sources", "not_upload_source")
-    limit = get_settings().max_upload_mb * 1024 * 1024
-    folder = storage_dir(str(source.id))
-    accepted = 0
+    settings = get_settings()
+    if len(files) > settings.max_upload_files:
+        raise bad_request(
+            f"Upload at most {settings.max_upload_files} files per request", "too_many_files"
+        )
+    limit = settings.max_upload_mb * 1024 * 1024
+    named = []
     for upload in files:
         name = _safe_name(upload.filename or "")
         try:
             mime_for(name)
         except UnsupportedFileType as exc:
             raise bad_request(str(exc), "unsupported_file") from exc
-        data = await upload.read()
-        if len(data) > limit:
+        if (upload.size or 0) > limit:
             raise ApiError(413, f"{name} is larger than {limit // 1_048_576} MB", "file_too_large")
-        (folder / name).write_bytes(data)
-        accepted += 1
+        named.append((name, upload))
+    folder = storage_dir(str(source.id))
+    for name, upload in named:
+        (folder / name).write_bytes(await upload.read())
     await enqueue_sync(ctx.db, source)
     await ctx.db.commit()
-    return UploadResult(accepted=accepted, source=await _one(ctx, source))
+    return UploadResult(accepted=len(named), source=await _one(ctx, source))
 
 
 # ── documents ────────────────────────────────────────────────────────────────
@@ -199,7 +213,7 @@ async def list_documents(
     source_id: uuid.UUID,
     ctx: OrgContext = Depends(org_context),
     limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=MAX_OFFSET),
     q: str | None = Query(None, max_length=200),
 ):
     source = await _get_source(ctx, source_id)

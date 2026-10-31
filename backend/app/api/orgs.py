@@ -4,14 +4,26 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.serializers import org_out, org_summaries
+from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import OrgContext, admin_ctx, current_user, org_context, owner_ctx
-from app.core.errors import bad_request, conflict, forbidden, not_found
+from app.core.errors import ApiError, bad_request, conflict, forbidden, not_found
 from app.core.slugs import is_valid_slug, next_available, slugify
-from app.models import Collection, Invitation, Membership, Organization, User
+from app.llm.models import CATALOGUE
+from app.models import (
+    ApiKey,
+    Collection,
+    CollectionAccess,
+    Invitation,
+    Membership,
+    Organization,
+    User,
+)
 from app.schemas.common import (
     InviteCreate,
     InviteOut,
@@ -68,7 +80,10 @@ async def create_org(
         settings=OrgSettings().model_dump(),
     )
     db.add(org)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError as exc:  # another request took the slug in the meantime
+        raise conflict("That URL is already taken", "slug_taken") from exc
     db.add(Membership(user_id=user.id, org_id=org.id, role="owner"))
     db.add(
         Collection(
@@ -90,15 +105,22 @@ async def get_org(ctx: OrgContext = Depends(org_context)):
 
 @router.patch("/orgs/{slug}", response_model=OrgOut)
 async def update_org(body: OrgPatch, ctx: OrgContext = Depends(admin_ctx)):
+    """`settings` is a partial update: omitted keys keep their value. `description: null`
+    clears it."""
     org = ctx.org
     if body.name is not None:
         org.name = body.name.strip()
-    if body.description is not None:
+    if "description" in body.model_fields_set:
         org.description = body.description
     if body.hue is not None:
         org.hue = body.hue
     if body.settings is not None:
-        merged = {**OrgSettings(**(org.settings or {})).model_dump()}
+        current = OrgSettings(**(org.settings or {}))
+        model = body.settings.model
+        known = {m.id for m in CATALOGUE} | {get_settings().default_model, current.model}
+        if model is not None and model not in known:
+            raise ApiError(422, f"Unknown model {model!r}; see GET /api/models", "unknown_model")
+        merged = current.model_dump()
         merged.update(body.settings.model_dump(exclude_none=True))
         org.settings = OrgSettings(**merged).model_dump()
     await ctx.db.commit()
@@ -160,6 +182,11 @@ async def update_member(user_id: uuid.UUID, body: RolePatch, ctx: OrgContext = D
 
 @router.delete("/orgs/{slug}/members/{user_id}", status_code=204)
 async def remove_member(user_id: uuid.UUID, ctx: OrgContext = Depends(org_context)):
+    """Remove a member (admin), or leave the org (your own id, any role). Their API keys
+    for this org and their restricted-collection grants go with them."""
+    if user_id == ctx.user.id and ctx.api_key is not None:
+        # Otherwise any leaked key, even a viewer one, could sign its creator out of the org.
+        raise forbidden("API keys can't remove their own user; sign in to leave")
     if user_id != ctx.user.id:
         ctx.require("admin")
     m = await _membership(ctx.db, ctx.org_id, user_id)
@@ -169,6 +196,17 @@ async def remove_member(user_id: uuid.UUID, ctx: OrgContext = Depends(org_contex
         if await _owner_count(ctx.db, ctx.org_id) <= 1:
             raise conflict("Transfer ownership before leaving", "last_owner")
     await ctx.db.delete(m)
+    await ctx.db.execute(
+        delete(ApiKey).where(ApiKey.org_id == ctx.org_id, ApiKey.user_id == user_id)
+    )
+    await ctx.db.execute(
+        delete(CollectionAccess).where(
+            CollectionAccess.user_id == user_id,
+            CollectionAccess.collection_id.in_(
+                select(Collection.id).where(Collection.org_id == ctx.org_id)
+            ),
+        )
+    )
     await ctx.db.commit()
     return Response(status_code=204)
 
@@ -243,6 +281,7 @@ async def _invite_by_token(db: AsyncSession, token: str) -> tuple[Invitation, Or
 
 @router.get("/invites/{token}", response_model=InvitePreview)
 async def preview_invite(token: str, db: AsyncSession = Depends(get_db)):
+    """Public (no auth): what an invite link is for, so the page can show it."""
     invite, org = await _invite_by_token(db, token)
     expired = invite.accepted_at is not None or invite.expires_at < datetime.now(UTC)
     return InvitePreview(
@@ -262,8 +301,12 @@ async def accept_invite(
         raise bad_request("This invite has expired", "invite_expired")
     if invite.email.lower() != user.email.lower():
         raise forbidden(f"This invite was sent to {invite.email}")
-    if await db.get(Membership, (user.id, org.id)) is None:
-        db.add(Membership(user_id=user.id, org_id=org.id, role=invite.role))
+    # Idempotent under double-submit: an existing membership is kept as is.
+    await db.execute(
+        insert(Membership)
+        .values(user_id=user.id, org_id=org.id, role=invite.role)
+        .on_conflict_do_nothing()
+    )
     invite.accepted_at = datetime.now(UTC)
     await db.commit()
     return (await org_summaries(db, user.id, [org.id]))[0]

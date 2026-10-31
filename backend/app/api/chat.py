@@ -6,10 +6,11 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse, StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.agent.engine import ChatRequest, message_payload, run_chat
 from app.agent.prompts import TITLE_SYSTEM
+from app.api.scope import key_collection_ids
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.deps import OrgContext, org_context
@@ -17,9 +18,11 @@ from app.core.errors import ApiError, bad_request, not_found
 from app.llm.client import structured_call
 from app.models import Agent, ChatAttachment, Conversation, Membership, Message, Organization
 from app.schemas.common import (
+    MAX_OFFSET,
     ConversationCreate,
     ConversationDetail,
     ConversationOut,
+    ConversationPage,
     ConversationPatch,
     FeedbackIn,
     MessageCreate,
@@ -56,9 +59,10 @@ def _spawn(coro) -> asyncio.Task:
 
 
 async def _scope_ids(ctx: OrgContext, slugs: list[str] | None) -> list[uuid.UUID]:
-    """Requested org slugs → ids the caller belongs to; the current org always first."""
+    """Requested org slugs → ids the caller belongs to; the current org always first.
+    An API key is bound to its org, so other slugs are ignored for it."""
     ids = [ctx.org_id]
-    if slugs:
+    if slugs and ctx.api_key is None:
         rows = await ctx.db.execute(
             select(Organization.id)
             .join(Membership, Membership.org_id == Organization.id)
@@ -75,20 +79,28 @@ async def _conversation(ctx: OrgContext, conversation_id: uuid.UUID) -> Conversa
     return conv
 
 
-@router.get("/conversations", response_model=list[ConversationOut])
+@router.get("/conversations", response_model=ConversationPage)
 async def list_conversations(
     ctx: OrgContext = Depends(org_context),
     limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=MAX_OFFSET),
 ):
+    """The caller's own conversations in this org, most recently active first."""
+    mine = (Conversation.org_id == ctx.org_id, Conversation.user_id == ctx.user.id)
+    total = (await ctx.db.execute(select(func.count(Conversation.id)).where(*mine))).scalar_one()
     rows = await ctx.db.execute(
         select(Conversation)
-        .where(Conversation.org_id == ctx.org_id, Conversation.user_id == ctx.user.id)
+        .where(*mine)
         .order_by(Conversation.updated_at.desc(), Conversation.id)
         .limit(limit)
         .offset(offset)
     )
-    return list(rows.scalars())
+    return ConversationPage(
+        items=[ConversationOut.model_validate(c) for c in rows.scalars()],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.post("/conversations", response_model=ConversationOut, status_code=201)
@@ -150,6 +162,7 @@ async def delete_conversation(conversation_id: uuid.UUID, ctx: OrgContext = Depe
 async def message_feedback(
     message_id: uuid.UUID, body: FeedbackIn, ctx: OrgContext = Depends(org_context)
 ):
+    """Rate an answer in one of your own conversations (`null` clears)."""
     message = await ctx.db.get(Message, message_id)
     if message is None or message.role != "assistant":
         raise not_found("Message")
@@ -238,6 +251,8 @@ async def send_message(
         True, description="false waits for the full answer and returns {message} as JSON"
     ),
 ):
+    """Ask a question. Streams Server-Sent Events (`start`, `step`, `reasoning`,
+    `sources`, `delta`, then `done` or `error`); see docs/API.md for each payload."""
     conv = await _conversation(ctx, conversation_id)
     if body.mode:
         conv.mode = body.mode
@@ -277,6 +292,17 @@ async def send_message(
     if first_message and get_settings().llm_configured:
         _spawn(_refine_title(conv.id, question, settings.model))
 
+    scope_org_ids = list(conv.scope_org_ids or [ctx.org_id])
+    collection_ids = body.collection_ids
+    if ctx.api_key is not None:
+        # Keys stay in their org and see what their role sees; the agent's collection
+        # filter is folded in because an explicit list replaces it downstream.
+        agent = await ctx.db.get(Agent, conv.agent_id) if conv.agent_id else None
+        scope_org_ids = [ctx.org_id]
+        collection_ids = await key_collection_ids(
+            ctx, collection_ids or (agent.collection_ids if agent else None)
+        )
+
     queue: asyncio.Queue = asyncio.Queue()
     req = ChatRequest(
         conversation_id=conv.id,
@@ -285,8 +311,8 @@ async def send_message(
         org_id=ctx.org_id,
         question=question,
         mode=conv.mode,
-        scope_org_ids=list(conv.scope_org_ids or [ctx.org_id]),
-        collection_ids=body.collection_ids,
+        scope_org_ids=scope_org_ids,
+        collection_ids=collection_ids,
         attachment_ids=[a.id for a in attachments],
         web_search=body.web_search,
     )

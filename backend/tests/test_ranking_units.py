@@ -121,3 +121,36 @@ def test_rate_limiter_blocks_after_the_limit_and_resets():
 async def test_page_fetcher_refuses_private_addresses(url):
     with pytest.raises(WebSearchError):
         await fetch_page(url)
+
+
+def test_gateway_key_alone_is_not_a_chat_model(monkeypatch):
+    s = get_settings()
+    monkeypatch.setattr(s, "anthropic_api_key", "")
+    monkeypatch.setattr(s, "nvidia_api_key", "")
+    monkeypatch.setattr(s, "explabs_api_key", "xpl-test")
+    assert s.llm_providers == ["explabs"] and not s.llm_configured
+    assert resolve_model("explabs:gpt-5.4-nano") == ("explabs", "gpt-5.4-nano")
+    with pytest.raises(LLMUnavailable):
+        resolve_model("claude-opus-5-5")
+
+
+def test_unavailable_model_falls_back_to_configured_default(monkeypatch):
+    s = get_settings()
+    monkeypatch.setattr(s, "anthropic_api_key", "")
+    monkeypatch.setattr(s, "nvidia_api_key", "nv-test")
+    monkeypatch.setattr(s, "explabs_api_key", "xpl-test")
+    monkeypatch.setattr(s, "llm_model", "explabs:claude-haiku-5.5")
+    assert resolve_model("claude-opus-5-5") == ("explabs", "claude-haiku-5.5")
+    monkeypatch.setattr(s, "llm_model", "")
+    assert resolve_model("claude-opus-5-5")[0] == "nvidia"
+
+
+def test_list_arguments_accept_a_bare_string():
+    from app.agent.tools import ToolBox, ToolInputError
+
+    assert ToolBox._str_list("HIPAA deadline", "queries", required=True) == ["HIPAA deadline"]
+    assert ToolBox._str_list([" a ", "b"], "queries") == ["a", "b"]
+    with pytest.raises(ToolInputError):
+        ToolBox._str_list(42, "queries", required=True)
+    with pytest.raises(ToolInputError):
+        ToolBox._str_list("   ", "queries", required=True)

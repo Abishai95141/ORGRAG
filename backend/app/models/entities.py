@@ -175,6 +175,8 @@ class Document(Base):
     feedback_down: Mapped[int] = mapped_column(
         Integer, default=0, server_default="0", nullable=False
     )
+    # content_hash the knowledge graph was last extracted from (None = not yet).
+    graph_hash: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = _created()
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
@@ -397,3 +399,63 @@ class ApiKey(Base):
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = _created()
+
+
+class KGEntity(Base):
+    """A named thing (person, team, system, vendor, policy…) in one org's graph.
+
+    Holds no description of its own: what is known about it lives in KGMention rows
+    tied to source chunks, and is assembled per request from the chunks the asker can
+    see — so a restricted collection never leaks through the graph."""
+
+    __tablename__ = "kg_entities"
+    __table_args__ = (UniqueConstraint("org_id", "name_key"),)
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    name_key: Mapped[str] = mapped_column(String(256), nullable=False)
+    type: Mapped[str] = mapped_column(String(40), nullable=False)
+    created_at: Mapped[datetime] = _created()
+
+
+class KGRelation(Base):
+    __tablename__ = "kg_relations"
+    __table_args__ = (UniqueConstraint("org_id", "source_id", "target_id"),)
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    source_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("kg_entities.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    target_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("kg_entities.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    created_at: Mapped[datetime] = _created()
+
+
+class KGMention(Base):
+    """One chunk's evidence for an entity or a relation: the extracted description and
+    keywords. Deleted with the chunk, so re-indexing or deleting a document removes
+    what it contributed to the graph."""
+
+    __tablename__ = "kg_mentions"
+    __table_args__ = (Index("ix_kg_mentions_scope", "collection_id", "entity_id"),)
+
+    id: Mapped[uuid.UUID] = _pk()
+    org_id: Mapped[uuid.UUID] = _org_fk()
+    entity_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("kg_entities.id", ondelete="CASCADE"), index=True
+    )
+    relation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("kg_relations.id", ondelete="CASCADE"), index=True
+    )
+    chunk_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("chunks.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    collection_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    keywords: Mapped[str] = mapped_column(Text, default="", nullable=False)

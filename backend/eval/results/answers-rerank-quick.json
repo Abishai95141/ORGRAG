@@ -1,0 +1,86 @@
+{
+ "kind": "answers",
+ "variant": "rerank-quick",
+ "corpus": "0839a2b6a340b684",
+ "settings": {
+  "rerank": true,
+  "recency_bias": "off"
+ },
+ "summary": {
+  "ALL": {
+   "n": 2,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 1.0,
+   "gold_cited": 1.0,
+   "errors": 0,
+   "s": 22.4
+  },
+  "cross_org_vocab": {
+   "n": 1,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 1.0,
+   "gold_cited": 1.0,
+   "errors": 0,
+   "s": 36.7
+  },
+  "single_fact": {
+   "n": 1,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 1.0,
+   "gold_cited": 1.0,
+   "errors": 0,
+   "s": 8.1
+  }
+ },
+ "rows": [
+  {
+   "id": "s1",
+   "category": "single_fact",
+   "answer": "When a critical lab value comes in, Halcyon Health follows a two-tier notification process:\n\n**Primary notification (all critical results)**\n- The critical result must reach the **ordering clinician within 60 minutes** [1].\n- If the ordering clinician cannot be reached within **30 minutes**, the result is escalated to the **medical director on call** [1].\n- Every notification is documented in the patient\u2019s chart with the **time** and the **person notified** [1].\n\n**Reference-lab call-in (specific trigger)**\n- When a reference lab phones in a critical value, the **supervising physician must be notified within 30 minutes** [1].\n\nIn short: the ordering clinician is the first target (60-minute window, 30-minute escalation to the medical director), and a direct call from the reference lab triggers a 30-minute notification to the supervising physician. All notifications are time-stamped and recorded in the chart.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Clinical escalation protocol"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 8.1,
+   "error": null
+  },
+  {
+   "id": "s2",
+   "category": "cross_org_vocab",
+   "answer": "**Northwind Labs** has a formal, three-tier technical incident severity system documented in its on-call runbook. **Halcyon Health**\u2019s available documents cover clinical safety escalations and privacy-breach reporting, but do not define a comparable technical severity taxonomy.\n\n---\n\n### Northwind Labs \u2014 Technical incidents (Engineering)\n\n| Severity | Definition | Immediate response |\n|---|---|---|\n| **SEV\u20111** (most severe) | Data loss, or a full outage of ingest or pipelines for a cell | Page immediately, declare incident via `/incident declare` in Slack, incident commander assigned within 15\u202fmin; communications lead posts first status-page update within 20\u202fmin [1] |\n| SEV\u20112 | Partial outage or degraded performance affecting many customers | Page, acknowledge within 15\u202fmin [1] |\n| SEV\u20113 | Single-customer issue or degraded non-critical feature | Ticket, next business day [1] |\n\n**SEV\u20111 example (INC\u20112291):** A certificate rotation caused a full ingest outage in us\u2011east. The incident was declared SEV\u20111 at 14:31 UTC, an incident commander was assigned, status-page updates went out every 30\u202fmin, and the corrected certificate bundle was deployed by 16:20 UTC [4].\n\n---\n\n### Halcyon Health \u2014 Documented \u201cmost severe\u201d pathways\n\n| Domain | Trigger | Required action |\n|---|---|---|\n| **Clinical safety** (patient-facing emergencies) | Chest pain with SOB, stroke signs (BE\u2011FAST), SpO\u2082 <\u202f90\u202f%, SBP >\u202f180/<\u202f90 with symptoms, active suicidal ideation with plan | **Call 911 immediately** and notify the on\u2011site clinician; clinician stays on video call until EMS arrives [3] |\n| **Critical lab results** | Critical value called in by reference lab | Must reach ordering clinician within 60\u202fmin; if unreachable in 30\u202fmin, escalate to medical director on call [3] |\n| **Privacy / PHI breaches** | Suspected breach (misdirected fax, lost device, unattended screen) | Report to Privacy Officer within 24\u202fhrs; breaches affecting \u2265\u202f500 people reported to HHS within 60\u202fdays [6] |\n| **Technical incident (single example)** | Duplicate medication reminders (IR\u20110412) \u2014 2,318 patients affected, 12 took extra dose | Classified **\u201cModerate\u201d**; old runner disabled at 09:40, clinical pharmacy outreach by 11:00, apology/guidance message by 14:00 [2] |\n\nNo technical severity levels (e.g., SEV\u20111/SEV\u20112) or a dedicated engineering incident runbook appear in the current Halcyon Health knowledge base.\n\n---\n\n### Bottom line\n- **Northwind Labs** treats its most severe technical incidents (SEV\u20111) with an immediate page, a formal incident declaration, an assigned incident commander within 15\u202fminutes, and public status-page updates within 20\u202fminutes.\n- **Halcyon Health**\u2019s \u201cmost severe\u201d documented responses are clinical (call 911 for life\u2011threatening patient conditions) and regulatory (24\u2011hour privacy-breach reporting). A technical incident classification scheme is not present in the available documents.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "On-call runbook",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Clinical escalation protocol",
+    "HIPAA privacy and PHI handling policy",
+    "Incident review: duplicate medication reminders (IR-0412)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 36.7,
+   "error": null
+  }
+ ]
+}

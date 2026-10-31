@@ -3,6 +3,7 @@ problems surface before the message is sent); sending a message with
 `attachment_ids` binds the files to that conversation."""
 
 import asyncio
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, Response, UploadFile
@@ -18,6 +19,14 @@ from app.schemas.common import AttachmentDetail, AttachmentOut
 
 router = APIRouter(prefix="/orgs/{slug}", tags=["attachments"])
 
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _display_name(filename: str | None) -> str:
+    """The bare file name (no client path, either slash style), without control chars."""
+    name = _CONTROL.sub("", (filename or "").replace("\\", "/").rsplit("/", 1)[-1]).strip()
+    return name[:255] or "file"
+
 
 async def get_attachment(ctx: OrgContext, attachment_id: uuid.UUID) -> ChatAttachment:
     attachment = await ctx.db.get(ChatAttachment, attachment_id)
@@ -32,18 +41,20 @@ async def upload_attachment(
     conversation_id: uuid.UUID | None = Form(None),
     ctx: OrgContext = Depends(org_context),
 ):
+    """Upload a file for chat. It is parsed to text now (so an unreadable file fails
+    here, not mid-answer) and bound to a conversation when a message references it."""
     settings = get_settings()
-    filename = (file.filename or "file").rsplit("/", 1)[-1][:255]
+    filename = _display_name(file.filename)
     try:
         mime = mime_for(filename)
     except UnsupportedFileType as exc:
         raise bad_request(str(exc), "unsupported_file") from exc
-    data = await file.read()
     limit = settings.max_upload_mb * 1024 * 1024
-    if len(data) > limit:
+    if (file.size or 0) > limit:  # checked before reading it into memory
         raise ApiError(
             413, f"{filename} is larger than {settings.max_upload_mb} MB", "file_too_large"
         )
+    data = await file.read()
     if conversation_id is not None:
         conv = await ctx.db.get(Conversation, conversation_id)
         if conv is None or conv.org_id != ctx.org_id or conv.user_id != ctx.user.id:

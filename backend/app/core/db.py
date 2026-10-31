@@ -10,7 +10,11 @@ class Base(DeclarativeBase):
     pass
 
 
-engine = create_async_engine(get_settings().database_url, pool_pre_ping=True, pool_size=10)
+# hide_parameters: DB errors are logged with their SQL; bound values (connector
+# secrets, key hashes, document text) must not end up in the logs with them.
+engine = create_async_engine(
+    get_settings().database_url, pool_pre_ping=True, pool_size=10, hide_parameters=True
+)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 

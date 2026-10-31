@@ -13,8 +13,6 @@ from app.schemas.common import CollectionCreate, CollectionOut, CollectionPatch
 
 router = APIRouter(prefix="/orgs/{slug}/collections", tags=["collections"])
 
-GLYPHS = {"stack", "book", "gear", "chart", "shield", "people", "code", "globe", "compass", "leaf"}
-
 
 async def _set_access(ctx: OrgContext, collection: Collection, user_ids: list[uuid.UUID]) -> None:
     member_ids = set(
@@ -54,7 +52,7 @@ async def create_collection(body: CollectionCreate, ctx: OrgContext = Depends(ad
         name=body.name.strip(),
         description=body.description,
         visibility=body.visibility,
-        glyph=body.glyph if body.glyph in GLYPHS else "stack",
+        glyph=body.glyph,
     )
     ctx.db.add(col)
     try:
@@ -71,14 +69,16 @@ async def create_collection(body: CollectionCreate, ctx: OrgContext = Depends(ad
 async def update_collection(
     collection_id: uuid.UUID, body: CollectionPatch, ctx: OrgContext = Depends(admin_ctx)
 ):
+    """Partial update; `description: null` clears it. `allowed_user_ids` replaces the
+    access list and must name members of this org."""
     col = await get_collection(ctx, collection_id)
     if body.name is not None:
         col.name = body.name.strip()
-    if body.description is not None:
+    if "description" in body.model_fields_set:
         col.description = body.description
     if body.visibility is not None:
         col.visibility = body.visibility
-    if body.glyph is not None and body.glyph in GLYPHS:
+    if body.glyph is not None:
         col.glyph = body.glyph
     if body.allowed_user_ids is not None:
         await _set_access(ctx, col, body.allowed_user_ids)

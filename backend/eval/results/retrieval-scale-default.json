@@ -1,0 +1,107 @@
+{
+ "kind": "retrieval",
+ "variant": "default",
+ "corpus": "0bc4032267322080",
+ "settings": {
+  "rerank": true,
+  "recency_bias": "low"
+ },
+ "summary": {
+  "ALL": {
+   "n": 4,
+   "recall@5": 0.417,
+   "recall@10": 0.771,
+   "mrr": 1.0,
+   "ms": 496
+  },
+  "list_aggregate": {
+   "n": 4,
+   "recall@5": 0.417,
+   "recall@10": 0.771,
+   "mrr": 1.0,
+   "ms": 496
+  }
+ },
+ "rows": [
+  {
+   "id": "s1",
+   "category": "list_aggregate",
+   "ranked": [
+    "Vendor record: Kestrel Labs",
+    "Vendor record: Sable Works",
+    "Vendor record: Birch Data",
+    "Vendor record: Rowan Health",
+    "Vendor record: Nimbus Works",
+    "Vendor record: Sable Labs",
+    "Vendor record: Garnet Systems",
+    "Vendor record: Basalt Health",
+    "Vendor record: Delta Data",
+    "Vendor record: Lumen Health"
+   ],
+   "recall5": 0.18518518518518517,
+   "recall10": 0.37037037037037035,
+   "mrr": 1.0,
+   "latency_ms": 596
+  },
+  {
+   "id": "s2",
+   "category": "list_aggregate",
+   "ranked": [
+    "Vendor record: Birch Labs",
+    "Vendor record: Sable Partners",
+    "Vendor record: Fjord Data",
+    "Vendor record: Cinder Analytics",
+    "Vendor record: Birch Works",
+    "Vendor record: Lumen Cloud",
+    "Vendor record: Cinder Data",
+    "Vendor record: Umber Systems",
+    "Vendor record: Rowan Data",
+    "Vendor record: Delta Data"
+   ],
+   "recall5": 0.625,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 482
+  },
+  {
+   "id": "s3",
+   "category": "list_aggregate",
+   "ranked": [
+    "Vendor record: Cinder Systems",
+    "Vendor record: Nimbus Partners",
+    "Vendor record: Fjord Data",
+    "Vendor record: Sable Works",
+    "Vendor record: Lumen Health",
+    "Vendor record: Cobalt Data",
+    "Vendor record: Basalt Health",
+    "Vendor record: Sable Labs",
+    "Vendor record: Basalt Partners",
+    "Vendor record: Sable Partners"
+   ],
+   "recall5": 0.35714285714285715,
+   "recall10": 0.7142857142857143,
+   "mrr": 1.0,
+   "latency_ms": 453
+  },
+  {
+   "id": "s4",
+   "category": "list_aggregate",
+   "ranked": [
+    "Vendor record: Birch Labs",
+    "Vendor record: Basalt Partners",
+    "Vendor record: Sable Works",
+    "Vendor record: Lumen Health",
+    "Vendor record: Harbor Cloud",
+    "Vendor record: Delta Systems",
+    "Vendor record: Umber Analytics",
+    "Vendor record: Basalt Data",
+    "Vendor record: Cinder Data",
+    "Vendor record: Quarry Analytics"
+   ],
+   "recall5": 0.5,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 455
+  }
+ ]
+}

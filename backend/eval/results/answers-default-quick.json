@@ -1,0 +1,124 @@
+{
+ "kind": "answers",
+ "variant": "default-quick",
+ "corpus": "0bc4032267322080",
+ "settings": {
+  "rerank": true,
+  "recency_bias": "low"
+ },
+ "summary": {
+  "ALL": {
+   "n": 3,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 1.0,
+   "gold_cited": 0.833,
+   "errors": 0,
+   "s": 33.6
+  },
+  "alias": {
+   "n": 1,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 1.0,
+   "gold_cited": 0.5,
+   "errors": 0,
+   "s": 12.4
+  },
+  "list_aggregate": {
+   "n": 1,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 1.0,
+   "gold_cited": 1.0,
+   "errors": 0,
+   "s": 73.9
+  },
+  "single_fact": {
+   "n": 1,
+   "pass": 1.0,
+   "facts_judge": 1.0,
+   "facts_substring": 1.0,
+   "gold_cited": 1.0,
+   "errors": 0,
+   "s": 14.6
+  }
+ },
+ "rows": [
+  {
+   "id": "q12",
+   "category": "single_fact",
+   "answer": "**17 lab results** were filed into the wrong patient's chart during the Bayline incident [1].\n\n**Why it happened:**\n\n1. **Bayline changed its results feed without notice** \u2014 On July 20, 2026, Bayline Reference Laboratories deployed a change that moved the medical record number (MRN) into a different HL7 segment, but did not inform Halcyon Health [1].\n\n2. **The interface engine fell back to a weak matching rule** \u2014 When the MRN could no longer be found in its expected location, the Switchyard interface engine automatically switched to a secondary matching rule that had existed since 2021: matching on **last name and year of birth only**. This rule had never been exercised at volume before [1].\n\n3. **No monitoring caught the problem** \u2014 There was no alerting when 100% of Bayline results began using the fallback match, so the issue went undetected for three days [1].\n\n4. **Contractual gap** \u2014 The Bayline lab services agreement did not require advance notice of feed format changes [1].\n\nThe mismatch was discovered on July 23 when a medical assistant at Riverside noticed a potassium result that didn't match the patient's history. Two patients experienced delayed follow-up (4 and 6 days) due to abnormal results going to the wrong charts, but neither suffered lasting harm. All 17 results were moved to the correct charts by July 24 [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 14.6,
+   "error": null
+  },
+  {
+   "id": "q29",
+   "category": "list_aggregate",
+   "answer": "Three vendor contracts renew on or before March 31, 2027:\n\n| Vendor | Service | Renewal Date | Annual Cost | Notice Period |\n|--------|---------|--------------|-------------|---------------|\n| **Parcelwise Ltd.** | Transactional email delivery | **December 15, 2026** | $31,500 | 30 days |\n| **Hollowpine Software Co.** | Customer support ticketing & help center | **January 31, 2027** | $44,000 | (1-year term) |\n| **Cobaltline, Inc.** | Hosted log search & retention | **March 31, 2027** | $96,000 | 60 days |\n\n**Key details:**\n- **Parcelwise** auto-renews on a 1-year term; notice must be given by mid-November 2026 [1].\n- **Hollowpine** is currently operating under a security exception (SEC-EX-117) because its DPA is still unsigned; the exception must be renewed or ticket intake moved back to email if the DPA isn't signed by the renewal date [4].\n- **Cobaltline**'s renewal will be renegotiated in February 2027; the Observability team is comparing ingest-based pricing vs. the current flat-fee plan [2].\n\nThe fourth vendor in the register, **Saltmarsh Analytics**, renews on June 30, 2027\u2014after the March cutoff [3].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Vendor register: Parcelwise",
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Cobaltline",
+    "Vendor register: Saltmarsh Analytics"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 73.9,
+   "error": null
+  },
+  {
+   "id": "q39",
+   "category": "alias",
+   "answer": "The new telehealth platform (codenamed **Juniper**) has a two-phase rollout for patients:\n\n| Phase | Date | Scope |\n|-------|------|-------|\n| **Pilot** | **January 12, 2027** | Riverside, Elm Park, and Northgate clinics only |\n| **Network-wide** | **March 2, 2027** | All clinics and the telehealth front desk |\n\nThe pilot go/no-go decision will be made at the **December 16, 2026** steering committee meeting. Criteria include sustained join-success rates above 98%, zero open Level 1\u20132 safety findings, and CSCAB approval as a significant change [1].\n\nThe current vendor, Larkspur Telehealth, will remain on a month-to-month extension through **March 31, 2027**, after which it will be fully decommissioned [1][3].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Juniper steering committee notes \u2014 October 2026",
+    "Business associate record: Larkspur Telehealth"
+   ],
+   "gold_cited": 0.5,
+   "passed": true,
+   "latency_s": 12.4,
+   "error": null
+  }
+ ]
+}

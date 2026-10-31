@@ -1,0 +1,1026 @@
+{
+ "kind": "answers",
+ "variant": "default-quick",
+ "corpus": "0bc4032267322080",
+ "settings": {
+  "rerank": true,
+  "recency_bias": "low"
+ },
+ "summary": {
+  "ALL": {
+   "n": 45,
+   "pass": 0.444,
+   "facts_judge": 0.979,
+   "facts_substring": 0.511,
+   "gold_cited": 0.373,
+   "errors": 24,
+   "s": 31.2
+  },
+  "alias": {
+   "n": 4,
+   "pass": 0.25,
+   "facts_judge": 1.0,
+   "facts_substring": 0.125,
+   "gold_cited": 0.125,
+   "errors": 3,
+   "s": 28.0
+  },
+  "cross_org_vocab": {
+   "n": 8,
+   "pass": 0.625,
+   "facts_judge": 1.0,
+   "facts_substring": 0.591,
+   "gold_cited": 0.406,
+   "errors": 3,
+   "s": 39.4
+  },
+  "list_aggregate": {
+   "n": 6,
+   "pass": 0.667,
+   "facts_judge": 1.0,
+   "facts_substring": 0.7,
+   "gold_cited": 0.583,
+   "errors": 2,
+   "s": 38.3
+  },
+  "multi_hop": {
+   "n": 7,
+   "pass": 0.286,
+   "facts_judge": 0.889,
+   "facts_substring": 0.4,
+   "gold_cited": 0.219,
+   "errors": 4,
+   "s": 29.6
+  },
+  "single_fact": {
+   "n": 12,
+   "pass": 0.5,
+   "facts_judge": 1.0,
+   "facts_substring": 0.471,
+   "gold_cited": 0.5,
+   "errors": 6,
+   "s": 24.8
+  },
+  "superseded": {
+   "n": 4,
+   "pass": 0.5,
+   "facts_judge": 1.0,
+   "facts_substring": 0.6,
+   "gold_cited": 0.5,
+   "errors": 2,
+   "s": 26.5
+  },
+  "unanswerable": {
+   "n": 4,
+   "pass": 0.0,
+   "facts_judge": null,
+   "facts_substring": null,
+   "gold_cited": 0.0,
+   "errors": 4,
+   "s": 34.5
+  }
+ },
+ "rows": [
+  {
+   "id": "q01",
+   "category": "single_fact",
+   "answer": "**Yes, you can deploy to production on a Friday afternoon, but it requires approval from the on-call engineering manager.**\n\nThe standard deployment window is **Monday through Thursday, 09:00\u201316:00 Pacific**. Friday deploys are not blocked outright\u2014they just need that extra sign-off [1].\n\n**Key details**\n- Every deploy goes to a canary cell first (5% of traffic) and auto-promotes after 20 minutes if error rates and p95 latency stay within 10% of baseline [1].\n- Rollbacks are always allowed at any time, without approval [1].\n- The on-call engineering manager rotates; you can find the current on-call in PagerDuty or ask in `#eng-oncall`.\n\n**When Friday deploys are *not* allowed**\n- During the **holiday freeze** (Dec 18, 2026 \u2013 Jan 4, 2027) only standard and emergency changes are permitted [2].\n- During the **month-end billing freeze** (last business day of the month until invoices are sent, usually the 2nd), normal changes to the Ledger service are blocked [2].\n\nIf you need a Friday deploy, ping the on-call engineering manager for approval before merging to `main`.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Northwind Engineering Handbook",
+    "Production change approval policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 12.2,
+   "error": null
+  },
+  {
+   "id": "q02",
+   "category": "single_fact",
+   "answer": "**$350 per night** is the maximum hotel allowance for London business travel.\n\nThe Northwind Labs travel policy sets hotel limits at:\n- **$250/night** in most cities\n- **$350/night** in New York, San Francisco, **London**, and Tokyo [1]\n\nYou must book through Navan and submit expenses in Ramp within 30 days with an itemized receipt for anything over $25.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Expense and travel policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 13.3,
+   "error": null
+  },
+  {
+   "id": "q03",
+   "category": "single_fact",
+   "answer": "**Income eligibility:** Household income under **250% of the federal poverty level** qualifies a patient for the sliding-fee program [1].\n\n**Discount range:** The program reduces visit costs by **40\u2013100%**, depending on where the patient\u2019s income falls within that threshold [1].\n\n**How to start:** Front-desk staff can begin the application at check-in, and no patient is ever denied care because of inability to pay [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Billing and insurance FAQ (for staff)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 9.2,
+   "error": null
+  },
+  {
+   "id": "q04",
+   "category": "single_fact",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 34.9,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q05",
+   "category": "single_fact",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.5,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q06",
+   "category": "single_fact",
+   "answer": "Visit links expire **2 hours after the scheduled end time** of the telehealth appointment [1][2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Telehealth platform: requirements v3",
+    "Juniper steering committee notes \u2014 October 2026"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 11.1,
+   "error": null
+  },
+  {
+   "id": "q07",
+   "category": "single_fact",
+   "answer": "Emergency access to a customer's workspace lasts **2 hours** and must be approved by **a second engineer** from the support or on-call rotation in Teleport [1].\n\n**Key details:**\n- **Duration:** 2 hours (shorter than the standard 8-hour Teleport production session). If more time is needed, you must request again with an update on the case [1].\n- **Approval:** A second engineer from the support or on-call rotation must approve the request in Teleport. You cannot approve your own request, and the approver must not be on the same case [1].\n- **Prerequisites:** Only allowed when there's an open support case or declared incident that requires it. Every request must reference the case or incident ID [1].\n- **Access level:** Read-only by default. Write access (e.g., editing a pipeline) requires the customer's written consent in the case first [1].\n\n**How to request:** Run `nwctl access request --workspace <id> --reason <case-or-incident-id>` [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Emergency access to customer workspaces"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 37.3,
+   "error": null
+  },
+  {
+   "id": "q08",
+   "category": "single_fact",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.4,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q09",
+   "category": "single_fact",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 48.9,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q10",
+   "category": "single_fact",
+   "answer": "The legacy `/v1/track` ingest endpoint will stop accepting events on **April 30, 2027** [1].\n\nThis deprecation notice was published in the October 20, 2026 changelog entry. SDKs released after March 2025 already use the `/v2/events` endpoint instead.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Northwind Pipelines changelog: September\u2013October 2026"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 39.2,
+   "error": null
+  },
+  {
+   "id": "q11",
+   "category": "single_fact",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.7,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q12",
+   "category": "single_fact",
+   "answer": "",
+   "status": "error",
+   "fact_hits_substring": [],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 0.0,
+   "error": "NvidiaError(\"NVIDIA API error 429: {'status': 429, 'title': 'Too Many Requests'}\")"
+  },
+  {
+   "id": "q13",
+   "category": "cross_org_vocab",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 47.5,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q14",
+   "category": "cross_org_vocab",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.7,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q15",
+   "category": "cross_org_vocab",
+   "answer": "**Halcyon Health** offers more guaranteed annual leave than **Northwind Labs**, especially after year three.\n\n| | Halcyon Health | Northwind Labs |\n|---|---|---|\n| **Annual leave (years 1\u20133)** | 20 days/year | Minimum 15 days/year (flexible PTO) |\n| **Annual leave (year 4+)** | 25 days/year | Minimum 15 days/year (flexible PTO) |\n| **Carry-over** | Up to 56 hours (\u22487 days) | Not specified |\n| **Paid holidays** | 9 days | Not specified |\n| **Sick leave** | 48 hours/year, separate from annual leave | Not specified |\n| **Notice required** | Clinicians: 60 days; Non-clinical: 2 weeks | Not specified |\n\n**Key differences**\n\n- **Halcyon** uses a structured accrual system (6.15 hrs/pay period \u2192 20 days; 7.7 hrs/pay period \u2192 25 days from year 4) with a defined carry-over limit (56 hrs) and 9 fixed paid holidays [3].\n- **Northwind** describes \u201cflexible PTO with a minimum of 15 days per year that we actually expect you to take\u201d but doesn\u2019t publish accrual rates, carry-over rules, or a holiday schedule [2].\n- Halcyon also provides a separate sick-leave bank (48 hrs/year) [1], while Northwind\u2019s document doesn\u2019t mention sick leave.\n\nIn short, Halcyon\u2019s policy guarantees more days off (20\u201325 vs. a 15-day floor), adds 9 company holidays, and includes a separate sick-leave allowance.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Annual leave policy (effective October 1, 2026)",
+    "Welcome to Northwind Labs",
+    "PTO and clinic scheduling policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 57.9,
+   "error": null
+  },
+  {
+   "id": "q16",
+   "category": "cross_org_vocab",
+   "answer": "**Halcyon Health requires four things before any vendor can receive or handle patient data (PHI):**\n\n1. **A signed Business Associate Agreement (BAA)** \u2014 this is the HIPAA equivalent of a DPA. No PHI may be shared, even for a pilot or test file, until the BAA is fully executed [1].\n\n2. **A completed security risk assessment** \u2014 the vendor must pass Halcyon\u2019s security review (sometimes \u201cwith conditions\u201d) before data flows [1][4][6].\n\n3. **An entry in the Clinical and Business Systems Inventory** \u2014 the system/vendor must be listed on the approved inventory maintained by the HIPAA Security Officer [2][5].\n\n4. **For clinical-use tools, a clinical safety review by the CMIO** \u2014 required when the vendor\u2019s service touches clinical workflows (e.g., an AI scribe) [2].\n\n**In practice:** The BAA and security assessment are the hard gates; the inventory entry and CMIO review follow for systems that will hold or process PHI in production.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Business associate record: Tallgrass Survey Co.",
+    "Business associate record: Quillon Ambient",
+    "Business associate record: Brightwater Billing Services",
+    "Approved AI tools for Halcyon staff",
+    "Clinical and business systems inventory"
+   ],
+   "gold_cited": 0.75,
+   "passed": true,
+   "latency_s": 66.9,
+   "error": null
+  },
+  {
+   "id": "q17",
+   "category": "cross_org_vocab",
+   "answer": "**Yes, Northwind has an analogous \u201cbreak-the-glass\u201d mechanism, but it\u2019s built for technical support rather than clinical care.**  \n\n| Aspect | Halcyon Health \u2013 Break-the-glass EHR access | Northwind Labs \u2013 Emergency workspace access |\n|--------|---------------------------------------------|---------------------------------------------|\n| **Purpose** | Open a patient\u2019s chart outside your normal treatment relationship when care urgently requires it. | Enter a customer\u2019s workspace to fix an urgent technical issue (pipeline down, connector broken, customer locked out). |\n| **Who can use it** | All workforce members with Meridian EHR access (clinicians, covering providers, telehealth staff). | Support engineers, solutions engineers, on-call engineers. |\n| **Trigger** | Unscheduled urgent patient, covering a colleague, telehealth escalation where the assigned clinician is unavailable. | An open support case **or** a declared incident that requires workspace access. \u201cCuriosity\u201d or \u201cit would be faster\u201d are explicitly not valid reasons. |\n| **How to invoke** | In Meridian: click **Emergency access** \u2192 pick a reason (*Emergency care*, *Coverage*, *Other*) \u2192 type a short justification. | Run `nwctl access request --workspace <id> --reason <case-or-incident-id>`. |\n| **Real-time approval** | **None** \u2013 patient care comes first; access is granted immediately. | **Mandatory** \u2013 a second engineer (from support/on-call, not on the same case) must approve in Teleport. You cannot approve your own request. |\n| **Access level** | Full chart access for the patient in question. | **Read-only by default**. Write access (e.g., editing a pipeline) requires the customer\u2019s written consent in the case first. |\n| **Duration** | Until end of shift, max **12 hours**. Must re-break the glass if needed longer. | **2 hours** (deliberately shorter than the standard 8-hour Teleport session). Can re-request with a case update. |\n| **Audit & review** | Every event logged; Privacy Officer\u2019s team reviews within **2 business days**. Unclear reasons trigger manager confirmation. Inappropriate use = privacy incident (sanctions up to termination). | All sessions recorded. Quarterly access reviews by team leads; unconfirmed access is auto-revoked. Access revoked within 1 hour of departure. |\n| **Governance owner** | Privacy Officer (Margaret Holloway) \u2013 HIPAA privacy policy. | Security team \u2013 Information Security Policy (Head of Security approves exceptions). |\n| **Underlying principle** | \u201cMinimum necessary\u201d still applies; never for family, coworkers, VIPs, or self. | Access to customer data requires a ticket linked to a case/incident; standing access to production databases is prohibited for everyone. |\n\n**In short:**  \n- **Halcyon\u2019s** is a *clinical safety valve* \u2013 no gatekeeper in the moment, heavy post-hoc privacy review.  \n- **Northwind\u2019s** is a *technical incident tool* \u2013 a mandatory two-person gate, short time-box, read-only default, and continuous session recording.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": true,
+   "latency_s": 29.9,
+   "error": null
+  },
+  {
+   "id": "q18",
+   "category": "cross_org_vocab",
+   "answer": "**No \u2014 at both organizations, putting sensitive data in Slack is explicitly prohibited.**\n\n**Northwind Labs**  \n- The Information Security Policy classifies customer event payloads, credentials, and encryption keys as **Restricted** data, which must *\u201cnever leaves production; never in tickets or Slack.\u201d* [1]  \n- The Emergency Access guide reinforces this: *\u201cRestricted data never leaves production, so do not paste payloads into tickets, Slack, or a support reply.\u201d* [4]\n\n**Halcyon Health**  \n- The Clinical & Business Systems Inventory lists Slack under **\u201cSystems that must not hold PHI\u201d** with the note **\u201cNever, including DMs.\u201d** [2]  \n- The HIPAA Privacy & PHI Handling Policy states: *\u201cNever put PHI in email subject lines, Slack, personal notes apps, or AI tools that are not on the approved list.\u201d* [3]\n\n**Bottom line:**  \n- **Northwind:** No Restricted data (customer payloads, credentials, keys) in Slack.  \n- **Halcyon:** No PHI in Slack, not even in direct messages.  \n\nUse the approved, secure channels each organization provides (e.g., encrypted email with `[secure]` subject at Halcyon; production systems and secure ticketing at Northwind).",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Information security policy",
+    "Emergency access to customer workspaces",
+    "Clinical and business systems inventory",
+    "HIPAA privacy and PHI handling policy"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 24.0,
+   "error": null
+  },
+  {
+   "id": "q19",
+   "category": "cross_org_vocab",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 34.1,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q20",
+   "category": "cross_org_vocab",
+   "answer": "At Halcyon Health, you must report a suspected privacy incident\u2014including a misdirected fax\u2014to the Privacy Officer **within 24 hours** by emailing `privacy@halcyon.example` or calling the compliance hotline [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "HIPAA privacy and PHI handling policy"
+   ],
+   "gold_cited": 0.5,
+   "passed": true,
+   "latency_s": 24.0,
+   "error": null
+  },
+  {
+   "id": "q21",
+   "category": "multi_hop",
+   "answer": "Based on the production change approval policy and the customer data retention standard, changing the lifecycle rule that deletes archived customer events in Driftwood is classified as a **normal change** because it alters \"data retention settings, lifecycle rules, or anything that deletes customer data on a schedule\" [2].\n\n**Required sign-off:**\n\n1. **Change approver of the team that owns the affected service** \u2014 the team that owns Driftwood (the archive storage service). The engineering team directory or service catalog lists the specific owner [2].\n\n2. **Additionally, if Driftwood is marked as a Restricted service** in the service catalog, you also need sign-off from the **Head of Security** (Tomasz Wierzbicki) or the security on-call delegate [2].\n\n**Other requirements for this change:**\n- An **ADR (Architecture Decision Record)** must be created and linked from the PR, per the engineering handbook [2].\n- If you are **shortening** the retention period, the account team must give **30-day customer notice** for any Enterprise contracts that reference a retention period [2].\n- The PR must carry the `change:normal` label with risk and rollback sections filled in, and approvals are valid for 7 days [2].\n\nIn short: start by identifying the Driftwood service owner in the service catalog\u2014that person (or their delegate) is the primary sign-off you need.",
+   "status": "complete",
+   "fact_hits_substring": [
+    false,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    false,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Production change approval policy"
+   ],
+   "gold_cited": 0.2,
+   "passed": false,
+   "latency_s": 20.5,
+   "error": null
+  },
+  {
+   "id": "q22",
+   "category": "multi_hop",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.9,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q23",
+   "category": "multi_hop",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 40.3,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q24",
+   "category": "multi_hop",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.4,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q25",
+   "category": "multi_hop",
+   "answer": "Changing the timing of medication reminder texts is considered a **significant change** to a patient-facing clinical system, so it requires a three-step approval chain:\n\n1. **System steward approval** \u2013 The medication reminder scheduler (Pillbox) is owned by **Digital Health Engineering \u2014 Patient Engagement (DHE-PE)**, whose steward is **Felix Brandt** [2][4].\n2. **Clinical safety sign-off** \u2013 The CMIO, **Dr. Anjali Rao** (or her delegate, Associate CMIO **Dr. Benedict Osei**) must sign off on the change [2].\n3. **CSCAB review** \u2013 The weekly Clinical Systems Change Advisory Board (Wednesdays at 14:00 Eastern) must review and approve the change [2].\n\n**Why this level of review?**  \nHalcyon treats patient-facing automation (like medication reminders) as a clinical system. The policy explicitly lists \u201cpatient-facing automation (reminders, outreach messages, the patient app\u2019s clinical content)\u201d as a trigger for the significant-change process [2]. A past incident (IR-0412) where a scheduler cutover caused duplicate reminders reinforced that any change to the reminder scheduler needs a written runbook and clinical safety sign-off [1].\n\n**In short:** You\u2019ll need Felix Brandt\u2019s sign-off, a clinical safety review by Dr. Rao or Dr. Osei, and a slot on the Wednesday CSCAB agenda.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Clinical systems change control",
+    "Clinical and business systems inventory",
+    "Incident review: duplicate medication reminders (IR-0412)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 31.2,
+   "error": null
+  },
+  {
+   "id": "q26",
+   "category": "multi_hop",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 36.7,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q27",
+   "category": "multi_hop",
+   "answer": "**Yes.** The video vendor powering the new telehealth platform (the Juniper platform currently in development) is **Coriander Media, Inc.**, and a signed BAA is in place.\n\n| Item | Detail |\n|------|--------|\n| **Vendor** | Coriander Media, Inc. (Record ID BA-020) |\n| **Services** | Real-time video/audio SDK and hosted media servers for the new platform |\n| **BAA status** | **Executed \u2014 August 18, 2026** [2] |\n| **Contract term** | 2 years |\n| **Contract renewal date** | **August 31, 2028** [2] |\n\n**Context**  \n- Coriander is the underlying media layer for the new telehealth platform (referred to as \u201cJuniper\u201d in other records) [2][3].  \n- The BAA covers live encrypted audio/video streams, participant display names, and room metadata; recordings are disabled at the account level [2].  \n- The current legacy platform (Larkspur Telehealth) is being phased out with a month-to-month extension only through March 31, 2027 [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Business associate record: Coriander Media",
+    "Telehealth platform: requirements v3",
+    "Business associate record: Larkspur Telehealth"
+   ],
+   "gold_cited": 0.3333333333333333,
+   "passed": true,
+   "latency_s": 17.2,
+   "error": null
+  },
+  {
+   "id": "q28",
+   "category": "list_aggregate",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.5,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q29",
+   "category": "list_aggregate",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 35.1,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q30",
+   "category": "list_aggregate",
+   "answer": "Based on the vendor records, **five business associates currently have an executed BAA**, and one (Tallgrass Survey Co.) does not.\n\n### Business Associates with Executed BAAs\n\n| Business Associate | Services | BAA Executed | Contract Renewal | Record ID |\n|---|---|---|---|---|\n| **Larkspur Telehealth Corp.** | Telehealth video platform for virtual visits | February 14, 2022 | December 31, 2026 (month-to-month extension through March 31, 2027) | BA-005 |\n| **Quillon Ambient, Inc.** | AI scribe for clinical notes in Meridian EHR | July 30, 2026 | July 31, 2027 | BA-019 |\n| **Coriander Media, Inc.** | Real-time video/audio SDK and hosted media servers | August 18, 2026 | August 31, 2028 | BA-020 |\n| **Brightwater Billing Services, Inc.** | Claims scrubbing, patient statements, payment plans | April 1, 2023 (updated October 2024) | November 30, 2026 (auto-renews) | BA-003 |\n| **Polyglen Interpreting, LLC** | Video/phone medical interpreting (200+ languages) | March 3, 2025 | February 28, 2027 | BA-007 |\n\n### Business Associate Without an Executed BAA\n\n| Business Associate | Status | Notes |\n|---|---|---|\n| **Tallgrass Survey Co.** | **Not executed** \u2014 draft received August 2026; retention terms under negotiation (Tallgrass wants 5 years, Halcyon accepts 18 months). No PHI may be shared until BAA is signed. | BA-021 (proposed) |\n\n**Sources:** Larkspur [1], Quillon [2], Coriander [3], Brightwater [4], Polyglen [5], Tallgrass [6].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Quillon Ambient",
+    "Business associate record: Coriander Media",
+    "Business associate record: Brightwater Billing Services",
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Tallgrass Survey Co."
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 60.8,
+   "error": null
+  },
+  {
+   "id": "q31",
+   "category": "list_aggregate",
+   "answer": "Based on the business associate records in the Vendors collection, two contracts come up for renewal between now (October 30, 2026) and January 31, 2027:\n\n| Business Associate | Record ID | Renewal Date | Status / Notes |\n|---|---|---|---|\n| **Brightwater Billing Services** | BA-003 | **November 30, 2026** | Auto-renews for 1 year unless 60 days' notice given. Renewal in progress; pricing renegotiation underway, no notice given [1]. |\n| **Larkspur Telehealth** | BA-005 | **December 31, 2026** | Not renewing on a full term. Month-to-month extension agreed through March 31, 2027 to cover migration to the new platform; BAA stays in force during the extension [2]. |\n\nThe next renewal after that is **Polyglen Interpreting** on February 28, 2027 (90-day notice period) [3], which falls just outside your window. All other recorded BAs have renewal dates later in 2027 or 2028.",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Business associate record: Brightwater Billing Services",
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Polyglen Interpreting"
+   ],
+   "gold_cited": 0.5,
+   "passed": true,
+   "latency_s": 35.5,
+   "error": null
+  },
+  {
+   "id": "q32",
+   "category": "list_aggregate",
+   "answer": "The three big bets picked at the Cycle 5 pitch review were:\n\n1. **Tributary** \u2014 streaming joins (the Enrich step). Scope for the cycle: CDC-backed snapshots, editor preview, dead-letter routing for unmatched events, and a private beta with design partners in October. GA target remains January 2027 [1].\n\n2. **Lantern** \u2014 self-serve billing portal so customers can view invoices, change plans, update payment methods, and download usage reports without contacting support. Target: beta in December, GA January 2027 (dependent on payment-provider migration finishing first) [1].\n\n3. **Hydrant** \u2014 automatic scaling for ingest gateways per cell, eliminating manual `nwctl scale ingest` runs. Includes the gateway TLS session ticket change from INC-2291 as a small batch item [1].\n\nThese were selected from seven pitches during the review held on September 8, 2026 (moved from Monday for Labor Day) [1].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Cycle 5 pitch review notes"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 21.5,
+   "error": null
+  },
+  {
+   "id": "q33",
+   "category": "list_aggregate",
+   "answer": "Yes \u2014 all four follow-up actions from INC-2291 have shipped.\n\n| # | Action item | Owner | Due | Status |\n|---|-------------|-------|-----|--------|\n| 1 | Validate certificate chains in the rotation job before publishing | Platform team | Aug 28 | **Done** (marked complete in the postmortem) [1] |\n| 2 | Lower the canary handshake-failure alert to page on sustained failures > 5 min | Ingest team | \u2014 | **Done** (marked complete in the postmortem) [1] |\n| 3 | Reduce gateway TLS session ticket lifetime from 4 hours to 30 minutes | Ingest team | Sep 15 | **Shipped Sep 12** (ahead of due date) [2] |\n| 4 | Add a \u201cTLS handshake errors\u201d panel to the ingest dashboard | Observability | \u2014 | **Done** (marked complete in the postmortem) [1] |\n\nThe Q3 board update also notes that \u201call action items are on track\u201d [4].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true,
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Q3 2026 board update (confidential)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 46.2,
+   "error": null
+  },
+  {
+   "id": "q34",
+   "category": "superseded",
+   "answer": "**365 days** is the current default retention period for customers' archived event data.\n\nThis is set in the **Customer data retention standard v2** (effective September 15, 2026), which reduced the default archive retention from 400 days to **365 days** and renamed the cold store to **Driftwood** [2]. The standard specifies:\n\n| Data | Where it lives | Default retention |\n|------|----------------|-------------------|\n| Archived event payloads | Driftwood | **365 days** |\n\nEnterprise customers can contract for longer retention (up to 730 days) with security-team approval, but the default for all customers is 365 days [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Customer data retention standard (v2)"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 10.0,
+   "error": null
+  },
+  {
+   "id": "q35",
+   "category": "superseded",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 39.4,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q36",
+   "category": "superseded",
+   "answer": "**Primary on-call pay for shifts starting in mid-November 2026:**\n\n| Component | Amount |\n|-----------|--------|\n| Weekly stipend | **$500 per week** |\n| Out-of-hours page | **$150 per page** |\n| Weekly cap on page pay | **$1,500 per week** |\n\nThese rates take effect for on-call shifts starting on or after **Tuesday, November 3, 2026**, per the compensation update memo from VP Engineering Dmitri Sokolov and CFO Renata Kowal [1]. Mid-November shifts fall under this new structure.\n\n*Previous rates (from the runbook) were $400/week stipend and $100 per out-of-hours page with no weekly cap [2].*",
+   "status": "complete",
+   "fact_hits_substring": [
+    true,
+    true
+   ],
+   "fact_hits_judge": [
+    true,
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "On-call compensation update (October 2026)",
+    "On-call runbook"
+   ],
+   "gold_cited": 1.0,
+   "passed": true,
+   "latency_s": 26.1,
+   "error": null
+  },
+  {
+   "id": "q37",
+   "category": "superseded",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.4,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q38",
+   "category": "alias",
+   "answer": "Enterprise customers can use reference tables up to **500 million rows per workspace** with Tributary [2]. \n\nFor comparison, the Growth plan supports up to 50 million rows per workspace [2].",
+   "status": "complete",
+   "fact_hits_substring": [
+    true
+   ],
+   "fact_hits_judge": [
+    true
+   ],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [
+    "Product spec: Streaming joins"
+   ],
+   "gold_cited": 0.5,
+   "passed": true,
+   "latency_s": 10.0,
+   "error": null
+  },
+  {
+   "id": "q39",
+   "category": "alias",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 40.5,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q40",
+   "category": "alias",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 31.0,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q41",
+   "category": "alias",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [
+    false,
+    false
+   ],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.4,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q42",
+   "category": "unanswerable",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.6,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q43",
+   "category": "unanswerable",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.5,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q44",
+   "category": "unanswerable",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 46.7,
+   "error": "The model is rate limited right now. Try again in a moment."
+  },
+  {
+   "id": "q45",
+   "category": "unanswerable",
+   "answer": "The model is rate limited right now. Try again in a moment.",
+   "status": "error",
+   "fact_hits_substring": [],
+   "fact_hits_judge": [],
+   "abstained": false,
+   "contradiction": false,
+   "cited_titles": [],
+   "gold_cited": 0.0,
+   "passed": false,
+   "latency_s": 30.4,
+   "error": "The model is rate limited right now. Try again in a moment."
+  }
+ ]
+}

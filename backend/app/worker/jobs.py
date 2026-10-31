@@ -4,9 +4,15 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
+from sqlalchemy import or_, select
+
 from app.connectors.base import ConnectorError
+from app.core.config import get_settings
+from app.graph.extract import extract_document, prune_orphans
 from app.ingestion.pipeline import sync_source
-from app.models import Job, Source
+from app.models import Document, Job, Organization, Source
+from app.schemas.common import OrgSettings
+from app.worker.queue import enqueue_graph
 
 log = logging.getLogger("strata.worker")
 
@@ -41,6 +47,52 @@ async def handle_sync_source(db, job: Job) -> None:
     source.progress = None
     await db.commit()
     log.info("Synced source %s (%s): %s", source.name, source.id, stats)
+    org = await db.get(Organization, source.org_id)
+    if OrgSettings(**(org.settings or {})).knowledge_graph and get_settings().llm_configured:
+        await enqueue_graph(db, source)
+        await db.commit()
 
 
-HANDLERS = {"sync_source": handle_sync_source}
+async def handle_extract_graph(db, job: Job) -> None:
+    """Extract the knowledge graph for every document of a source whose content changed
+    since its last extraction. Each document commits on its own, so a rate-limited or
+    crashed job resumes where it stopped when it's retried."""
+    source = await db.get(Source, uuid.UUID(job.payload["source_id"]))
+    if source is None:
+        return
+    org = await db.get(Organization, source.org_id)
+    model = get_settings().graph_extraction_model or OrgSettings(**(org.settings or {})).model
+    pending = (
+        (
+            await db.execute(
+                select(Document)
+                .where(
+                    Document.source_id == source.id,
+                    or_(
+                        Document.graph_hash.is_(None), Document.graph_hash != Document.content_hash
+                    ),
+                )
+                .order_by(Document.title)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    failed = 0
+    for doc in pending:
+        try:
+            stats = await extract_document(db, doc, model)
+            await db.commit()
+            log.info("Graph: %s → %s", doc.title, stats)
+        except Exception as exc:
+            await db.rollback()
+            failed += 1
+            log.warning("Graph extraction failed for %s: %s", doc.title, exc)
+    await prune_orphans(db, source.org_id)
+    await db.commit()
+    if failed:
+        # Retried by the queue (with backoff); finished documents aren't redone.
+        raise RuntimeError(f"Graph extraction failed for {failed} of {len(pending)} documents")
+
+
+HANDLERS = {"sync_source": handle_sync_source, "extract_graph": handle_extract_graph}

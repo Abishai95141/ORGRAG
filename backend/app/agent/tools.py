@@ -11,9 +11,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.citations import CitationRegistry, Registered
+from app.graph import query as graph
+from app.graph.extract import ENTITY_TYPES
 from app.models import ChatAttachment, Document
 from app.retrieval.access import RetrievalScope
-from app.retrieval.hybrid import Hit, RankingOptions, hybrid_search, neighbour_text
+from app.retrieval.hybrid import Hit, RankingOptions, hits_for_chunks, hybrid_search, neighbour_text
 from app.retrieval.web import WebSearchError, fetch_page, search_web
 
 READ_PAGE_CHARS = 14_000
@@ -105,12 +107,56 @@ SEARCH_WEB = {
     },
 }
 
+LIST_ENTITIES = {
+    "name": "list_entities",
+    "description": (
+        "List ALL entities of a kind from the knowledge graph built from the org's "
+        "documents — people, teams, vendors/organizations, systems, policies, projects, "
+        "roles. Unlike search (which returns only the top few passages), this returns the "
+        "complete set and its total count, so use it for 'which…' / 'how many…' / 'list "
+        "every…' questions. Filter with `contains` (matched against names and what the "
+        "documents say about each entity), then check the details before answering."
+    ),
+    "eager_input_streaming": True,
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string", "enum": list(ENTITY_TYPES), "description": "Entity type."},
+            "contains": {
+                "type": "string",
+                "description": "Optional text that must appear in the name or description.",
+            },
+        },
+    },
+}
+
+EXPLORE_ENTITY = {
+    "name": "explore_entity",
+    "description": (
+        "Look up one entity in the knowledge graph (a person, team, vendor, system, "
+        "policy, role, risk tier…) and get what the documents say about it plus every "
+        "entity it is connected to. Use it to follow chains (service → owning team → "
+        "approver) and to list everything linked to one thing."
+    ),
+    "eager_input_streaming": True,
+    "input_schema": {
+        "type": "object",
+        "properties": {"name": {"type": "string", "description": "Entity name."}},
+        "required": ["name"],
+    },
+}
+
 # Kept for callers that want the default knowledge-only tool set.
 TOOL_DEFINITIONS: list[dict[str, Any]] = [SEARCH_KNOWLEDGE, READ_DOCUMENT, LIST_COLLECTIONS]
 
 
-def tool_definitions(*, web: bool) -> list[dict[str, Any]]:
-    return [*TOOL_DEFINITIONS, SEARCH_WEB] if web else list(TOOL_DEFINITIONS)
+def tool_definitions(*, web: bool, graph: bool = False) -> list[dict[str, Any]]:
+    out = list(TOOL_DEFINITIONS)
+    if graph:
+        out += [LIST_ENTITIES, EXPLORE_ENTITY]
+    if web:
+        out.append(SEARCH_WEB)
+    return out
 
 
 def openai_tools(definitions: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -163,6 +209,7 @@ class ToolBox:
     top_k: int = 8
     ranking: RankingOptions = field(default_factory=RankingOptions)
     attachments: dict[uuid.UUID, ChatAttachment] = field(default_factory=dict)
+    graph: bool = False
     _web_pages: dict[int, tuple[str | None, str]] = field(default_factory=dict)
 
     # ── validation ────────────────────────────────────────────────────────
@@ -170,6 +217,10 @@ class ToolBox:
     def _str_list(value: Any, name: str, *, required: bool = False) -> list[str]:
         if value is None and not required:
             return []
+        if isinstance(value, str):
+            # Models sometimes send one query as a bare string (seen live with Haiku on
+            # search_web); treat it as a one-item list rather than failing the search.
+            value = [value]
         if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
             raise ToolInputError(f"'{name}' must be a list of strings")
         cleaned = [v.strip() for v in value if v.strip()]
@@ -243,7 +294,11 @@ class ToolBox:
                 f"{escape(section[:2400])}\n</source>"
             )
         return SearchOutcome(
-            text="\n\n".join(blocks), queries=queries, refs=refs, new_sources=new, hits=len(hits)
+            text="\n\n".join(blocks) + self._capped_note(len(hits)),
+            queries=queries,
+            refs=refs,
+            new_sources=new,
+            hits=len(hits),
         )
 
     async def list_collections(self) -> str:
@@ -269,6 +324,132 @@ class ToolBox:
                     desc = f" — {col.description}" if col.description else ""
                     lines.append(f"  • {col.name}: {counts.get(col.id, 0)} documents{desc}")
         return "\n".join(lines)
+
+    def _capped_note(self, hits: int) -> str:
+        """Search results are capped; say so where the model reads them, and point to
+        the complete-set tools, rather than relying on the system prompt alone."""
+        if not self.graph or hits < self.top_k:
+            return ""
+        return (
+            f"\n\n(Search returns at most {self.top_k} passages, so this may not be "
+            "everything. For lists or counts, also check list_entities or explore_entity.)"
+        )
+
+    # ── knowledge graph ───────────────────────────────────────────────────
+    async def _refs_for(self, chunk_ids: list[uuid.UUID], new: list[Registered]) -> list[int]:
+        """Register the documents behind graph facts as citable sources."""
+        refs: list[int] = []
+        for hit in await hits_for_chunks(self.db, chunk_ids[:3]):
+            if hit.collection_id not in self.scope.collections:
+                continue
+            entry, is_new = self.registry.register(
+                hit, self.scope.orgs[hit.org_id], self.scope.collections[hit.collection_id]
+            )
+            if is_new:
+                new.append(entry)
+            if entry.ref not in refs:
+                refs.append(entry.ref)
+        return refs
+
+    def _org_label(self, org_id: uuid.UUID) -> str:
+        return f" ({self.scope.orgs[org_id].name})" if len(self.scope.orgs) > 1 else ""
+
+    async def list_entities(self, args: dict[str, Any]) -> SearchOutcome:
+        etype = args.get("type")
+        if etype is not None and etype not in ENTITY_TYPES:
+            raise ToolInputError(f"'type' must be one of: {', '.join(ENTITY_TYPES)}")
+        contains = args.get("contains")
+        if contains is not None and not isinstance(contains, str):
+            raise ToolInputError("'contains' must be a string")
+        rows, total = await graph.list_entities(
+            self.db, self.scope.collection_ids, entity_type=etype, contains=contains or None
+        )
+        label = " ".join(
+            x
+            for x in (
+                f"type={etype}" if etype else "",
+                f"contains={contains!r}" if contains else "",
+            )
+            if x
+        )
+        if not rows:
+            return SearchOutcome(
+                text=f"No entities match ({label or 'all'}).", queries=[label], refs=[]
+            )
+        new: list[Registered] = []
+        lines, all_refs = [], []
+        # Facts often live on relations (owner, risk tier, agreement status), so show
+        # each entity's neighbours too: one call is then enough to filter or count.
+        links = await graph.linked_names(self.db, self.scope.collection_ids, [r.id for r in rows])
+        for row in rows:
+            refs = await self._refs_for(row.chunk_ids, new)
+            all_refs += [r for r in refs if r not in all_refs]
+            cite = "".join(f"[{r}]" for r in refs)
+            linked = f" | linked: {'; '.join(links[row.id])}" if links.get(row.id) else ""
+            lines.append(
+                f"- {row.name} [{row.type}]{self._org_label(row.org_id)} {cite}: "
+                f"{row.description[:240]}{linked}"
+            )
+        more = f" Showing the first {len(rows)}." if total > len(rows) else ""
+        # The graph is extracted automatically and can miss items: say so, so the model
+        # cross-checks instead of treating it as ground truth (measured: claiming
+        # completeness made a stronger model stop searching too early).
+        header = (
+            f"{total} entities in the knowledge graph match ({label or 'all types'}).{more} "
+            "The graph is extracted automatically and may miss items; for an exact list or "
+            "count, cross-check with search_knowledge."
+        )
+        return SearchOutcome(
+            text=header + "\n" + "\n".join(lines),
+            queries=[label or "all entities"],
+            refs=all_refs,
+            new_sources=new,
+            hits=total,
+        )
+
+    async def explore_entity(self, args: dict[str, Any]) -> SearchOutcome:
+        name = args.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise ToolInputError("'name' must be a non-empty string")
+        matches = await graph.find_entity(self.db, self.scope.collection_ids, name)
+        if not matches:
+            return SearchOutcome(
+                text=f"No entity named {name!r} in the knowledge graph. Try search_knowledge.",
+                queries=[name],
+                refs=[],
+            )
+        new: list[Registered] = []
+        blocks, all_refs = [], []
+        # Spellings with exactly the query's words ("Risk Tier High" / "High Risk Tier")
+        # are one entity: merge their relations.
+        want = graph.name_tokens(name)
+        same = [m for m in matches if graph.name_tokens(m.name) == want]
+        for group in [same] if same else [[m] for m in matches[:2]]:
+            entity = group[0]
+            refs = await self._refs_for([c for g in group for c in g.chunk_ids], new)
+            all_refs += [r for r in refs if r not in all_refs]
+            relations, total = await graph.relations_of(
+                self.db, self.scope.collection_ids, [g.id for g in group]
+            )
+            lines = [
+                f"{entity.name} [{entity.type}]{self._org_label(entity.org_id)} "
+                f"{''.join(f'[{r}]' for r in refs)}: {entity.description}",
+                f"Connected to {total} entities:",
+            ]
+            for rel in relations:
+                rrefs = await self._refs_for(rel.chunk_ids, new)
+                all_refs += [r for r in rrefs if r not in all_refs]
+                lines.append(
+                    f"- {rel.other_name} [{rel.other_type}] {''.join(f'[{r}]' for r in rrefs)}: "
+                    f"{rel.description}"
+                )
+            if total > len(relations):
+                lines.append(f"(first {len(relations)} of {total} shown)")
+            blocks.append("\n".join(lines))
+        return SearchOutcome(
+            text="\n\n".join(blocks), queries=[name], refs=all_refs, new_sources=new,
+            hits=len(all_refs),
+        )  # fmt: skip
 
     # ── web ───────────────────────────────────────────────────────────────
     async def search_web(self, args: dict[str, Any]) -> SearchOutcome:

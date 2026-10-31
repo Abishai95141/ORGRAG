@@ -55,6 +55,18 @@ CATALOGUE: tuple[ModelInfo, ...] = (
         "Fast, accurate tool use for quick questions",
     ),
     ModelInfo(
+        "explabs:claude-haiku-5.5",
+        "Claude Haiku 5.5 (Experiential Labs)",
+        "explabs",
+        "Measured best value: fast, cheap, strong tool use",
+    ),
+    ModelInfo(
+        "explabs:gpt-5.4-nano",
+        "GPT-5.4 nano (Experiential Labs)",
+        "explabs",
+        "Cheapest; best graph extraction in our tests",
+    ),
+    ModelInfo(
         "minimaxai/minimax-m3.1-flash",
         "MiniMax M3.1 Flash",
         "nvidia",
@@ -64,6 +76,8 @@ CATALOGUE: tuple[ModelInfo, ...] = (
 
 
 def provider_for(model: str) -> str:
+    if model.startswith("explabs:"):
+        return "explabs"
     return "anthropic" if model.startswith("claude") else "nvidia"
 
 
@@ -76,8 +90,14 @@ def resolve_model(model: str | None) -> tuple[str, str]:
     model = model or settings.default_model
     provider = provider_for(model)
     if provider in available:
-        return provider, model
-    fallback = available[0]
+        return provider, model.removeprefix("explabs:")
+    # Prefer the deployment's configured default (LLM_MODEL) when it can run.
+    default = settings.default_model
+    if default != model and provider_for(default) in available:
+        return provider_for(default), default.removeprefix("explabs:")
+    fallback = next((p for p in available if p != "explabs"), None)
+    if fallback is None:
+        raise LLMUnavailable(f"No API key for {model}; set ANTHROPIC_API_KEY or NVIDIA_API_KEY")
     return fallback, DEFAULT_CLAUDE_MODEL if fallback == "anthropic" else DEFAULT_NVIDIA_MODEL
 
 

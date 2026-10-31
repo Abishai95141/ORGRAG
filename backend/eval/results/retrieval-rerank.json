@@ -1,0 +1,882 @@
+{
+ "kind": "retrieval",
+ "variant": "rerank",
+ "corpus": "ecec8b015521c14e",
+ "settings": {
+  "rerank": true,
+  "recency_bias": "off"
+ },
+ "summary": {
+  "ALL": {
+   "n": 41,
+   "recall@5": 0.939,
+   "recall@10": 0.965,
+   "mrr": 0.951,
+   "ms": 532
+  },
+  "alias": {
+   "n": 4,
+   "recall@5": 1.0,
+   "recall@10": 1.0,
+   "mrr": 1.0,
+   "ms": 479
+  },
+  "cross_org_vocab": {
+   "n": 8,
+   "recall@5": 0.906,
+   "recall@10": 0.906,
+   "mrr": 1.0,
+   "ms": 512
+  },
+  "list_aggregate": {
+   "n": 6,
+   "recall@5": 0.944,
+   "recall@10": 1.0,
+   "mrr": 1.0,
+   "ms": 478
+  },
+  "multi_hop": {
+   "n": 7,
+   "recall@5": 0.8,
+   "recall@10": 0.905,
+   "mrr": 0.929,
+   "ms": 556
+  },
+  "single_fact": {
+   "n": 12,
+   "recall@5": 1.0,
+   "recall@10": 1.0,
+   "mrr": 1.0,
+   "ms": 590
+  },
+  "superseded": {
+   "n": 4,
+   "recall@5": 1.0,
+   "recall@10": 1.0,
+   "mrr": 0.625,
+   "ms": 490
+  }
+ },
+ "rows": [
+  {
+   "id": "q01",
+   "category": "single_fact",
+   "ranked": [
+    "Northwind Engineering Handbook",
+    "Production change approval policy",
+    "Welcome to Northwind Labs",
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Engineering team directory and change approvers",
+    "Information security policy",
+    "On-call compensation update (October 2026)",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Emergency access to customer workspaces",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 1951
+  },
+  {
+   "id": "q02",
+   "category": "single_fact",
+   "ranked": [
+    "Expense and travel policy",
+    "Welcome to Northwind Labs",
+    "Information security policy",
+    "On-call compensation update (October 2026)",
+    "Leadership offsite notes (October 2026)",
+    "On-call runbook",
+    "Pricing and discount policy",
+    "Engineering team directory and change approvers",
+    "Northwind Engineering Handbook",
+    "Q3 2026 board update (confidential)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 458
+  },
+  {
+   "id": "q03",
+   "category": "single_fact",
+   "ranked": [
+    "Billing and insurance FAQ (for staff)",
+    "Business associate record: Brightwater Billing Services",
+    "Patient intake procedure",
+    "Telehealth platform: requirements v3",
+    "Business associate record: Polyglen Interpreting",
+    "Annual leave policy (effective October 1, 2026)",
+    "Staff onboarding at Halcyon Health",
+    "PTO and clinic scheduling policy",
+    "Approved AI tools for Halcyon staff",
+    "Clinical escalation protocol"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 469
+  },
+  {
+   "id": "q04",
+   "category": "single_fact",
+   "ranked": [
+    "Clinical escalation protocol",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Sentinel and adverse event reporting policy",
+    "Break-the-glass access to the EHR",
+    "Telehealth platform: requirements v3",
+    "Patient intake procedure",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Clinical systems change control",
+    "Clinical and business systems inventory",
+    "PTO and clinic scheduling policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 460
+  },
+  {
+   "id": "q05",
+   "category": "single_fact",
+   "ranked": [
+    "Pricing and discount policy",
+    "Q3 2026 board update (confidential)",
+    "Product spec: Streaming joins",
+    "Vendor register: Saltmarsh Analytics",
+    "Leadership offsite notes (October 2026)",
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Service catalog",
+    "Cycle 5 pitch review notes",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Customer data retention standard (v2)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 485
+  },
+  {
+   "id": "q06",
+   "category": "single_fact",
+   "ranked": [
+    "Telehealth platform: requirements v3",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Business associate record: Coriander Media",
+    "Business associate record: Larkspur Telehealth",
+    "Clinical escalation protocol",
+    "Patient intake procedure",
+    "Business associate record: Polyglen Interpreting",
+    "Clinical and business systems inventory",
+    "PTO and clinic scheduling policy",
+    "Break-the-glass access to the EHR"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 435
+  },
+  {
+   "id": "q07",
+   "category": "single_fact",
+   "ranked": [
+    "Emergency access to customer workspaces",
+    "Information security policy",
+    "Incident roles FAQ",
+    "On-call runbook",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Production change approval policy",
+    "Customer data retention standard (v2)",
+    "Customer data retention standard (v1)",
+    "Welcome to Northwind Labs",
+    "Northwind Pipelines changelog: September\u2013October 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 476
+  },
+  {
+   "id": "q08",
+   "category": "single_fact",
+   "ranked": [
+    "Clinical systems change control",
+    "Sentinel and adverse event reporting policy",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Business associate record: Tallgrass Survey Co.",
+    "Clinical and business systems inventory",
+    "Patient intake procedure",
+    "Break-the-glass access to the EHR",
+    "Approved AI tools for Halcyon staff"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 437
+  },
+  {
+   "id": "q09",
+   "category": "single_fact",
+   "ranked": [
+    "Approved AI tools for Halcyon staff",
+    "HIPAA privacy and PHI handling policy",
+    "Break-the-glass access to the EHR",
+    "Business associate record: Quillon Ambient",
+    "Clinical and business systems inventory",
+    "Patient intake procedure",
+    "Clinical escalation protocol",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Business associate record: Polyglen Interpreting",
+    "Juniper steering committee notes \u2014 October 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 467
+  },
+  {
+   "id": "q10",
+   "category": "single_fact",
+   "ranked": [
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Customer data retention standard (v1)",
+    "Service catalog",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Q3 2026 board update (confidential)",
+    "Customer data retention standard (v2)",
+    "Cycle 5 pitch review notes",
+    "Pricing and discount policy",
+    "Product spec: Streaming joins",
+    "On-call runbook"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 449
+  },
+  {
+   "id": "q11",
+   "category": "single_fact",
+   "ranked": [
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Engineering team directory and change approvers",
+    "Leadership offsite notes (October 2026)",
+    "Q3 2026 board update (confidential)",
+    "Pricing and discount policy",
+    "Service catalog",
+    "Cycle 5 pitch review notes",
+    "Production change approval policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 523
+  },
+  {
+   "id": "q12",
+   "category": "single_fact",
+   "ranked": [
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Clinical escalation protocol",
+    "HIPAA privacy and PHI handling policy",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Break-the-glass access to the EHR",
+    "Sentinel and adverse event reporting policy",
+    "Clinical and business systems inventory",
+    "Patient intake procedure",
+    "Clinical systems change control"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 468
+  },
+  {
+   "id": "q13",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "On-call runbook",
+    "Sentinel and adverse event reporting policy",
+    "Clinical escalation protocol",
+    "Clinical systems change control",
+    "HIPAA privacy and PHI handling policy",
+    "Incident roles FAQ",
+    "Staff onboarding at Halcyon Health",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Annual leave policy (effective October 1, 2026)",
+    "Clinical and business systems inventory"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 505
+  },
+  {
+   "id": "q14",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Sentinel and adverse event reporting policy",
+    "Clinical escalation protocol",
+    "Patient intake procedure",
+    "HIPAA privacy and PHI handling policy",
+    "Clinical systems change control",
+    "Staff onboarding at Halcyon Health",
+    "Engineering team directory and change approvers",
+    "Annual leave policy (effective October 1, 2026)",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Approved AI tools for Halcyon staff"
+   ],
+   "recall5": 0.5,
+   "recall10": 0.5,
+   "mrr": 1.0,
+   "latency_ms": 445
+  },
+  {
+   "id": "q15",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Welcome to Northwind Labs",
+    "Annual leave policy (effective October 1, 2026)",
+    "PTO and clinic scheduling policy",
+    "Northwind Engineering Handbook",
+    "Leadership offsite notes (October 2026)",
+    "Information security policy",
+    "On-call compensation update (October 2026)",
+    "Incident roles FAQ",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Emergency access to customer workspaces"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 463
+  },
+  {
+   "id": "q16",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Approved AI tools for Halcyon staff",
+    "Business associate record: Tallgrass Survey Co.",
+    "Clinical and business systems inventory",
+    "HIPAA privacy and PHI handling policy",
+    "Business associate record: Quillon Ambient",
+    "Vendor register: Hollowpine Helpdesk",
+    "Telehealth platform: requirements v3",
+    "Clinical systems change control",
+    "Patient intake procedure",
+    "Vendor register: Parcelwise"
+   ],
+   "recall5": 0.75,
+   "recall10": 0.75,
+   "mrr": 1.0,
+   "latency_ms": 542
+  },
+  {
+   "id": "q17",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Break-the-glass access to the EHR",
+    "Information security policy",
+    "Emergency access to customer workspaces",
+    "On-call runbook",
+    "Welcome to Northwind Labs",
+    "HIPAA privacy and PHI handling policy",
+    "Clinical and business systems inventory",
+    "Northwind Engineering Handbook",
+    "Customer data retention standard (v1)",
+    "Incident roles FAQ"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 529
+  },
+  {
+   "id": "q18",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Information security policy",
+    "Clinical and business systems inventory",
+    "HIPAA privacy and PHI handling policy",
+    "Approved AI tools for Halcyon staff",
+    "Emergency access to customer workspaces",
+    "Northwind Engineering Handbook",
+    "On-call runbook",
+    "Customer data retention standard (v1)",
+    "Clinical escalation protocol",
+    "Vendor register: Parcelwise"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 508
+  },
+  {
+   "id": "q19",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "Welcome to Northwind Labs",
+    "Staff onboarding at Halcyon Health",
+    "Northwind Engineering Handbook",
+    "Information security policy",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Expense and travel policy",
+    "Incident roles FAQ",
+    "Annual leave policy (effective October 1, 2026)",
+    "Vendor register: Saltmarsh Analytics",
+    "Pricing and discount policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 561
+  },
+  {
+   "id": "q20",
+   "category": "cross_org_vocab",
+   "ranked": [
+    "HIPAA privacy and PHI handling policy",
+    "Information security policy",
+    "Emergency access to customer workspaces",
+    "Staff onboarding at Halcyon Health",
+    "Approved AI tools for Halcyon staff",
+    "Sentinel and adverse event reporting policy",
+    "Clinical and business systems inventory",
+    "Welcome to Northwind Labs",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Customer data retention standard (v1)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 540
+  },
+  {
+   "id": "q21",
+   "category": "multi_hop",
+   "ranked": [
+    "Customer data retention standard (v2)",
+    "Production change approval policy",
+    "Customer data retention standard (v1)",
+    "RFC-031: Persisting Tributary snapshots",
+    "Service catalog",
+    "Vendor register: Saltmarsh Analytics",
+    "Engineering team directory and change approvers",
+    "Northwind Engineering Handbook",
+    "Vendor register: Hollowpine Helpdesk",
+    "Emergency access to customer workspaces"
+   ],
+   "recall5": 0.6,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 518
+  },
+  {
+   "id": "q22",
+   "category": "multi_hop",
+   "ranked": [
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Engineering team directory and change approvers",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Production change approval policy",
+    "Service catalog",
+    "Incident roles FAQ",
+    "Leadership offsite notes (October 2026)",
+    "Northwind Engineering Handbook",
+    "Vendor register: Parcelwise",
+    "Cycle 5 pitch review notes"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 492
+  },
+  {
+   "id": "q23",
+   "category": "multi_hop",
+   "ranked": [
+    "Vendor register: Parcelwise",
+    "Engineering team directory and change approvers",
+    "Service catalog",
+    "Customer data retention standard (v1)",
+    "Information security policy",
+    "Production change approval policy",
+    "Vendor register: Saltmarsh Analytics",
+    "Vendor register: Hollowpine Helpdesk",
+    "Emergency access to customer workspaces",
+    "On-call compensation update (October 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 514
+  },
+  {
+   "id": "q24",
+   "category": "multi_hop",
+   "ranked": [
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Cobaltline",
+    "Vendor register: Parcelwise",
+    "Vendor register: Saltmarsh Analytics",
+    "Customer data retention standard (v1)",
+    "Emergency access to customer workspaces",
+    "Leadership offsite notes (October 2026)",
+    "Production change approval policy",
+    "Service catalog",
+    "Customer data retention standard (v2)"
+   ],
+   "recall5": 0.3333333333333333,
+   "recall10": 0.3333333333333333,
+   "mrr": 1.0,
+   "latency_ms": 522
+  },
+  {
+   "id": "q25",
+   "category": "multi_hop",
+   "ranked": [
+    "Clinical systems change control",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Clinical and business systems inventory",
+    "Sentinel and adverse event reporting policy",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Patient intake procedure",
+    "Approved AI tools for Halcyon staff",
+    "Telehealth platform: requirements v3",
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Break-the-glass access to the EHR"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 444
+  },
+  {
+   "id": "q26",
+   "category": "multi_hop",
+   "ranked": [
+    "Root cause analysis: lab results filed to the wrong patient chart (RCA-26-07)",
+    "Clinical systems change control",
+    "Sentinel and adverse event reporting policy",
+    "Clinical and business systems inventory",
+    "Break-the-glass access to the EHR",
+    "Incident review: duplicate medication reminders (IR-0412)",
+    "Clinical escalation protocol",
+    "Approved AI tools for Halcyon staff",
+    "HIPAA privacy and PHI handling policy",
+    "Juniper steering committee notes \u2014 October 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 488
+  },
+  {
+   "id": "q27",
+   "category": "multi_hop",
+   "ranked": [
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Coriander Media",
+    "Business associate record: Polyglen Interpreting",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Business associate record: Quillon Ambient",
+    "Telehealth platform: requirements v3",
+    "Clinical and business systems inventory",
+    "Business associate record: Brightwater Billing Services",
+    "Business associate record: Tallgrass Survey Co.",
+    "Approved AI tools for Halcyon staff"
+   ],
+   "recall5": 0.6666666666666666,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 913
+  },
+  {
+   "id": "q28",
+   "category": "list_aggregate",
+   "ranked": [
+    "Vendor register: Saltmarsh Analytics",
+    "Vendor register: Cobaltline",
+    "Vendor register: Parcelwise",
+    "Vendor register: Hollowpine Helpdesk",
+    "Expense and travel policy",
+    "Service catalog",
+    "Customer data retention standard (v1)",
+    "RFC-031: Persisting Tributary snapshots",
+    "Leadership offsite notes (October 2026)",
+    "Production change approval policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 446
+  },
+  {
+   "id": "q29",
+   "category": "list_aggregate",
+   "ranked": [
+    "Vendor register: Cobaltline",
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Parcelwise",
+    "Vendor register: Saltmarsh Analytics",
+    "Leadership offsite notes (October 2026)",
+    "Customer data retention standard (v2)",
+    "Q3 2026 board update (confidential)",
+    "Expense and travel policy",
+    "On-call compensation update (October 2026)",
+    "Cycle 5 pitch review notes"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 473
+  },
+  {
+   "id": "q30",
+   "category": "list_aggregate",
+   "ranked": [
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Brightwater Billing Services",
+    "Business associate record: Coriander Media",
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Quillon Ambient",
+    "Business associate record: Tallgrass Survey Co.",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Clinical and business systems inventory",
+    "Approved AI tools for Halcyon staff",
+    "Break-the-glass access to the EHR"
+   ],
+   "recall5": 0.8333333333333334,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 432
+  },
+  {
+   "id": "q31",
+   "category": "list_aggregate",
+   "ranked": [
+    "Business associate record: Brightwater Billing Services",
+    "Business associate record: Polyglen Interpreting",
+    "Business associate record: Larkspur Telehealth",
+    "Business associate record: Tallgrass Survey Co.",
+    "Business associate record: Quillon Ambient",
+    "Business associate record: Coriander Media",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Clinical and business systems inventory",
+    "Approved AI tools for Halcyon staff",
+    "HIPAA privacy and PHI handling policy"
+   ],
+   "recall5": 0.8333333333333334,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 490
+  },
+  {
+   "id": "q32",
+   "category": "list_aggregate",
+   "ranked": [
+    "Cycle 5 pitch review notes",
+    "Northwind Engineering Handbook",
+    "Product spec: Streaming joins",
+    "Leadership offsite notes (October 2026)",
+    "Q3 2026 board update (confidential)",
+    "RFC-031: Persisting Tributary snapshots",
+    "Engineering team directory and change approvers",
+    "Welcome to Northwind Labs",
+    "On-call runbook",
+    "Emergency access to customer workspaces"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 511
+  },
+  {
+   "id": "q33",
+   "category": "list_aggregate",
+   "ranked": [
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Cycle 5 pitch review notes",
+    "Q3 2026 board update (confidential)",
+    "On-call runbook",
+    "Leadership offsite notes (October 2026)",
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "RFC-031: Persisting Tributary snapshots",
+    "Product spec: Streaming joins",
+    "Production change approval policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 514
+  },
+  {
+   "id": "q34",
+   "category": "superseded",
+   "ranked": [
+    "Customer data retention standard (v1)",
+    "Customer data retention standard (v2)",
+    "Pricing and discount policy",
+    "Service catalog",
+    "Vendor register: Saltmarsh Analytics",
+    "Production change approval policy",
+    "RFC-031: Persisting Tributary snapshots",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Emergency access to customer workspaces",
+    "Product spec: Streaming joins"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 517
+  },
+  {
+   "id": "q35",
+   "category": "superseded",
+   "ranked": [
+    "Customer data retention standard (v1)",
+    "Customer data retention standard (v2)",
+    "Production change approval policy",
+    "Vendor register: Hollowpine Helpdesk",
+    "Vendor register: Saltmarsh Analytics",
+    "Pricing and discount policy",
+    "Service catalog",
+    "Information security policy",
+    "Emergency access to customer workspaces",
+    "Vendor register: Parcelwise"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 499
+  },
+  {
+   "id": "q36",
+   "category": "superseded",
+   "ranked": [
+    "On-call compensation update (October 2026)",
+    "On-call runbook",
+    "Leadership offsite notes (October 2026)",
+    "Engineering team directory and change approvers",
+    "Incident roles FAQ",
+    "Postmortem: Ingest outage in us-east cell (INC-2291)",
+    "Welcome to Northwind Labs",
+    "Q3 2026 board update (confidential)",
+    "Emergency access to customer workspaces",
+    "Service catalog"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 508
+  },
+  {
+   "id": "q37",
+   "category": "superseded",
+   "ranked": [
+    "PTO and clinic scheduling policy",
+    "Annual leave policy (effective October 1, 2026)",
+    "Staff onboarding at Halcyon Health",
+    "HIPAA privacy and PHI handling policy",
+    "Billing and insurance FAQ (for staff)",
+    "Break-the-glass access to the EHR",
+    "Approved AI tools for Halcyon staff",
+    "Juniper steering committee notes \u2014 October 2026",
+    "Business associate record: Tallgrass Survey Co.",
+    "Sentinel and adverse event reporting policy"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 0.5,
+   "latency_ms": 436
+  },
+  {
+   "id": "q38",
+   "category": "alias",
+   "ranked": [
+    "Product spec: Streaming joins",
+    "RFC-031: Persisting Tributary snapshots",
+    "Cycle 5 pitch review notes",
+    "Customer data retention standard (v2)",
+    "Service catalog",
+    "Customer data retention standard (v1)",
+    "Q3 2026 board update (confidential)",
+    "Production change approval policy",
+    "On-call runbook",
+    "Northwind Pipelines changelog: September\u2013October 2026"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 464
+  },
+  {
+   "id": "q39",
+   "category": "alias",
+   "ranked": [
+    "Juniper steering committee notes \u2014 October 2026",
+    "Business associate record: Larkspur Telehealth",
+    "Telehealth platform: requirements v3",
+    "Clinical and business systems inventory",
+    "Business associate record: Quillon Ambient",
+    "Patient intake procedure",
+    "Clinical escalation protocol",
+    "Business associate record: Polyglen Interpreting",
+    "Billing and insurance FAQ (for staff)",
+    "Annual leave policy (effective October 1, 2026)"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 432
+  },
+  {
+   "id": "q40",
+   "category": "alias",
+   "ranked": [
+    "RFC-031: Persisting Tributary snapshots",
+    "Cycle 5 pitch review notes",
+    "Leadership offsite notes (October 2026)",
+    "Engineering team directory and change approvers",
+    "Production change approval policy",
+    "Information security policy",
+    "Customer data retention standard (v2)",
+    "Service catalog",
+    "Customer data retention standard (v1)",
+    "Product spec: Streaming joins"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 513
+  },
+  {
+   "id": "q41",
+   "category": "alias",
+   "ranked": [
+    "Cycle 5 pitch review notes",
+    "Leadership offsite notes (October 2026)",
+    "Northwind Pipelines changelog: September\u2013October 2026",
+    "Slack export: #inc-2340-ledger-double-invoices",
+    "Q3 2026 board update (confidential)",
+    "Product spec: Streaming joins",
+    "Engineering team directory and change approvers",
+    "Service catalog",
+    "Production change approval policy",
+    "Vendor register: Parcelwise"
+   ],
+   "recall5": 1.0,
+   "recall10": 1.0,
+   "mrr": 1.0,
+   "latency_ms": 508
+  }
+ ]
+}

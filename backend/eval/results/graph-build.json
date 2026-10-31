@@ -1,0 +1,7 @@
+{
+ "documents": 108,
+ "chunks": 369,
+ "model_calls": 369,
+ "seconds": 456.1,
+ "failed": []
+}

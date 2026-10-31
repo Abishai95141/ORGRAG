@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
 from app.core.config import get_settings
 
@@ -12,6 +12,25 @@ SourceKind = Literal["upload", "web", "github", "gdrive", "slack", "notion"]
 SourceStatus = Literal["idle", "queued", "syncing", "ready", "error"]
 RecencyBias = Literal["off", "low", "medium", "high"]
 SourceOrigin = Literal["knowledge", "web", "attachment"]
+Glyph = Literal[
+    "stack", "book", "gear", "chart", "shield", "people", "code", "globe", "compass", "leaf"
+]
+
+# Input bounds. Names are trimmed before their length is checked, so "   " is rejected.
+Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+Description = Annotated[str, Field(max_length=2000)]
+Slug = Annotated[str, Field(min_length=1, max_length=64)]
+MAX_ID_LIST = 100
+MAX_OFFSET = 10_000_000  # keeps ?offset= inside Postgres' bigint
+
+
+class ErrorOut(BaseModel):
+    """Every error response: a human message, a stable machine `code`, and the
+    request id (also in the `X-Request-ID` header)."""
+
+    detail: str
+    code: str
+    request_id: str | None
 
 
 class Page[T](BaseModel):
@@ -39,12 +58,13 @@ class UserOut(Out):
 class SignupIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=200)
-    name: str = Field(min_length=1, max_length=120)
+    name: Name
 
 
 class LoginIn(BaseModel):
     email: EmailStr
-    password: str
+    # Bounded so a huge body can't make the password hash expensive.
+    password: str = Field(max_length=200)
 
 
 class UserEnvelope(BaseModel):
@@ -62,6 +82,9 @@ class OrgSettings(BaseModel):
     rerank: bool = True
     recency_bias: RecencyBias = "low"
     web_search: bool = False
+    # Extract a knowledge graph from indexed documents (one LLM call per chunk) and give
+    # the agent list/explore tools over it.
+    knowledge_graph: bool = False
 
 
 class OrgSettingsPatch(BaseModel):
@@ -74,6 +97,7 @@ class OrgSettingsPatch(BaseModel):
     rerank: bool | None = None
     recency_bias: RecencyBias | None = None
     web_search: bool | None = None
+    knowledge_graph: bool | None = None
 
 
 class OrgSummary(BaseModel):
@@ -96,14 +120,14 @@ class OrgOut(OrgSummary):
 
 
 class OrgCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
+    name: Name
     slug: str | None = Field(default=None, max_length=64)
-    description: str | None = None
+    description: Description | None = None
 
 
 class OrgPatch(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=120)
-    description: str | None = None
+    name: Name | None = None
+    description: Description | None = None
     hue: int | None = Field(default=None, ge=0, le=359)
     settings: OrgSettingsPatch | None = None
 
@@ -167,19 +191,19 @@ class CollectionOut(BaseModel):
 
 
 class CollectionCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-    description: str | None = None
+    name: Name
+    description: Description | None = None
     visibility: Literal["org", "restricted"] = "org"
-    glyph: str = "stack"
-    allowed_user_ids: list[uuid.UUID] = []
+    glyph: Glyph = "stack"
+    allowed_user_ids: list[uuid.UUID] = Field(default=[], max_length=1000)
 
 
 class CollectionPatch(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=120)
-    description: str | None = None
+    name: Name | None = None
+    description: Description | None = None
     visibility: Literal["org", "restricted"] | None = None
-    glyph: str | None = None
-    allowed_user_ids: list[uuid.UUID] | None = None
+    glyph: Glyph | None = None
+    allowed_user_ids: list[uuid.UUID] | None = Field(default=None, max_length=1000)
 
 
 # ── sources & documents ──────────────────────────────────────────────────────
@@ -207,18 +231,23 @@ class SourceOut(BaseModel):
     progress: SourceProgress | None
 
 
+SourceName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)]
+# 15 minutes .. 30 days
+SyncInterval = Annotated[int, Field(ge=15, le=43200)]
+
+
 class SourceCreate(BaseModel):
     kind: SourceKind
-    name: str = Field(min_length=1, max_length=160)
+    name: SourceName
     collection_id: uuid.UUID
     config: dict[str, Any] = {}
-    sync_interval_minutes: int | None = Field(default=None, ge=15)
+    sync_interval_minutes: SyncInterval | None = None
 
 
 class SourcePatch(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=160)
+    name: SourceName | None = None
     config: dict[str, Any] | None = None
-    sync_interval_minutes: int | None = Field(default=None, ge=15)
+    sync_interval_minutes: SyncInterval | None = None
 
 
 class UploadResult(BaseModel):
@@ -301,8 +330,8 @@ class SourceRef(BaseModel):
 
 class SearchIn(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
-    org_slugs: list[str] | None = None
-    collection_ids: list[uuid.UUID] | None = None
+    org_slugs: list[Slug] | None = Field(default=None, max_length=20)
+    collection_ids: list[uuid.UUID] | None = Field(default=None, max_length=MAX_ID_LIST)
     limit: int = Field(default=10, ge=1, le=50)
 
 
@@ -326,24 +355,29 @@ class AgentOut(Out):
     created_at: datetime
 
 
+Instructions = Annotated[str, Field(max_length=20000)]
+# Only the first six non-blank prompts are kept.
+StarterPrompts = Annotated[list[Annotated[str, Field(max_length=500)]], Field(max_length=20)]
+
+
 class AgentCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-    description: str | None = None
-    instructions: str = ""
+    name: Name
+    description: Description | None = None
+    instructions: Instructions = ""
     mode: Mode = "quick"
-    glyph: str = "compass"
-    collection_ids: list[uuid.UUID] = []
-    starter_prompts: list[str] = []
+    glyph: Glyph = "compass"
+    collection_ids: list[uuid.UUID] = Field(default=[], max_length=MAX_ID_LIST)
+    starter_prompts: StarterPrompts = []
 
 
 class AgentPatch(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=120)
-    description: str | None = None
-    instructions: str | None = None
+    name: Name | None = None
+    description: Description | None = None
+    instructions: Instructions | None = None
     mode: Mode | None = None
-    glyph: str | None = None
-    collection_ids: list[uuid.UUID] | None = None
-    starter_prompts: list[str] | None = None
+    glyph: Glyph | None = None
+    collection_ids: list[uuid.UUID] | None = Field(default=None, max_length=MAX_ID_LIST)
+    starter_prompts: StarterPrompts | None = None
 
 
 # ── chat ─────────────────────────────────────────────────────────────────────
@@ -358,16 +392,25 @@ class ConversationOut(Out):
     updated_at: datetime
 
 
+ScopeSlugs = Annotated[list[Slug], Field(max_length=20)]
+
+
 class ConversationCreate(BaseModel):
     agent_id: uuid.UUID | None = None
     mode: Mode | None = None
-    scope_org_slugs: list[str] | None = None
+    scope_org_slugs: ScopeSlugs | None = None
 
 
 class ConversationPatch(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=200)
+    title: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+        | None
+    ) = None
     mode: Mode | None = None
-    scope_org_slugs: list[str] | None = None
+    scope_org_slugs: ScopeSlugs | None = None
+
+
+ConversationPage = Page[ConversationOut]
 
 
 class AttachmentOut(Out):
@@ -403,10 +446,12 @@ class ConversationDetail(BaseModel):
 
 
 class MessageCreate(BaseModel):
-    content: str = Field(min_length=1, max_length=20000)
+    content: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20000)
+    ]
     mode: Mode | None = None
-    scope_org_slugs: list[str] | None = None
-    collection_ids: list[uuid.UUID] | None = None
+    scope_org_slugs: ScopeSlugs | None = None
+    collection_ids: list[uuid.UUID] | None = Field(default=None, max_length=MAX_ID_LIST)
     attachment_ids: list[uuid.UUID] = Field(default=[], max_length=10)
     web_search: bool | None = None
 
@@ -470,7 +515,7 @@ class HealthOut(BaseModel):
 class ModelOut(BaseModel):
     id: str
     label: str
-    provider: Literal["anthropic", "nvidia"]
+    provider: Literal["anthropic", "nvidia", "explabs"]
     hint: str
     available: bool
 
@@ -488,10 +533,38 @@ class ApiKeyOut(Out):
 
 
 class ApiKeyCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
+    name: Name
     role: Literal["admin", "member", "viewer"] = "member"
     expires_in_days: int | None = Field(default=None, ge=1, le=730)
 
 
 class ApiKeyCreated(ApiKeyOut):
     key: str = Field(description="The secret key. Shown only once.")
+
+
+# ── knowledge graph ──────────────────────────────────────────────────────────
+class GraphStats(BaseModel):
+    enabled: bool
+    entities: int
+    relations: int
+    documents_extracted: int
+    documents_pending: int
+
+
+class EntityOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    type: str
+    description: str = Field(description="Assembled from the documents the caller can see")
+    document_ids: list[uuid.UUID]
+
+
+class EntityLink(BaseModel):
+    entity: EntityOut
+    keywords: str
+    description: str
+
+
+class EntityDetail(EntityOut):
+    relations: list[EntityLink]
+    relation_count: int

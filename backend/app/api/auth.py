@@ -2,12 +2,13 @@ import random
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.serializers import org_summaries
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.core.deps import current_user
+from app.core.deps import api_key_of, current_user
 from app.core.errors import ApiError, conflict, too_many
 from app.core.ratelimit import RateLimiter
 from app.core.security import create_session_token, hash_password, verify_password
@@ -44,7 +45,10 @@ async def signup(body: SignupIn, response: Response, db: AsyncSession = Depends(
         avatar_hue=random.randint(0, 359),
     )
     db.add(user)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:  # a concurrent signup with the same email won
+        raise conflict("An account with that email already exists", "email_taken") from exc
     _set_cookie(response, user)
     return {"user": UserOut.model_validate(user)}
 
@@ -74,5 +78,11 @@ async def logout(response: Response):
 
 
 @router.get("/me", response_model=MeOut)
-async def me(user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
-    return MeOut(user=UserOut.model_validate(user), orgs=await org_summaries(db, user.id))
+async def me(
+    request: Request, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    """The signed-in user and their organizations. With an API key, `orgs` holds only
+    the key's own organization."""
+    key = api_key_of(request)
+    orgs = await org_summaries(db, user.id, [key.org_id] if key else None)
+    return MeOut(user=UserOut.model_validate(user), orgs=orgs)

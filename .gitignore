@@ -23,3 +23,6 @@ web/next-env.d.ts
 .vscode/
 .claude/
 graphify-out/
+
+# Eval run data (database files, uploaded copies)
+backend/eval/.data/

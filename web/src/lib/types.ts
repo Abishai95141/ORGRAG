@@ -15,10 +15,14 @@ export type OrgSettings = {
   rerank: boolean;
   recency_bias: "off" | "low" | "medium" | "high";
   web_search: boolean;
+  knowledge_graph: boolean;
 };
 
 /** A paginated list. `limit` / `offset` echo the request. */
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
+
+/** Every error response body. `code` is stable and machine-readable. */
+export type ApiErrorBody = { detail: string; code: string; request_id: string | null };
 
 export type OrgSummary = {
   id: string;
@@ -50,7 +54,8 @@ export type Invite = {
   accepted_at: string | null;
 };
 
-export type Glyph = "stack" | "book" | "gear" | "chart" | "shield" | "people" | "code" | "globe";
+/** Glyphs the API accepts for collections and agents (anything else is a 422). */
+export type Glyph = "stack" | "book" | "gear" | "chart" | "shield" | "people" | "code" | "globe" | "compass" | "leaf";
 
 export type Collection = {
   id: string;
@@ -219,14 +224,22 @@ export type Health = {
   status: string;
   version: string;
   llm_configured: boolean;
-  llm_providers: ("anthropic" | "nvidia")[];
+  llm_providers: ("anthropic" | "nvidia" | "explabs")[];
   default_model: string;
   embedding_provider: string;
   rerank_provider: string | null;
   web_search_provider: string | null;
 };
 
-export type ModelInfo = { id: string; label: string; provider: "anthropic" | "nvidia"; hint: string; available: boolean };
+export type GraphStats = {
+  enabled: boolean;
+  entities: number;
+  relations: number;
+  documents_extracted: number;
+  documents_pending: number;
+};
+
+export type ModelInfo = { id: string; label: string; provider: "anthropic" | "nvidia" | "explabs"; hint: string; available: boolean };
 
 export type ApiKey = {
   id: string;

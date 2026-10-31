@@ -14,7 +14,14 @@ from app.llm.models import LLMUnavailable, resolve_model
 
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
-__all__ = ["LLMUnavailable", "describe_error", "get_client", "request_extras", "structured_call"]
+__all__ = [
+    "LLMUnavailable",
+    "complete_text",
+    "describe_error",
+    "get_client",
+    "request_extras",
+    "structured_call",
+]
 
 
 @lru_cache
@@ -84,8 +91,9 @@ async def structured_call(
     """One-shot call that returns a JSON object matching `schema`. Claude enforces the
     schema with structured outputs; NVIDIA models are asked for JSON and parsed."""
     provider, model = resolve_model(model)
-    if provider == "nvidia":
+    if provider in nvidia.OPENAI_COMPATIBLE:
         text = await nvidia.complete(
+            provider=provider,
             model=model,
             system=(
                 f"{system}\n\nReply with only a JSON object matching this JSON schema, "
@@ -111,3 +119,26 @@ async def structured_call(
         raise ValueError("refused")
     text = next((b.text for b in message.content if b.type == "text"), "")
     return json.loads(text)
+
+
+async def complete_text(
+    *, model: str | None, system: str, prompt: str, max_tokens: int = 4096
+) -> str:
+    """One plain-text completion on whichever provider the model resolves to."""
+    provider, model = resolve_model(model)
+    if provider in nvidia.OPENAI_COMPATIBLE:
+        return await nvidia.complete(
+            provider=provider,
+            model=model,
+            system=system,
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=0.0,
+        )
+    message = await get_client().messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=system,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return next((b.text for b in message.content if b.type == "text"), "")

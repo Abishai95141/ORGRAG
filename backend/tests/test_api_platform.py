@@ -248,7 +248,7 @@ async def test_errors_share_one_envelope_with_request_ids(app):
         health
     )
     models = (await admin.get("/api/models")).json()
-    assert {m["provider"] for m in models} == {"anthropic", "nvidia"}
+    assert {m["provider"] for m in models} == {"anthropic", "nvidia", "explabs"}
 
 
 async def test_login_is_rate_limited(app):
@@ -271,4 +271,4 @@ def test_every_route_documents_its_response():
     for path, ops in spec["paths"].items():
         for method, op in ops.items():
             assert op.get("tags"), f"{method} {path} has no tag"
-            assert set(op["responses"]) & {"200", "201", "204"}, f"{method} {path}"
+            assert set(op["responses"]) & {"200", "201", "202", "204"}, f"{method} {path}"

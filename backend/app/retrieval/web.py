@@ -77,8 +77,40 @@ def _is_public_host(host: str) -> bool:
     return True
 
 
+async def _tavily_extract(url: str, key: str) -> str | None:
+    """Page text through Tavily's extract API: sites that block plain fetchers (403s are
+    common) still come back, and Tavily does the fetching. None when it can't."""
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                "https://api.tavily.com/extract",
+                headers={"Authorization": f"Bearer {key}"},
+                json={"urls": [url]},
+            )
+        if r.status_code != 200:
+            return None
+        results = r.json().get("results") or []
+        content = (results[0].get("raw_content") or "").strip() if results else ""
+        return content[:MAX_PAGE_BYTES] or None
+    except (httpx.HTTPError, ValueError):
+        return None
+
+
 async def fetch_page(url: str) -> tuple[str | None, str]:
-    """(detected title, Markdown) for a public web page."""
+    """(detected title, Markdown) for a public web page. Uses Tavily's extractor when a
+    Tavily key is set (after the same public-address check), else fetches directly."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise WebSearchError("Only public http(s) pages can be read")
+    if not await asyncio.to_thread(_is_public_host, parsed.hostname):
+        raise WebSearchError("That address isn't a public web page")
+    key = get_settings().tavily_api_key
+    if key and (content := await _tavily_extract(url, key)):
+        return None, content
+    return await _fetch_direct(url)
+
+
+async def _fetch_direct(url: str) -> tuple[str | None, str]:
     async with httpx.AsyncClient(
         timeout=20, follow_redirects=False, headers={"User-Agent": USER_AGENT}
     ) as client:

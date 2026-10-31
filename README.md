@@ -173,6 +173,8 @@ If you already ran Strata before this version, run `make migrate` (or restart th
 backend/   FastAPI app, agent engine, connectors, ingestion, worker, migrations, tests
 web/       Next.js app, design system, icons and illustrations
 docs/      ARCHITECTURE.md · API.md (the contract) · DESIGN.md
+           EVALUATION.md (measured quality) · AUDIT.md · API_AUDIT.md
+           RESEARCH.md (techniques, tools, landscape) · ROADMAP.md (the plan)
 ```
 
 ## License

@@ -8,6 +8,7 @@ import type {
   DocumentDetail,
   DocumentRow,
   DocumentSort,
+  GraphStats,
   Health,
   Insights,
   Invite,
@@ -84,6 +85,26 @@ function query(params: Record<string, string | number | boolean | null | undefin
   return qs.toString();
 }
 
+const UPLOAD_BATCH_FILES = 20;
+const UPLOAD_BATCH_BYTES = 90 * 1024 * 1024; // under the API's 100 MB multipart cap
+
+function uploadBatches(files: File[]): File[][] {
+  const batches: File[][] = [];
+  let current: File[] = [];
+  let bytes = 0;
+  for (const file of files) {
+    if (current.length && (current.length >= UPLOAD_BATCH_FILES || bytes + file.size > UPLOAD_BATCH_BYTES)) {
+      batches.push(current);
+      current = [];
+      bytes = 0;
+    }
+    current.push(file);
+    bytes += file.size;
+  }
+  if (current.length) batches.push(current);
+  return batches;
+}
+
 export const api = {
   health: () => request<Health>("/health"),
   models: () => request<ModelInfo[]>("/models"),
@@ -150,13 +171,21 @@ export const api = {
     request<Source>(`${o(slug)}/sources/${id}`, { method: "PATCH", json: body }),
   deleteSource: (slug: string, id: string) => request<void>(`${o(slug)}/sources/${id}`, { method: "DELETE" }),
   syncSource: (slug: string, id: string) => request<Source>(`${o(slug)}/sources/${id}/sync`, { method: "POST" }),
-  uploadFiles: (slug: string, id: string, files: File[]) => {
-    const form = new FormData();
-    files.forEach((f) => form.append("files", f));
-    return request<{ accepted: number; source: Source }>(`${o(slug)}/sources/${id}/files`, {
-      method: "POST",
-      body: form,
-    });
+  uploadFiles: async (slug: string, id: string, files: File[]) => {
+    // The API takes at most 20 files / 100 MB per request, so send larger selections in batches.
+    let accepted = 0;
+    let source: Source | undefined;
+    for (const batch of uploadBatches(files)) {
+      const form = new FormData();
+      batch.forEach((f) => form.append("files", f));
+      const res = await request<{ accepted: number; source: Source }>(`${o(slug)}/sources/${id}/files`, {
+        method: "POST",
+        body: form,
+      });
+      accepted += res.accepted;
+      source = res.source;
+    }
+    return { accepted, source: source as Source };
   },
   documents: (slug: string, sourceId: string, params: { limit?: number; offset?: number; q?: string } = {}) =>
     request<Page<DocumentRow>>(`${o(slug)}/sources/${sourceId}/documents?${query(params)}`),
@@ -198,6 +227,10 @@ export const api = {
     request<ApiKey & { key: string }>(`${o(slug)}/api-keys`, { method: "POST", json: body }),
   revokeApiKey: (slug: string, id: string) => request<void>(`${o(slug)}/api-keys/${id}`, { method: "DELETE" }),
 
+  // knowledge graph
+  graphStats: (slug: string) => request<GraphStats>(`${o(slug)}/graph`),
+  rebuildGraph: (slug: string) => request<GraphStats>(`${o(slug)}/graph/rebuild`, { method: "POST" }),
+
   // search
   search: (slug: string, body: { query: string; org_slugs?: string[]; collection_ids?: string[]; limit?: number }) =>
     request<{ results: SourceRef[]; latency_ms: number }>(`${o(slug)}/search`, { method: "POST", json: body }),
@@ -211,7 +244,8 @@ export const api = {
   deleteAgent: (slug: string, id: string) => request<void>(`${o(slug)}/agents/${id}`, { method: "DELETE" }),
 
   // chat
-  conversations: (slug: string) => request<Conversation[]>(`${o(slug)}/conversations?limit=50`),
+  conversations: (slug: string) =>
+    request<Page<Conversation>>(`${o(slug)}/conversations?limit=50`).then((page) => page.items),
   createConversation: (slug: string, body: { agent_id?: string | null; mode?: Mode; scope_org_slugs?: string[] }) =>
     request<Conversation>(`${o(slug)}/conversations`, { method: "POST", json: body }),
   conversation: (slug: string, id: string) =>

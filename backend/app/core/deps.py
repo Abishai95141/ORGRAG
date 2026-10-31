@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,12 +34,13 @@ API_KEY_GLOBAL_ROUTES = {
 }
 LAST_USED_RESOLUTION = timedelta(minutes=5)
 
-
-def _bearer(request: Request) -> str | None:
-    auth = request.headers.get("authorization", "")
-    if auth.lower().startswith("bearer "):
-        return auth[7:].strip()
-    return None
+# Declared so /api/docs offers an "Authorize" box; parsing stays lenient (no 403 when
+# the header is missing — the session cookie may be used instead).
+bearer_scheme = HTTPBearer(
+    auto_error=False,
+    scheme_name="bearer",
+    description="An org API key (`strata_sk_…`) or a session JWT.",
+)
 
 
 async def _api_key_user(request: Request, db: AsyncSession, raw: str) -> User:
@@ -61,8 +63,12 @@ async def _api_key_user(request: Request, db: AsyncSession, raw: str) -> User:
     return user
 
 
-async def current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
-    bearer = _bearer(request)
+async def current_user(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> User:
+    bearer = credentials.credentials.strip() if credentials else None
     if bearer and bearer.startswith(API_KEY_PREFIX):
         return await _api_key_user(request, db, bearer)
     token = request.cookies.get(get_settings().session_cookie) or bearer
@@ -90,6 +96,8 @@ class OrgContext:
     user: User
     role: str
     db: AsyncSession
+    # Set when the caller authenticated with an API key (bound to this org).
+    api_key: ApiKey | None = None
 
     @property
     def org_id(self) -> uuid.UUID:
@@ -125,7 +133,7 @@ async def org_context(
     org, role = row
     if key is not None and ROLE_RANK[key.role] < ROLE_RANK[role]:
         role = key.role
-    return OrgContext(org=org, user=user, role=role, db=db)
+    return OrgContext(org=org, user=user, role=role, db=db, api_key=key)
 
 
 def require_role(minimum: str):

@@ -21,6 +21,7 @@ from app.connectors.registry import get_connector_class
 from app.core.config import get_settings
 from app.embeddings import get_embedder
 from app.ingestion.chunker import chunk_markdown, embedding_text, estimate_tokens
+from app.ingestion.dates import document_date
 from app.ingestion.parsers import parse
 from app.models import Chunk, Document, Source
 
@@ -40,6 +41,8 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
     if existing and existing.content_hash == content_hash:
         if raw.updated_at and existing.source_updated_at != raw.updated_at:
             existing.source_updated_at = raw.updated_at
+        elif existing.source_updated_at is None and not raw.updated_at:
+            existing.source_updated_at = document_date(existing.content, existing.title)
         return "unchanged"
 
     markdown, detected_title = parse(raw.data, raw.mime)
@@ -80,7 +83,9 @@ async def index_document(db: AsyncSession, source: Source, raw: RawDocument) -> 
     doc.content = markdown
     doc.content_hash = content_hash
     doc.meta = raw.metadata
-    doc.source_updated_at = raw.updated_at
+    # The source system's own timestamp when there is one; otherwise the date the
+    # document states about itself (uploads have no trustworthy modified time).
+    doc.source_updated_at = raw.updated_at or document_date(markdown, title)
     doc.token_count = estimate_tokens(markdown)
     doc.updated_at = datetime.now(UTC)
     await db.flush()

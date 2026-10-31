@@ -24,6 +24,7 @@ dependencies = [
     "lxml>=5.3",
     "numpy>=1.26",
     "cryptography>=43",
+    "json-repair>=0.59.9,<1",
 ]
 
 [project.optional-dependencies]

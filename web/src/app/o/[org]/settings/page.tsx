@@ -14,7 +14,7 @@ import { qk, useHealth, useModels, useOrg } from "@/lib/queries";
 import type { ApiKey, OrgSettings, Role } from "@/lib/types";
 import { atLeast, cn, HUES, orgColor, relativeTime } from "@/lib/utils";
 
-const PROVIDER_LABEL = { anthropic: "Anthropic", nvidia: "NVIDIA" } as const;
+const PROVIDER_LABEL = { anthropic: "Anthropic", nvidia: "NVIDIA", explabs: "Experiential Labs" } as const;
 
 const RECENCY: { value: OrgSettings["recency_bias"]; label: string }[] = [
   { value: "off", label: "Off" },
@@ -247,6 +247,13 @@ export default function SettingsPage() {
                     : "Unavailable: set TAVILY_API_KEY or BRAVE_API_KEY on the server to enable web search."
                 }
               />
+              <Switch
+                checked={settings.knowledge_graph}
+                onCheckedChange={(v) => set("knowledge_graph", v)}
+                label="Knowledge graph"
+                description="Extract people, teams, vendors, systems and how they connect from every document, so the agent can answer “which…” and “how many…” questions exactly instead of from the top few search results. Costs one model call per passage while indexing."
+              />
+              {full.data.settings.knowledge_graph ? <GraphStatus slug={org.slug} /> : null}
               <div className="flex justify-end">
                 <Button variant="primary" loading={save.isPending} onClick={() => save.mutate({ settings })}>
                   Save retrieval settings
@@ -296,6 +303,40 @@ function Section({
       </div>
       <div className="flex flex-col gap-4">{children}</div>
     </Card>
+  );
+}
+
+function GraphStatus({ slug }: { slug: string }) {
+  const qc = useQueryClient();
+  const stats = useQuery({
+    queryKey: ["org", slug, "graph"],
+    queryFn: () => api.graphStats(slug),
+    // Poll while extraction is working through documents.
+    refetchInterval: (q) => (q.state.data?.documents_pending ? 5000 : false),
+  });
+  const rebuild = useMutation({
+    mutationFn: () => api.rebuildGraph(slug),
+    onSuccess: (s) => {
+      qc.setQueryData(["org", slug, "graph"], s);
+      toast("Extraction queued");
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Could not queue extraction"),
+  });
+  const s = stats.data;
+  if (!s) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[10px] border border-line bg-surface-2/40 px-3.5 py-2.5 text-[12.5px] text-ink-2">
+      <span>
+        <span className="font-medium tabular-nums">{s.entities}</span> entities ·{" "}
+        <span className="font-medium tabular-nums">{s.relations}</span> connections
+      </span>
+      <span className="text-ink-3">
+        {s.documents_pending ? `${s.documents_pending} documents waiting to be read` : `All ${s.documents_extracted} documents read`}
+      </span>
+      <Button size="sm" className="ml-auto" loading={rebuild.isPending} onClick={() => rebuild.mutate()}>
+        {s.documents_pending ? "Extract now" : "Re-check"}
+      </Button>
+    </div>
   );
 }
 

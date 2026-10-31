@@ -31,6 +31,15 @@ ATTACHMENTS_NOTE = """
 The user may attach files to their message; they appear in <attachment ref="n"> blocks \
 and are cited like any other source."""
 
+GRAPH_ADDENDUM = """
+A knowledge graph of the documents is available. For questions asking which / how many / \
+list every item (vendors, people, systems, records…), use list_entities as well as \
+search: search only returns the top few passages, and the graph is extracted \
+automatically, so neither alone is guaranteed complete — combine them, and say so \
+when an answer may be incomplete. Use \
+explore_entity to follow links between people, teams, systems and policies. Cite the \
+[n] numbers the graph tools return."""
+
 DEEP_ADDENDUM = """
 This is a deep research request. Work through the research plan: cover each \
 sub-question with its own searches, read the most important documents in full, and \
@@ -52,10 +61,13 @@ def build_system(
     agent_instructions: str | None,
     deep: bool,
     web: bool = False,
+    graph: bool = False,
 ) -> str:
     parts = [BASE_SYSTEM, ATTACHMENTS_NOTE]
     if web:
         parts.append(WEB_ADDENDUM)
+    if graph:
+        parts.append(GRAPH_ADDENDUM)
     if deep:
         parts.append(DEEP_ADDENDUM)
     parts.append(f"\nKnowledge in scope comes from: {', '.join(org_names)}.\n{collections_note}")

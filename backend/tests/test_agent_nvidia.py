@@ -18,7 +18,7 @@ class FakeNvidia:
         self.calls: list[dict] = []
 
     def stream_chat(self, **kwargs):
-        if not kwargs.get("tools"):
+        if "You are Strata" not in kwargs["messages"][0]["content"]:
             # Helper calls (conversation title, research plan) run alongside the agent.
             events, turn = [], ChatTurn(content='{"title": "Leave", "sub_questions": []}')
         else:
@@ -201,3 +201,18 @@ async def test_provider_error_maps_to_json_error(app, monkeypatch):
     detail = (await admin.get(f"/api/orgs/{slug}/conversations/{conv['id']}")).json()
     assert detail["messages"][-1]["status"] == "error"
     assert uuid.UUID(detail["messages"][-1]["id"])
+
+
+async def test_empty_final_turn_gets_one_answer_retry(app, monkeypatch):
+    """Seen live: after researching, Nemotron sometimes returns an empty turn."""
+    answer = "Staff get sixteen weeks of leave under the policy [1]."
+    empty = ([], ChatTurn(content="", finish_reason="stop"))
+    fake, r, *_ = await _run(
+        app,
+        monkeypatch,
+        [_tool_turn("search_knowledge", '{"queries": ["leave"]}'), empty, _answer_turn(answer)],
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["message"]["content"] == answer
+    last = fake.calls[-1]
+    assert last["tools"] is None and "final answer now" in last["messages"][-1]["content"]

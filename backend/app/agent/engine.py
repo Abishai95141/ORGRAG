@@ -39,6 +39,7 @@ from app.models import (
     Agent,
     ChatAttachment,
     Conversation,
+    KGMention,
     Message,
     MessageCitation,
     Organization,
@@ -56,6 +57,10 @@ PREAMBLE_CHARS = 160  # text shorter than this before a tool call is treated as 
 MAX_REASONING_CHARS = 8000
 INLINE_ATTACHMENT_CHARS = 40_000  # across all files attached to one message
 NVIDIA_MAX_TOKENS = {"quick": 8192, "deep": 16384}
+ANSWER_NOW = (
+    "Write the final answer now, using only the sources above and citing them as [n]. "
+    "If they don't answer the question, say so."
+)
 
 EventQueue = asyncio.Queue[tuple[str, dict[str, Any]] | None]
 
@@ -213,6 +218,18 @@ class AgentRun:
             self.req.web_search if self.req.web_search is not None else self.settings.web_search
         )
         self.web_enabled = bool(wanted_web and get_settings().web_search_provider)
+        # Graph tools only when enabled and something in scope has been extracted.
+        self.graph_enabled = bool(
+            self.settings.knowledge_graph
+            and self.scope.collections
+            and (
+                await db.execute(
+                    select(KGMention.id)
+                    .where(KGMention.collection_id.in_(self.scope.collection_ids))
+                    .limit(1)
+                )
+            ).first()
+        )
         self.tools = ToolBox(
             db,
             scope,
@@ -222,6 +239,7 @@ class AgentRun:
                 rerank=self.settings.rerank, recency_bias=self.settings.recency_bias
             ),
             attachments=self.attachments,
+            graph=self.graph_enabled,
         )
 
     async def _history(self, db) -> list[dict[str, Any]]:
@@ -432,6 +450,7 @@ class AgentRun:
             agent_instructions=self.agent.instructions if self.agent else None,
             deep=deep,
             web=self.web_enabled,
+            graph=self.graph_enabled,
         )
         user_content = self.req.question
         attachment_context = self._attachment_context()
@@ -443,8 +462,9 @@ class AgentRun:
         if attachment_context:
             user_content = f"{attachment_context}\n\n{user_content}"
         history = await self._history(db)
-        definitions = tool_definitions(web=self.web_enabled)
-        if provider == "nvidia":
+        definitions = tool_definitions(web=self.web_enabled, graph=self.graph_enabled)
+        if provider in nvidia.OPENAI_COMPATIBLE:
+            self.provider = provider
             await self._nvidia_loop(model, system, history, user_content, definitions, deep)
         else:
             await self._claude_loop(model, system, history, user_content, definitions, deep)
@@ -547,6 +567,51 @@ class AgentRun:
                 results.append(result)
             messages.append({"role": "user", "content": results})
 
+    async def _nvidia_turn(
+        self, model: str, messages: list[dict[str, Any]], tools, tool_choice: str, deep: bool
+    ) -> nvidia.ChatTurn:
+        """Stream one model turn into the trace/answer; returns the completed turn."""
+        reflect_step: str | None = None
+        pending_text = ""
+        streaming_answer = False
+        result = nvidia.ChatTurn()
+        async for kind, value in nvidia.stream_chat(
+            provider=getattr(self, "provider", "nvidia"),
+            model=model,
+            messages=messages,
+            # A turn that must answer gets no tools at all: offered tools with
+            # tool_choice "none", Nemotron sometimes keeps planning tool calls and writes
+            # nothing.
+            tools=None if tool_choice == "none" else tools,
+            tool_choice=None if tool_choice == "none" else tool_choice,
+            max_tokens=NVIDIA_MAX_TOKENS["deep" if deep else "quick"],
+        ):
+            if kind == "reasoning":
+                if reflect_step is None:
+                    reflect_step = await self.em.step_start("reflect", "Thinking")
+                await self.em.reasoning(reflect_step, value)
+            elif kind == "text":
+                if streaming_answer:
+                    await self.em.delta(value)
+                else:
+                    pending_text += value
+                    if len(pending_text) > PREAMBLE_CHARS:
+                        streaming_answer = True
+                        await self.em.delta(pending_text)
+                        pending_text = ""
+            elif kind == "tool_start" and pending_text and not streaming_answer:
+                reflect_step = reflect_step or await self.em.step_start("reflect", "Thinking")
+                await self.em.reasoning(reflect_step, pending_text)
+                pending_text = ""
+            elif kind == "done":
+                result = value
+        if tool_choice == "none":
+            result.tool_calls = []
+        await self._settle_turn_text(
+            pending_text, reflect_step, streaming_answer, has_tools=bool(result.tool_calls)
+        )
+        return result
+
     async def _nvidia_loop(self, model, system, history, user_content, definitions, deep) -> None:
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": system},
@@ -555,51 +620,21 @@ class AgentRun:
         ]
         tools = openai_tools(definitions)
         max_turns = MAX_TURNS["deep" if deep else "quick"]
+        if self.graph_enabled and not deep:
+            max_turns += 1  # list → explore → answer needs one more step than search alone
+        researched = False
 
         for turn in range(max_turns):
-            last_turn = turn == max_turns - 1
-            reflect_step: str | None = None
-            pending_text = ""
-            streaming_answer = False
-            result = nvidia.ChatTurn()
-            async for kind, value in nvidia.stream_chat(
-                model=model,
-                messages=messages,
-                tools=tools,
-                # Research budget spent: the model must answer with what it has.
-                tool_choice="none" if last_turn else "auto",
-                max_tokens=NVIDIA_MAX_TOKENS["deep" if deep else "quick"],
-            ):
-                if kind == "reasoning":
-                    if reflect_step is None:
-                        reflect_step = await self.em.step_start("reflect", "Thinking")
-                    await self.em.reasoning(reflect_step, value)
-                elif kind == "text":
-                    if streaming_answer:
-                        await self.em.delta(value)
-                    else:
-                        pending_text += value
-                        if len(pending_text) > PREAMBLE_CHARS:
-                            streaming_answer = True
-                            await self.em.delta(pending_text)
-                            pending_text = ""
-                elif kind == "tool_start" and pending_text and not streaming_answer:
-                    reflect_step = reflect_step or await self.em.step_start("reflect", "Thinking")
-                    await self.em.reasoning(reflect_step, pending_text)
-                    pending_text = ""
-                elif kind == "done":
-                    result = value
-
-            calls = [] if last_turn else result.tool_calls
-            await self._settle_turn_text(
-                pending_text, reflect_step, streaming_answer, has_tools=bool(calls)
-            )
+            # Research budget spent: the model must answer with what it has.
+            tool_choice = "none" if turn == max_turns - 1 else "auto"
+            result = await self._nvidia_turn(model, messages, tools, tool_choice, deep)
+            calls = result.tool_calls
             if not calls or result.finish_reason == "length":
                 # No tool calls means the answer is complete; a truncated turn may hold
                 # partial tool arguments, which must never run.
                 break
 
-            result.tool_calls = calls
+            researched = True
             messages.append(result.assistant_message())
             for call in calls:
                 try:
@@ -618,6 +653,12 @@ class AgentRun:
                         "content": f"Error: {content}" if is_error else content,
                     }
                 )
+
+        if researched and not self.em.answer.strip():
+            # Open models occasionally end a research loop with an empty turn. Ask once
+            # for the answer from what was gathered, with tools off.
+            messages.append({"role": "user", "content": ANSWER_NOW})
+            await self._nvidia_turn(model, messages, tools, "none", deep)
 
     async def _settle_turn_text(
         self, pending_text: str, reflect_step: str | None, streaming_answer: bool, has_tools: bool
@@ -683,6 +724,36 @@ class AgentRun:
                     refs=[entry.ref],
                 )
                 return content, False
+            if name in ("list_entities", "explore_entity") and self.graph_enabled:
+                listing = name == "list_entities"
+                step = await self.em.step_start(
+                    "search",
+                    "Listing entities" if listing else f"Exploring “{args.get('name', '')}”",
+                )
+                started = time.perf_counter()
+                try:
+                    outcome = await (
+                        self.tools.list_entities(args)
+                        if listing
+                        else self.tools.explore_entity(args)
+                    )
+                except ToolInputError:
+                    await self.em.step_update(step, label="Graph lookup failed", status="error")
+                    raise
+                self.retrieval_ms += int((time.perf_counter() - started) * 1000)
+                await self.em.sources([s.to_source_ref() for s in outcome.new_sources])
+                await self.em.step_update(
+                    step,
+                    label=(
+                        f"Listed {outcome.hits} entities"
+                        if listing
+                        else f"Explored {args.get('name', '')}"
+                    ),
+                    status="done",
+                    queries=outcome.queries,
+                    refs=outcome.refs,
+                )
+                return outcome.text, False
             if name == "list_collections":
                 step = await self.em.step_start("search", "Listing collections")
                 content = await self.tools.list_collections()

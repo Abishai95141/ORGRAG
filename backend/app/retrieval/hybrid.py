@@ -33,6 +33,9 @@ RERANK_PASSAGE_CHARS = 2000
 # ties; "high" lets a fresh document beat a slightly more relevant stale one.
 RECENCY_WEIGHT = {"off": 0.0, "low": 0.1, "medium": 0.2, "high": 0.35}
 RECENCY_HALF_LIFE_DAYS = 180
+# Documents with no known date are treated as this old (as Onyx does), rather than
+# as new as the moment they were indexed.
+UNDATED_AGE_DAYS = 90
 BOOST_STEP = 0.15  # admin boost -3..3 → ×0.55..×1.45
 FEEDBACK_WEIGHT = 0.25  # net reader votes → at most ×0.75..×1.25
 
@@ -128,7 +131,7 @@ _DETAIL_SQL = text(
     """
     SELECT c.id, c.document_id, c.ordinal, c.org_id, c.collection_id, c.heading, c.content,
            d.title, d.url, d.source_id, s.kind, d.boost, d.feedback_up, d.feedback_down,
-           coalesce(d.source_updated_at, d.updated_at) AS doc_time
+           d.source_updated_at AS doc_time
     FROM chunks c
     JOIN documents d ON d.id = c.document_id
     JOIN sources s ON s.id = d.source_id
@@ -231,7 +234,9 @@ async def hybrid_search(
     scores = {
         r.id: adjusted_score(
             base[r.id],
-            age_days=(now - r.doc_time).total_seconds() / 86400 if r.doc_time else 0.0,
+            age_days=(
+                (now - r.doc_time).total_seconds() / 86400 if r.doc_time else UNDATED_AGE_DAYS
+            ),
             recency_bias=ranking.recency_bias,
             boost=r.boost,
             feedback_up=r.feedback_up,
@@ -259,6 +264,43 @@ async def hybrid_search(
         for r in sorted(rows, key=lambda r: scores[r.id], reverse=True)
     ]
     return diversify(ordered, limit, per_doc)
+
+
+async def hits_for_chunks(db: AsyncSession, chunk_ids: list[uuid.UUID]) -> list[Hit]:
+    """Hits for known chunks (e.g. the evidence behind graph facts), in input order.
+    Hidden documents are dropped, as in search."""
+    if not chunk_ids:
+        return []
+    rows = {r.id: r for r in (await db.execute(_DETAIL_SQL, {"ids": list(chunk_ids)})).all()}
+    hidden = set(
+        (
+            await db.execute(
+                text("SELECT id FROM documents WHERE hidden AND id IN :ids").bindparams(
+                    bindparam("ids", expanding=True)
+                ),
+                {"ids": list({r.document_id for r in rows.values()}) or [uuid.uuid4()]},
+            )
+        ).scalars()
+    )
+    return [
+        Hit(
+            chunk_id=r.id,
+            document_id=r.document_id,
+            ordinal=r.ordinal,
+            org_id=r.org_id,
+            collection_id=r.collection_id,
+            source_id=r.source_id,
+            source_kind=r.kind,
+            title=r.title,
+            url=r.url,
+            heading=r.heading,
+            content=r.content,
+            score=1.0,
+            updated_at=r.doc_time,
+        )
+        for cid in chunk_ids
+        if (r := rows.get(cid)) is not None and r.document_id not in hidden
+    ]
 
 
 async def neighbour_text(db: AsyncSession, hit: Hit, radius: int = 1) -> str:
