@@ -326,6 +326,8 @@ class Message(Base):
         JSONB, default=list, server_default="[]", nullable=False
     )
     trace: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, nullable=False)
+    # Model tokens spent on this answer, per model: {"model": {"input", "output", "calls"}}.
+    usage: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     feedback: Mapped[str | None] = mapped_column(String(8))
     # complete | streaming | error | stopped
     status: Mapped[str] = mapped_column(String(16), default="complete", nullable=False)

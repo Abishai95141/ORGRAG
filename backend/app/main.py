@@ -29,6 +29,7 @@ from app.api import (
     search,
     sources,
 )
+from app.core import telemetry
 from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.core.http import BodyLimit, StripTrailingSlash
@@ -58,8 +59,12 @@ def _operation_id(route: APIRoute) -> str:
 
 @contextlib.asynccontextmanager
 async def lifespan(_: FastAPI):
-    async with mcp.lifespan():
-        yield
+    telemetry.setup("strata-api")
+    try:
+        async with mcp.lifespan():
+            yield
+    finally:
+        telemetry.shutdown()
 
 
 app = FastAPI(

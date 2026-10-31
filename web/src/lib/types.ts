@@ -218,6 +218,7 @@ export type Insights = {
   top_sources: { source_id: string; name: string; kind: SourceKind; citations: number }[];
   feedback: { up: number; down: number };
   recent_questions: { query: string; user_name: string; created_at: string; hits: number }[];
+  usage: { model: string; answers: number; calls: number; input_tokens: number; output_tokens: number }[];
 };
 
 export type Health = {

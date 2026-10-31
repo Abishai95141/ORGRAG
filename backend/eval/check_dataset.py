@@ -10,9 +10,12 @@ eval/questions.jsonl is internally consistent with that corpus:
 - every fact has at least one any_of phrasing, and at least one phrasing of each
   fact appears (case-insensitively) in at least one of the question's gold docs;
 - unanswerable questions have no gold docs and no facts;
+- cross_org questions need gold documents from both orgs;
 - document titles are unique and word counts of the eval corpus are in range.
 
-Run: cd backend && .venv/bin/python eval/check_dataset.py
+Run: cd backend && .venv/bin/python eval/check_dataset.py [questions.jsonl ...]
+(default: eval/questions.jsonl; several files are checked together, so ids must be
+unique across them)
 """
 
 import json
@@ -32,10 +35,15 @@ CATEGORIES = {
     "superseded",
     "alias",
     "unanswerable",
+    # Answers that live in a table row or cell (inventories, rate cards, matrices).
+    "table",
+    # Answers that need facts from both orgs (compare, reconcile, "which of us").
+    "cross_org",
 }
 ORGS = {"northwind", "halcyon"}
 REQUIRED = {"id", "category", "scope", "question", "gold_docs", "facts", "notes"}
-EVAL_WORDS = (150, 600)
+OPTIONAL = {"smoke"}  # smoke: part of the 15-question set run on every change
+EVAL_WORDS = (150, 900)
 ALT_ONLY: list[str] = []  # any_of phrasings absent from gold docs (answer-side alternatives)
 
 
@@ -74,23 +82,35 @@ def load_corpus() -> tuple[dict[str, dict], list[str]]:
     return docs, errors
 
 
-def check_questions(docs: dict[str, dict]) -> tuple[list[dict], list[str]]:
+def read_questions(paths: list[Path]) -> tuple[list[dict], list[str]]:
+    rows: list[dict] = []
     errors: list[str] = []
-    questions: list[dict] = []
-    for n, line in enumerate(QUESTIONS.read_text(encoding="utf-8").splitlines(), 1):
-        if not line.strip():
-            continue
-        try:
-            q = json.loads(line)
-        except json.JSONDecodeError as e:
-            errors.append(f"line {n}: invalid JSON ({e})")
-            continue
-        questions.append(q)
-        qid = q.get("id", f"line {n}")
+    for path in paths:
+        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if not line.strip():
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError as e:
+                errors.append(f"{path.name} line {n}: invalid JSON ({e})")
+    return rows, errors
+
+
+def check_questions(
+    docs: dict[str, dict], paths: list[Path] | None = None
+) -> tuple[list[dict], list[str]]:
+    questions, errors = read_questions(paths or [QUESTIONS])
+    for n, q in enumerate(questions, 1):
+        qid = q.get("id", f"row {n}")
         missing = REQUIRED - q.keys()
         if missing:
             errors.append(f"{qid}: missing fields {sorted(missing)}")
             continue
+        unknown = q.keys() - REQUIRED - OPTIONAL
+        if unknown:
+            errors.append(f"{qid}: unknown fields {sorted(unknown)}")
+        if "smoke" in q and not isinstance(q["smoke"], bool):
+            errors.append(f"{qid}: smoke must be true or false")
         if q["category"] not in CATEGORIES:
             errors.append(f"{qid}: invalid category {q['category']!r}")
         scope = q["scope"]
@@ -102,8 +122,8 @@ def check_questions(docs: dict[str, dict]) -> tuple[list[dict], list[str]]:
         ):
             errors.append(f"{qid}: invalid scope {scope!r}")
             scope = list(ORGS)
-        if q["category"] == "cross_org_vocab" and len(scope) != 2:
-            errors.append(f"{qid}: cross_org_vocab questions must span both orgs")
+        if q["category"] in ("cross_org_vocab", "cross_org") and len(scope) != 2:
+            errors.append(f"{qid}: {q['category']} questions must span both orgs")
 
         if q["category"] == "unanswerable":
             if q["gold_docs"] or q["facts"]:
@@ -127,6 +147,10 @@ def check_questions(docs: dict[str, dict]) -> tuple[list[dict], list[str]]:
             gold_texts.append(doc["text"])
         if len(set(q["gold_docs"])) != len(q["gold_docs"]):
             errors.append(f"{qid}: duplicate gold_docs")
+        if q["category"] == "cross_org":
+            orgs = {docs[t]["org"] for t in q["gold_docs"] if t in docs}
+            if orgs != set(scope):
+                errors.append(f"{qid}: cross_org gold docs must come from both orgs")
 
         for i, fact in enumerate(q["facts"]):
             phrasings = fact.get("any_of") or []
@@ -153,7 +177,7 @@ def check_questions(docs: dict[str, dict]) -> tuple[list[dict], list[str]]:
 
 def main() -> int:
     docs, errors = load_corpus()
-    questions, q_errors = check_questions(docs)
+    questions, q_errors = check_questions(docs, [Path(a) for a in sys.argv[1:]] or None)
     errors += q_errors
 
     by_collection = Counter(
@@ -165,6 +189,7 @@ def main() -> int:
     print(f"Questions: {len(questions)}")
     for cat, count in sorted(Counter(q.get("category") for q in questions).items()):
         print(f"  {cat}: {count}")
+    print(f"Smoke set: {sum(bool(q.get('smoke')) for q in questions)} questions")
     used = {t for q in questions for t in q.get("gold_docs", [])}
     unused = sorted(t for t in docs if t not in used)
     print(f"Documents never used as gold: {len(unused)}")

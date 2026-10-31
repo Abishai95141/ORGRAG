@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import cast, func, select
+from sqlalchemy import cast, func, select, text
 from sqlalchemy.types import Date
 
 from app.core.deps import OrgContext, admin_ctx
@@ -20,6 +20,7 @@ from app.schemas.common import (
     FeedbackCounts,
     InsightsOut,
     InsightTotals,
+    ModelUsage,
     RecentQuestion,
     TopSource,
 )
@@ -102,8 +103,22 @@ async def insights(ctx: OrgContext = Depends(admin_ctx), days: int = Query(30, g
         .order_by(SearchEvent.created_at.desc())
         .limit(10)
     )
+    usage = await db.execute(
+        text(
+            "SELECT u.key AS model, count(*) AS answers, "
+            "sum((u.value->>'calls')::bigint) AS calls, "
+            "sum((u.value->>'input')::bigint) AS input_tokens, "
+            "sum((u.value->>'output')::bigint) AS output_tokens "
+            "FROM messages m JOIN conversations c ON c.id = m.conversation_id, "
+            "jsonb_each(m.usage) u "
+            "WHERE c.org_id = :org AND m.created_at >= :since AND m.usage IS NOT NULL "
+            "GROUP BY u.key ORDER BY input_tokens DESC"
+        ),
+        {"org": org_id, "since": since},
+    )
     return InsightsOut(
         totals=totals,
+        usage=[ModelUsage(**row._mapping) for row in usage.all()],
         questions_per_day=questions_per_day,
         top_sources=top_sources,
         feedback=FeedbackCounts(up=fb.get("up", 0), down=fb.get("down", 0)),

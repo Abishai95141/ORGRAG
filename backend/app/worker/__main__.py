@@ -14,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 
 from app.agent.runs import reap_stale
+from app.core import telemetry
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.models import Source
@@ -57,17 +58,25 @@ async def run_job(n: int, db, job) -> None:
             return
         log.info("[loop %d] running %s %s (attempt %d)", n, job.kind, job.id, job.attempts)
         beat = asyncio.create_task(heartbeat(job.id))
-        try:
-            if handler is None:
-                raise RuntimeError(f"No handler for job kind {job.kind}")
-            await handler(db, job)
-            await finish(db, job)
-        except Exception as exc:
-            log.exception("Job %s failed", job.id)
-            await db.rollback()
-            await finish(db, await db.get(type(job), job.id), error=str(exc)[:2000])
-        finally:
-            beat.cancel()
+        attrs = {
+            "langfuse.trace.name": f"job {job.kind}",
+            "strata.job.id": str(job.id),
+            "strata.job.attempt": job.attempts,
+            **telemetry.org_attrs(job.org_id),
+        }
+        with telemetry.span(f"job {job.kind}", root=True, **attrs) as span:
+            try:
+                if handler is None:
+                    raise RuntimeError(f"No handler for job kind {job.kind}")
+                await handler(db, job)
+                await finish(db, job)
+            except Exception as exc:
+                log.exception("Job %s failed", job.id)
+                telemetry.set_attrs(span, **{"strata.job.error": str(exc)[:500]})
+                await db.rollback()
+                await finish(db, await db.get(type(job), job.id), error=str(exc)[:2000])
+            finally:
+                beat.cancel()
 
 
 async def scheduler(stop: asyncio.Event) -> None:
@@ -110,8 +119,12 @@ async def main() -> None:
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop.set)
     concurrency = get_settings().worker_concurrency
+    telemetry.setup("strata-worker")
     log.info("Worker started with %d loop(s)", concurrency)
-    await asyncio.gather(scheduler(stop), *(job_loop(i, stop) for i in range(concurrency)))
+    try:
+        await asyncio.gather(scheduler(stop), *(job_loop(i, stop) for i in range(concurrency)))
+    finally:
+        telemetry.shutdown()
     log.info("Worker stopped")
 
 

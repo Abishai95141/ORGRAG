@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import telemetry
 from app.embeddings import get_embedder
 from app.retrieval.rerank import get_reranker, sigmoid
 
@@ -146,6 +147,11 @@ def _vec_literal(vec: list[float]) -> str:
 
 
 async def _rerank_scores(queries: list[str], rows) -> dict[uuid.UUID, float] | None:
+    with telemetry.span("rerank", **{"strata.queries": len(queries), "strata.pairs": len(rows)}):
+        return await _rerank(queries, rows)
+
+
+async def _rerank(queries: list[str], rows) -> dict[uuid.UUID, float] | None:
     """Best cross-encoder probability per chunk across the queries; None if reranking
     is unavailable or fails (callers fall back to fusion scores)."""
     reranker = get_reranker()
@@ -172,6 +178,28 @@ async def hybrid_search(
     limit: int = 8,
     per_doc: int = MAX_CHUNKS_PER_DOCUMENT,
     ranking: RankingOptions | None = None,
+) -> list[Hit]:
+    attrs = {
+        "strata.queries": len(queries),
+        "strata.collections": len(collection_ids),
+        "strata.limit": limit,
+        "strata.rerank": bool(ranking and ranking.rerank),
+    }
+    if telemetry.capture_content():
+        attrs["langfuse.observation.input"] = "\n".join(queries)
+    with telemetry.span("retrieve", "retriever", **attrs) as span:
+        hits = await _hybrid_search(db, queries, collection_ids, limit, per_doc, ranking)
+        telemetry.set_attrs(span, **{"strata.hits": len(hits)})
+        return hits
+
+
+async def _hybrid_search(
+    db: AsyncSession,
+    queries: list[str],
+    collection_ids: list[uuid.UUID],
+    limit: int,
+    per_doc: int,
+    ranking: RankingOptions | None,
 ) -> list[Hit]:
     queries = [q.strip() for q in queries if q and q.strip()][:6]
     if not queries or not collection_ids:

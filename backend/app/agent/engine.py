@@ -13,6 +13,7 @@ Event flow:  step(plan) → step(search/read/reflect)* + reasoning* + sources* �
 import asyncio
 import contextlib
 import copy
+import json
 import logging
 import time
 import uuid
@@ -34,6 +35,7 @@ from app.agent.tools import (
     openai_tools,
     tool_definitions,
 )
+from app.core import telemetry
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.llm import nvidia
@@ -176,6 +178,45 @@ class AgentRun:
         self.em = Emitter(queue)
         self.registry = CitationRegistry()
         self.retrieval_ms = 0
+        self.usage: dict[str, dict[str, int]] = {}  # per model: input/output tokens, calls
+        self.status = "streaming"
+
+    def _add_usage(self, model: str, usage: dict[str, int] | None) -> None:
+        totals = self.usage.setdefault(model, {"input": 0, "output": 0, "calls": 0})
+        totals["calls"] += 1
+        for key, value in (usage or {}).items():
+            totals[key] = totals.get(key, 0) + value
+
+    def _trace_attrs(self) -> dict[str, Any]:
+        r = self.req
+        attrs = {
+            "langfuse.trace.name": "chat",
+            "langfuse.user.id": str(r.user_id),
+            "langfuse.session.id": str(r.conversation_id),
+            "langfuse.trace.metadata.mode": r.mode,
+            "langfuse.trace.metadata.message_id": str(r.assistant_message_id),
+            "langfuse.trace.metadata.scope_orgs": len(r.scope_org_ids or []),
+            **telemetry.org_attrs(r.org_id),
+        }
+        if telemetry.capture_content():
+            attrs["langfuse.observation.input"] = r.question
+        return attrs
+
+    def _trace_result(self) -> dict[str, Any]:
+        attrs: dict[str, Any] = {
+            "strata.status": self.status,
+            "langfuse.trace.metadata.status": self.status,
+            "strata.sources": len(self.registry),
+            "strata.retrieval_ms": self.retrieval_ms,
+            "strata.answer_chars": len(self.em.answer),
+            "gen_ai.usage.input_tokens": sum(u["input"] for u in self.usage.values()),
+            "gen_ai.usage.output_tokens": sum(u["output"] for u in self.usage.values()),
+        }
+        if org := getattr(self, "org", None):
+            attrs["langfuse.trace.metadata.org"] = org.slug
+        if telemetry.capture_content():
+            attrs["langfuse.observation.output"] = self.em.answer
+        return attrs
 
     # ── setup ─────────────────────────────────────────────────────────────
     async def _load(self, db) -> None:
@@ -291,6 +332,16 @@ class AgentRun:
 
     # ── main entry ────────────────────────────────────────────────────────
     async def execute(self) -> None:
+        # Its own trace: the answer can outlive the request that started it.
+        with telemetry.span("chat", "agent", root=True, **self._trace_attrs()) as root:
+            try:
+                await self._lifecycle()
+            finally:
+                telemetry.set_attrs(root, **self._trace_result())
+                if self.status == "error":  # failures are caught and saved, not raised
+                    telemetry.fail(root, "answer failed")
+
+    async def _lifecycle(self) -> None:
         beat = asyncio.create_task(runs.heartbeat(self.req.assistant_message_id))
         try:
             async with asyncio.timeout(get_settings().chat_run_timeout_seconds):
@@ -424,13 +475,16 @@ class AgentRun:
             "additionalProperties": False,
         }
         try:
-            result = await structured_call(
-                model=self.settings.model,
-                system=PLAN_SYSTEM,
-                prompt=f"{self._collections_note()}\n\nQuestion: {self.req.question}",
-                schema=schema,
-                effort="low",
-            )
+            with telemetry.span(
+                "plan", "generation", **{"gen_ai.request.model": self.settings.model}
+            ):
+                result = await structured_call(
+                    model=self.settings.model,
+                    system=PLAN_SYSTEM,
+                    prompt=f"{self._collections_note()}\n\nQuestion: {self.req.question}",
+                    schema=schema,
+                    effort="low",
+                )
             plan = [
                 {"question": p["question"].strip(), "rationale": p["rationale"].strip()}
                 for p in result.get("sub_questions", [])
@@ -548,6 +602,11 @@ class AgentRun:
             reflect_step: str | None = None
             pending_text = ""
             streaming_answer = False
+            generation = telemetry.start(
+                "llm turn",
+                "generation",
+                **{"gen_ai.request.model": model, "gen_ai.system": "anthropic"},
+            )
             try:
                 async with client.beta.messages.stream(**kwargs) as stream:
                     async for event in stream:
@@ -576,12 +635,23 @@ class AgentRun:
                             await self.em.reasoning(reflect_step, pending_text)
                             pending_text = ""
                     final = await stream.get_final_message()
-            except ValueError:
+                usage = _claude_usage(final)
+                telemetry.record_usage(generation, usage)
+                telemetry.set_attrs(generation, **{"gen_ai.response.finish_reasons": [
+                    final.stop_reason or ""]})  # fmt: skip
+                self._add_usage(model, usage)
+            except ValueError as exc:
                 # Tool input JSON the SDK could not parse at all: re-issue the turn (bounded).
+                telemetry.fail(generation, exc)
                 json_retries += 1
                 if json_retries > 2:
                     raise
                 continue
+            except BaseException as exc:
+                telemetry.fail(generation, exc)
+                raise
+            finally:
+                generation.end()
             json_retries = 0
             turn += 1
 
@@ -618,12 +688,34 @@ class AgentRun:
         self, model: str, messages: list[dict[str, Any]], tools, tool_choice: str, deep: bool
     ) -> nvidia.ChatTurn:
         """Stream one model turn into the trace/answer; returns the completed turn."""
+        result = nvidia.ChatTurn()
+        provider = getattr(self, "provider", "nvidia")
+        generation = telemetry.start(
+            "llm turn", "generation", **{"gen_ai.request.model": model, "gen_ai.system": provider}
+        )
+        try:
+            result = await self._stream_turn(provider, model, messages, tools, tool_choice, deep)
+        except BaseException as exc:
+            telemetry.fail(generation, exc)
+            raise
+        finally:
+            telemetry.record_usage(generation, result.usage)
+            telemetry.set_attrs(
+                generation, **{"gen_ai.response.finish_reasons": [result.finish_reason or ""]}
+            )
+            generation.end()
+        self._add_usage(model, result.usage)
+        return result
+
+    async def _stream_turn(
+        self, provider: str, model: str, messages, tools, tool_choice: str, deep: bool
+    ) -> nvidia.ChatTurn:
         reflect_step: str | None = None
         pending_text = ""
         streaming_answer = False
         result = nvidia.ChatTurn()
         async for kind, value in nvidia.stream_chat(
-            provider=getattr(self, "provider", "nvidia"),
+            provider=provider,
             model=model,
             messages=messages,
             # A turn that must answer gets no tools at all: offered tools with
@@ -724,8 +816,23 @@ class AgentRun:
     async def _run_tool(self, name: str, args: dict[str, Any]) -> tuple[str, bool]:
         """Run one tool call. Returns (content, is_error); input problems are reported
         back to the model so it can correct itself."""
-        async with self._tool_session():
-            return await self._dispatch_tool(name, args)
+        attrs: dict[str, Any] = {"gen_ai.tool.name": name}
+        if telemetry.capture_content():
+            attrs["gen_ai.tool.call.arguments"] = json.dumps(args, default=str)
+        with telemetry.span(f"tool {name}", "tool", **attrs) as span:
+            async with self._tool_session():
+                content, is_error = await self._dispatch_tool(name, args)
+            telemetry.set_attrs(
+                span,
+                **{
+                    "strata.tool.error": is_error,
+                    "strata.tool.result_chars": len(content),
+                    "gen_ai.tool.call.result": content[:8000]
+                    if telemetry.capture_content()
+                    else None,
+                },
+            )
+            return content, is_error
 
     async def _dispatch_tool(self, name: str, args: dict[str, Any]) -> tuple[str, bool]:
         try:
@@ -824,6 +931,8 @@ class AgentRun:
         message.sources = [r.to_source_ref() for r in self.registry.all()]
         message.trace = self.em.trace
         message.status = status
+        message.usage = self.usage or None
+        self.status = status
 
         cited = [
             r
@@ -857,6 +966,18 @@ class AgentRun:
         await db.commit()
         await db.refresh(message)
         return message
+
+
+def _claude_usage(final) -> dict[str, int] | None:
+    """Token usage of a Claude turn; None when absent (observability never fails a run)."""
+    u = getattr(final, "usage", None)
+    if u is None:
+        return None
+    return {
+        "input": getattr(u, "input_tokens", 0) or 0,
+        "output": getattr(u, "output_tokens", 0) or 0,
+        "cache_read": getattr(u, "cache_read_input_tokens", 0) or 0,
+    }
 
 
 async def run_chat(req: ChatRequest, queue: EventQueue) -> None:

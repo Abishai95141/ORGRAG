@@ -78,6 +78,16 @@ class Settings(BaseSettings):
     # Longest a chat answer may run before it's stopped (and its spend with it).
     chat_run_timeout_seconds: int = 900
 
+    # Tracing (app/core/telemetry.py). Langfuse keys win over a generic OTLP endpoint;
+    # neither set means tracing is off.
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
+    langfuse_host: str = "https://cloud.langfuse.com"
+    otel_exporter_otlp_endpoint: str | None = None
+    otel_exporter_otlp_headers: str | None = None
+    # Attach question, answer and tool-argument text to spans (off: metadata only).
+    trace_content: bool = False
+
     worker_poll_seconds: float = 2.0
     worker_concurrency: int = 2
 

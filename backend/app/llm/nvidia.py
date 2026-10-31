@@ -65,6 +65,7 @@ class ChatTurn:
     reasoning: str = ""
     tool_calls: list[ToolCall] = field(default_factory=list)
     finish_reason: str | None = None
+    usage: dict[str, int] | None = None  # input / output tokens, when the API reports them
 
     def assistant_message(self) -> dict[str, Any]:
         """The turn as an OpenAI-format assistant message for the next request."""
@@ -264,6 +265,8 @@ async def stream_chat(
         "stream": True,
         "max_tokens": max_tokens,
         "temperature": temperature,
+        # The last chunk then carries token usage (for tracing and per-org spend).
+        "stream_options": {"include_usage": True},
     }
     if tools:
         body["tools"] = tools
@@ -304,6 +307,11 @@ async def stream_chat(
                 if payload == "[DONE]":
                     break
                 chunk = json.loads(payload)
+                if usage := chunk.get("usage"):
+                    turn.usage = {
+                        "input": usage.get("prompt_tokens") or 0,
+                        "output": usage.get("completion_tokens") or 0,
+                    }
                 for choice in chunk.get("choices") or []:
                     delta = choice.get("delta") or {}
                     reasoning = delta.get("reasoning_content") or delta.get("reasoning")

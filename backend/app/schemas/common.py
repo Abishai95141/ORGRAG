@@ -493,12 +493,23 @@ class RecentQuestion(BaseModel):
     hits: int
 
 
+class ModelUsage(BaseModel):
+    """Tokens spent by answers in this org's conversations, per model."""
+
+    model: str
+    answers: int
+    calls: int
+    input_tokens: int
+    output_tokens: int
+
+
 class InsightsOut(BaseModel):
     totals: InsightTotals
     questions_per_day: list[DayCount]
     top_sources: list[TopSource]
     feedback: FeedbackCounts
     recent_questions: list[RecentQuestion]
+    usage: list[ModelUsage] = []
 
 
 class HealthOut(BaseModel):

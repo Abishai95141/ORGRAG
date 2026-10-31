@@ -88,6 +88,12 @@ export default function InsightsPage() {
             </div>
 
             <Card className="p-5">
+              <h2 className="text-[14px] font-semibold">Model usage</h2>
+              <p className="mt-0.5 text-[12.5px] text-ink-3">Tokens spent answering questions in this organization, last {days} days</p>
+              <ModelUsage items={d.usage ?? []} />
+            </Card>
+
+            <Card className="p-5">
               <h2 className="text-[14px] font-semibold">Recent questions</h2>
               {d.recent_questions.length ? (
                 <ul className="mt-3 divide-y divide-line">
@@ -230,6 +236,36 @@ function TopSources({ items }: { items: Insights["top_sources"] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function ModelUsage({ items }: { items: Insights["usage"] }) {
+  if (!items.length) return <p className="mt-3 text-[13px] text-ink-3">No answers with usage recorded yet.</p>;
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="text-left text-[11.5px] text-ink-3">
+            <th className="py-1.5 font-medium">Model</th>
+            <th className="py-1.5 text-right font-medium">Answers</th>
+            <th className="py-1.5 text-right font-medium">Model calls</th>
+            <th className="py-1.5 text-right font-medium">Input tokens</th>
+            <th className="py-1.5 text-right font-medium">Output tokens</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line">
+          {items.map((u) => (
+            <tr key={u.model}>
+              <td className="py-2 font-mono text-[12px]">{u.model}</td>
+              <td className="py-2 text-right tabular-nums">{formatNumber(u.answers)}</td>
+              <td className="py-2 text-right tabular-nums">{formatNumber(u.calls)}</td>
+              <td className="py-2 text-right tabular-nums">{formatNumber(u.input_tokens)}</td>
+              <td className="py-2 text-right tabular-nums">{formatNumber(u.output_tokens)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

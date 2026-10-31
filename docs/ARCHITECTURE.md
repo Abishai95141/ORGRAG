@@ -149,6 +149,34 @@ user question
 * With no `ANTHROPIC_API_KEY`, chat degrades to "retrieval only": the trace and
   sources still render and the answer explains how to configure a key.
 
+## Tracing
+
+`app/core/telemetry.py` exports OpenTelemetry spans over OTLP/HTTP when
+`LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` (Langfuse) or `OTEL_EXPORTER_OTLP_ENDPOINT`
+(any collector) is set; otherwise tracing is a no-op.
+
+```
+chat  (agent; its own trace, session = conversation, user, org_id, status, total tokens)
+ ├─ plan                     (deep mode)
+ ├─ llm turn  (generation: model, input/output tokens, finish reason)
+ ├─ tool search_knowledge
+ │    └─ retrieve  (retriever: queries, collections, hits)
+ │         └─ rerank
+ └─ llm turn …
+job <kind>  (worker; its own trace, org_id, job id, attempt)
+```
+
+* An answer is a root trace rather than a child of its HTTP request, because it can
+  outlive the request (closing the stream doesn't stop it). FastAPI adds its own
+  request spans.
+* Attributes follow the GenAI semantic conventions plus Langfuse's `langfuse.*`
+  names, so Langfuse shows generations, tools and sessions, and can filter by
+  `metadata.org_id`.
+* Text is kept out by default: spans carry timings, ids, models and token counts.
+  `TRACE_CONTENT=true` adds the question, answer, tool arguments and results.
+* Token usage per model is also saved on each answer (`messages.usage`) and summed per
+  org in Insights, so spend per org needs no tracing backend.
+
 ## Ingestion
 
 1. `sources` row created → `jobs` row `sync_source` enqueued.
