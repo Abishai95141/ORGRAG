@@ -117,7 +117,7 @@ Smoke set, Haiku 5.5, Sonnet judge. Claude's native citations (search_result blo
 
 ### Retrieval: Contextual Retrieval and BM25 (2026-10-31)
 
-135 answerable questions, reranked unless noted. Neither change is statistically significant here; see [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md#2a-bm25-with-pg_textsearch) for why BM25 is on and Contextual Retrieval is off.
+135 answerable questions, reranked unless noted. Neither change is statistically significant here; [LOG.md](LOG.md) has why BM25 is on (D13) and Contextual Retrieval is off (D11, D55).
 
 | | recall@5 | recall@10 | MRR |
 |---|---|---|---|
@@ -175,7 +175,7 @@ What it showed:
 | + NVIDIA reranker (default) | **0.939** | **0.965** | **0.951** | 528 |
 | + reranker + stronger recency | 0.939 | 0.965 | 0.963 | 512 |
 
-Reranking earns its 0.46 s: it surfaces the right document first in more cases. Recency had **no effect** at first. Uploads have no "last modified" time, so every document looked brand new. Strata now reads the date a document states about itself, and treats undated documents as 90 days old, as Onyx does.
+Reranking earns its 0.46 s: it surfaces the right document first in more cases. Recency had **no effect** at first. Uploads have no "last modified" time, so every document looked brand new. Strata now reads the date a document states about itself, and treats undated documents as 90 days old.
 
 ### Answers (45 questions, Nemotron 3 Ultra, quick mode)
 
@@ -265,7 +265,7 @@ The same build on NVIDIA's free-tier rate limits managed 7 documents in about an
 
 ### Phase 3 — corpus-wide community summaries: not built
 
-None of the evaluation questions need corpus-wide theme summaries, and Onyx's own move away from that design suggests the cost rarely pays off. Not built.
+None of the evaluation questions need corpus-wide theme summaries, and the cost of building and refreshing them rarely pays off. Not built.
 
 ## Re-running
 

@@ -19,7 +19,7 @@ QUESTIONS = HERE / "questions_scale.jsonl"
 
 PREFIX = [
     "Amber", "Basalt", "Cinder", "Delta", "Ember", "Fjord", "Garnet", "Harbor", "Indigo",
-    "Juniper", "Kestrel", "Lumen", "Marlow", "Nimbus", "Onyx", "Pebble", "Quarry", "Rowan",
+    "Juniper", "Kestrel", "Lumen", "Marlow", "Nimbus", "Osprey", "Pebble", "Quarry", "Rowan",
     "Sable", "Tundra", "Umber", "Vesper", "Willow", "Yarrow", "Zephyr", "Alder", "Birch",
     "Cobalt", "Dune", "Elm",
 ]  # fmt: skip

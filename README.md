@@ -8,9 +8,7 @@ company and its portfolio, a lab and its partners. Each organization connects it
 sources. One question can then cover several organizations at once, and every
 citation shows which organization it came from.
 
-It is a ground-up rebuild inspired by [Onyx](https://github.com/onyx-dot-app/onyx).
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for what was carried over and
-what changed.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how it's built.
 
 ---
 
@@ -292,11 +290,15 @@ backend/   FastAPI app, agent engine, connectors, ingestion, worker, migrations,
            e2e/ (the end-to-end scenario)
 web/       Next.js app, design system, icons and illustrations
 docs/      ARCHITECTURE.md · API.md (the contract) · DESIGN.md
-           EVALUATION.md (measured quality) · AUDIT.md · API_AUDIT.md
+           EVALUATION.md (measured quality) · LOG.md (decisions and evals)
            RESEARCH.md (techniques, tools, landscape) · ROADMAP.md (the plan)
-           PLAN-WEEKS-3-5.md (current build plan) · LOG.md (decisions and evals)
 postgres/  Postgres 17 image with pgvector and pg_textsearch
+sample-data/  Test sources for every connector, with questions (see its README)
 ```
+
+## Credits
+
+Strata was inspired by [Onyx](https://github.com/onyx-dot-app/onyx), the open-source AI platform for teams.
 
 ## License
 

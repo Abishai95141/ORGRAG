@@ -1,4 +1,4 @@
-"""The quick-mode fast path (docs/PLAN-WEEKS-3-5.md step 1.4).
+"""The quick-mode fast path (docs/LOG.md, D54).
 
 Most quick questions are single lookups the first search already answers; the agent loop
 then spends a model turn deciding to search before it can answer. For a question that

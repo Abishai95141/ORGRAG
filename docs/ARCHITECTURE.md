@@ -1,9 +1,8 @@
 # Strata — Architecture
 
-Strata is a multi-organization knowledge platform with an agentic RAG engine. It is a
-ground-up rebuild inspired by [Onyx](https://github.com/onyx-dot-app/onyx), keeping the
-ideas that matter (connectors → chunk → embed → hybrid index, permission-filtered
-retrieval, a tool-calling chat loop, streamed citations) and changing three things:
+Strata is a multi-organization knowledge platform with an agentic RAG engine:
+connectors → chunk → embed → hybrid index, permission-filtered retrieval, a
+tool-calling chat loop and streamed citations. Three choices shape it:
 
 1. **Organizations are first-class.** A user belongs to many orgs, each with its own
    sources, collections, agents and settings. A single question can be scoped to
@@ -12,30 +11,31 @@ retrieval, a tool-calling chat loop, streamed citations) and changing three thin
    model on NVIDIA's API) plans, issues searches, reads documents, decides whether it
    has enough evidence, and only then answers. Every step is streamed to the UI as a
    visible trace.
-3. **Lean infrastructure.** One Postgres (with `pgvector` + full-text search) replaces
-   Vespa/OpenSearch + Redis + Celery. Jobs run from a Postgres queue
-   (`FOR UPDATE SKIP LOCKED`). `docker compose up` is the whole deployment.
+3. **Lean infrastructure.** One Postgres (with `pgvector` + full-text search) is the
+   index, the queue and the store: no separate search engine, cache or task broker.
+   Jobs run from a Postgres queue (`FOR UPDATE SKIP LOCKED`). `docker compose up` is
+   the whole deployment.
 
-## What we took from Onyx
+## Components
 
-| Onyx concept | Onyx implementation | Strata |
-|---|---|---|
-| Connector framework | `backend/onyx/connectors/interfaces.py` — Load/Poll/Checkpointed/Slim connectors yielding `Document`s | `app/connectors/base.py` — `iter_documents(progress, since)` covers load and poll; `list_ids()` is the slim listing used for pruning. Upload, Web crawler, GitHub, Google Drive, Slack, Notion |
-| Pruning | Celery prune task diffs indexed ids against the slim listing | Full syncs prune by the set of ids seen; incremental syncs prune against `list_ids()`; an empty listing never deletes; a full sync runs at least daily |
-| Rerank / recency / boost | Cross-encoder rerank × time decay × boost (v1–v3; current Onyx uses LLM section selection and a hard time filter instead) | `app/retrieval/hybrid.py` + `rerank.py` — top 40 candidates (≤3 per document) reranked by NVIDIA Nemotron or a local cross-encoder, × recency × admin boost × reader feedback; hidden documents filtered in SQL |
-| User files | Indexed `UserFile`s; inlined when they fit | `chat_attachments` — parsed once, inlined into the question (with a budget) and paged with `read_document`; never indexed |
-| Web search | `web_search` + `open_url` tools, several providers | `search_web` tool (Tavily/Brave) returning snippets; `read_document` fetches a page through an SSRF-guarded fetcher, opening on the snippet |
-| API keys | Service-account users with group permissions | Per-org keys acting as their creator with a capped role (`app/core/deps.py`) |
-| Indexing pipeline | Celery docfetching → docprocessing, chunk + embed into Vespa/OpenSearch | `app/ingestion/pipeline.py` — parse → heading-aware chunking → embed → upsert into `chunks` (pgvector + tsvector) |
-| Hybrid search | Vespa/OpenSearch hybrid with ACL filters (`context/search/pipeline.py`) | `app/retrieval/hybrid.py` — vector (HNSW cosine) + keyword (BM25 via pg_textsearch, or `ts_rank_cd`) fused with Reciprocal Rank Fusion, neighbour-chunk expansion into sections |
-| Access control | `access/access.py` ACL lists on every chunk | Org scope + collection visibility (`org` / `restricted`) resolved into an allow-list of collection ids before every query |
-| Document sets | `DocumentSet` | `Collection` |
-| Personas ("Agents") | `Persona` table, prompt + tools + document sets | `Agent` — instructions, default collections, quick/deep mode |
-| Chat loop + tools | `chat/llm_loop.py`, `tools/` (internal_search, web_search…) | `app/agent/engine.py` — Claude tool loop over `search_knowledge`, `read_document`, `list_collections`, plus `query_records` and `scan` for complete lists |
-| Deep research | `deep_research/dr_loop.py` | Deep mode: structured plan → iterative search/read/reflect → cited synthesis |
-| Streaming protocol | NDJSON `Packet`s with `Placement` | Server-Sent Events with a small typed event vocabulary (see `API.md`) |
-| Citations | `chat/citation_processor.py` | Global citation registry per answer; model cites `[n]`; UI resolves to source cards |
-| Multi-tenancy | Schema-per-tenant + contextvar (EE/cloud) | Row-level `org_id` on every table, enforced by `OrgContext` dependency; cross-org reads only through the membership allow-list |
+| Area | How Strata does it |
+|---|---|
+| Connector framework | `app/connectors/base.py` — `iter_documents(progress, since)` covers load and poll; `list_ids()` lists the ids used for pruning. Upload, Web crawler, GitHub, Google Drive, Slack, Notion |
+| Pruning | Full syncs prune by the set of ids seen; incremental syncs prune against `list_ids()`; an empty listing never deletes; a full sync runs at least daily |
+| Rerank / recency / boost | `app/retrieval/hybrid.py` + `rerank.py` — top 40 candidates (≤3 per document) reranked by NVIDIA Nemotron or a local cross-encoder, × recency × admin boost × reader feedback; hidden documents filtered in SQL |
+| Files in chat | `chat_attachments` — parsed once, inlined into the question (with a budget) and paged with `read_document`; never indexed |
+| Web search | `search_web` tool (Tavily/Brave) returning snippets; `read_document` fetches a page through an SSRF-guarded fetcher, opening on the snippet |
+| API keys | Per-org keys acting as their creator with a capped role (`app/core/deps.py`) |
+| Indexing pipeline | `app/ingestion/pipeline.py` — parse → heading-aware chunking → embed → upsert into `chunks` (pgvector + tsvector) |
+| Hybrid search | `app/retrieval/hybrid.py` — vector (HNSW cosine) + keyword (BM25 via pg_textsearch, or `ts_rank_cd`) fused with Reciprocal Rank Fusion, neighbour-chunk expansion into sections |
+| Access control | Org scope + collection visibility (`org` / `restricted`) resolved into an allow-list of collection ids before every query |
+| Collections | `Collection` — a set of sources seen by the whole org or only by listed people (`restricted`) |
+| Agents | `Agent` — instructions, default collections, quick/deep mode |
+| Chat loop + tools | `app/agent/engine.py` — Claude tool loop over `search_knowledge`, `read_document`, `list_collections`, plus `query_records` and `scan` for complete lists |
+| Deep research | Deep mode: structured plan → iterative search/read/reflect → cited synthesis |
+| Streaming protocol | Server-Sent Events with a small typed event vocabulary (see `API.md`) |
+| Citations | Global citation registry per answer; model cites `[n]`; UI resolves to source cards |
+| Multi-tenancy | Row-level `org_id` on every table, enforced by `OrgContext` dependency; cross-org reads only through the membership allow-list |
 
 ## System diagram
 

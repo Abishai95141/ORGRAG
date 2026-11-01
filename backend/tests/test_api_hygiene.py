@@ -1,4 +1,4 @@
-"""API hygiene regressions (see docs/API_AUDIT.md): API-key binding, cross-user ids,
+"""API hygiene regressions: API-key binding, cross-user ids,
 races that used to 500, input bounds, the error envelope, and OpenAPI quality."""
 
 import asyncio

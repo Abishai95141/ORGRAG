@@ -1,8 +1,7 @@
 """Connector interface. A connector streams `RawDocument`s; the ingestion pipeline
-handles parsing, hashing, chunking, embedding and pruning. Mirrors the role of
-Onyx's `connectors/interfaces.py`: one async generator covers Load (full sync) and
-Poll (`since` set) connectors, and `list_ids` plays the part of Onyx's slim
-connector for removing documents that were deleted upstream."""
+handles parsing, hashing, chunking, embedding and pruning. One async generator covers
+full syncs and incremental ones (`since` set), and `list_ids` lists what still exists
+upstream so documents deleted there can be removed."""
 
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Callable

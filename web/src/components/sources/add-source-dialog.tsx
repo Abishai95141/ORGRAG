@@ -215,7 +215,7 @@ export function AddSourceDialog({ open, onOpenChange, slug }: { open: boolean; o
           {kind === "github" ? (
             <>
               <Field label="Repository" htmlFor="src-repo" hint="owner/name or a github.com URL.">
-                <Input id="src-repo" placeholder="onyx-dot-app/onyx" value={gh.repo} onChange={(e) => setGh({ ...gh, repo: e.target.value })} autoFocus />
+                <Input id="src-repo" placeholder="owner/repository" value={gh.repo} onChange={(e) => setGh({ ...gh, repo: e.target.value })} autoFocus />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Branch" htmlFor="src-branch" hint="Defaults to the repo's default.">

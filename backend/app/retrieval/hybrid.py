@@ -28,7 +28,7 @@ CANDIDATES_PER_LIST = 40
 RERANK_CANDIDATES = 40
 MAX_CHUNKS_PER_DOCUMENT = 2
 # At most this many chunks of one document enter reranking, so one long, well-titled
-# document can't crowd everything else out of the candidate set (as in Onyx).
+# document can't crowd everything else out of the candidate set.
 MAX_CANDIDATES_PER_DOCUMENT = 3
 RERANK_PASSAGE_CHARS = 2000
 # A list-like passage (a CSV's rows, a table) is shown to the reranker as at most this
@@ -40,8 +40,8 @@ MIN_LIST_ROWS = 8  # fewer rows than this is read whole
 # ties; "high" lets a fresh document beat a slightly more relevant stale one.
 RECENCY_WEIGHT = {"off": 0.0, "low": 0.1, "medium": 0.2, "high": 0.35}
 RECENCY_HALF_LIFE_DAYS = 180
-# Documents with no known date are treated as this old (as Onyx does), rather than
-# as new as the moment they were indexed.
+# Documents with no known date are treated as this old, rather than as new as the
+# moment they were indexed.
 UNDATED_AGE_DAYS = 90
 BOOST_STEP = 0.15  # admin boost -3..3 → ×0.55..×1.45
 FEEDBACK_WEIGHT = 0.25  # net reader votes → at most ×0.75..×1.25

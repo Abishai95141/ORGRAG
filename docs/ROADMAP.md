@@ -1,6 +1,6 @@
 # Strata — Audit findings and roadmap (2026-10-31)
 
-Full detail: **[AUDIT.md](AUDIT.md)** (every code finding with file:line evidence), **[RESEARCH.md](RESEARCH.md)** (research with sources), [API_AUDIT.md](API_AUDIT.md) (API layer) and [EVALUATION.md](EVALUATION.md) (measurements).
+Full detail: **[RESEARCH.md](RESEARCH.md)** (research with sources), [EVALUATION.md](EVALUATION.md) (measurements) and [LOG.md](LOG.md) (decisions).
 
 Built from four independent reviews:
 - a read-only code audit of everything outside the API layer;
@@ -21,7 +21,7 @@ plus our own measurements in [EVALUATION.md](EVALUATION.md). Effort: **S** ≈ �
 | Connectors | Upload and Tavily web search verified live; Drive, Slack and Notion only against simulated APIs |
 | Not measured at all | faithfulness of individual claims, citation precision, cost per org, p95 latency, injection resistance |
 
-**Strata's opening.** No product we looked at offers permission-aware search across several organizations with org-labelled citations. Microsoft 365 Copilot explicitly can't search tenants where the user is a guest ([source](https://learn.microsoft.com/en-us/training/modules/examine-data-security-microsoft-365-copilot/3-examine-copilot-protects-sensitive-business-data)). Onyx, Glean, Dust and the open-source peers are all one-org-at-a-time. Every compounding feature below should lean into that.
+**Strata's opening.** No product we looked at offers permission-aware search across several organizations with org-labelled citations. Microsoft 365 Copilot explicitly can't search tenants where the user is a guest ([source](https://learn.microsoft.com/en-us/training/modules/examine-data-security-microsoft-365-copilot/3-examine-copilot-protects-sensitive-business-data)). Glean, Dust and the open-source peers are all one-org-at-a-time. Every compounding feature below should lean into that.
 
 ---
 
@@ -50,7 +50,7 @@ The current harness covers retrieval recall, MRR, per-fact correctness, abstenti
 
 These are correctness and security bugs in what already exists. All are verified in code, and two were reproduced by me (C1, S1).
 
-**Progress (2026-10-31):** everything in this section is fixed and tested: C1, C2, S1 (with S2), S3, S4, S5, I1, I2, P2, O3/F1, O5 and F2. Details are in [AUDIT.md](AUDIT.md#fixed-since-the-audit). Track B's week-1 item, the MCP server, is built too (see [API.md](API.md#mcp-server)). It authenticates with org API keys, so one connection covers one org; searching *across* a user's orgs needs user-level tokens (OAuth through the MCP SDK's authorization-server support), which is the follow-up.
+**Progress (2026-10-31):** everything in this section is fixed and tested: C1, C2, S1 (with S2), S3, S4, S5, I1, I2, P2, O3/F1, O5 and F2. Track B's week-1 item, the MCP server, is built too (see [API.md](API.md#mcp-server)). It authenticates with org API keys, so one connection covers one org; searching *across* a user's orgs needs user-level tokens (OAuth through the MCP SDK's authorization-server support), which is the follow-up.
 
 | # | Problem | Fix | Effort |
 |---|---|---|---|
@@ -67,13 +67,10 @@ These are correctness and security bugs in what already exists. All are verified
 | O5 | The default `SECRET_KEY` is accepted, and the DB port is published with the `postgres` password. | Refuse the default outside dev; don't publish the DB port. | S |
 | F2 | No `aria-live` region, so screen readers get nothing from streaming answers. | Add a polite live region. | S |
 
-The full findings, with file:line evidence, are in [AUDIT.md](AUDIT.md).
 
 ---
 
 ## 3. Quality and speed upgrades (≈2–3 weeks)
-
-**Build plan:** [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) (verified against current library docs; it revises the reranker and embedding expectations below).
 
 Ranked by expected value. Each one is measured before it becomes the default.
 
@@ -134,11 +131,11 @@ Ranked by (value × fit) ÷ effort. Each gets more valuable *because* Strata is 
 
 | # | Feature | Who else ships it | Why it compounds for Strata | Effort |
 |---|---|---|---|---|
-| 1 | **MCP server** | Glean, Onyx v5, Guru, AnythingLLM | One permission-aware endpoint that searches *across a user's orgs* with org-labelled citations, usable from Claude, ChatGPT and IDE agents. Mostly wraps existing APIs and keys. | S |
+| 1 | **MCP server** | Glean, Guru, AnythingLLM | One permission-aware endpoint that searches *across a user's orgs* with org-labelled citations, usable from Claude, ChatGPT and IDE agents. Mostly wraps existing APIs and keys. | S |
 | 2 | **Knowledge-gap detection and doc requests** | Guru, Coveo, Glean Insights | Clusters of unanswered or low-confidence questions per org (data we already log). Unique view: "answered in org B, missing in org A". One click requests the doc from the owning admin. | S–M |
 | 3 | **Verified answers (FAQ promotion)** | Glean Answers, Guru | Promote a good answer to a verified answer with an owner and an expiry; it's boosted in retrieval. Reuses boost, hide and votes. Pairs with #2: gap → doc request → verified answer. | S |
 | 4 | **Per-org audit log and compliance export** | Credal, Perplexity, Purview | Each org's admin sees every query that touched its data, *including from other orgs*. Needed before clients connect sensitive sources. | M |
-| 5 | **Slack / Teams bot** | Glean, Dust, Onyx | Slack is already a connector. Map a workspace or channel to an org scope; a Slack Connect channel shared between companies maps naturally to a multi-org scope. | M |
+| 5 | **Slack / Teams bot** | Glean, Dust | Slack is already a connector. Map a workspace or channel to an org scope; a Slack Connect channel shared between companies maps naturally to a multi-org scope. | M |
 | 6 | **Digests and watch alerts** | Glean, Copilot, Notion agents, Khoj; Quivr pivoted to this | "What changed across my 6 clients this week" and "tell me when this policy changes". Uses the change detection and worker queue we already have. | M |
 | 7 | **Answer permalinks** | Glean, Copilot Notebooks | Permissions are re-checked per viewer, who only sees the citations they're allowed to; a request-access flow covers the rest. | S |
 | 8 | **Stale and contradictory content detection** | Guru | Flags outdated or conflicting documents within an org and across orgs (client policy vs consultancy template) using dates and records. Feeds hide and verify. | M |
@@ -159,7 +156,7 @@ Deprioritised: expert finding (identities don't align across orgs), actions with
 - **Answer permalinks:** built. Permissions are checked per viewer, who sees the answer only if they can read every cited source, with access requests that admins approve.
 - **CI eval gate:** CI exists now (lint, tests on two Postgres setups, web build); wiring the smoke set into it is open.
 
-**Progress, weeks 3–5 (2026-10-31):** decisions and numbers in [LOG.md](LOG.md), status per step in [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md#status-2026-10-31).
+**Progress, weeks 3–5 (2026-10-31):** decisions and numbers in [LOG.md](LOG.md).
 - **Claude Haiku 5.5 runs every LLM job** (chat, graph extraction, eval answers) on the Anthropic API. Smoke set: 14/15, citation recall 0.65 → 0.76 with step 1, median 4.9 s, $0.0011 per answer.
 - **Latency:** prompt caching and concurrent tool calls are in. Rerank-once was dropped after measuring (the rerank calls already run in parallel); the fast path is built but off: it lifted fact recall 2 points but not speed (LOG D54).
 - **BM25:** pg_textsearch on Postgres 17, read top-k from its index; on where installed. Equal quality within noise here, chosen for scale.

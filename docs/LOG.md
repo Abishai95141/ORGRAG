@@ -1,6 +1,6 @@
 # Decision and eval log
 
-What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
+What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results.
 
 ## 2026-11-01 (latest) — A CSV's rows share passages; tables fit the chunk size cap; the reranker reads a list's matching rows
 

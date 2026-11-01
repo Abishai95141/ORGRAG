@@ -5,7 +5,7 @@ What the research found about improving Strata, in three parts:
 - tooling (parsing, evaluation, observability, safety, Postgres search);
 - the product landscape (commercial and open-source peers, and features that compound with multi-org).
 
-The plan built on this is in [ROADMAP.md](ROADMAP.md); the code audit is in [AUDIT.md](AUDIT.md).
+The plan built on this is in [ROADMAP.md](ROADMAP.md).
 
 **How to read this.** Repo stars, licences and latest releases were pulled from the GitHub and Hugging Face APIs on 2026-10-31. Benchmark numbers are as published and mostly self-reported by the authors; where a party with a stake in the result ran the benchmark, it's marked **(vendor)**. Claims taken from secondary sources are marked **(2°)**. Nothing here has yet been validated on Strata's own evaluation set; every adoption is gated on a before/after run.
 
@@ -259,10 +259,6 @@ Some parsers silently drop whole tables ([arXiv 2603.18652](https://arxiv.org/ht
   - A remote **MCP server** that enforces each user's permissions ([docs](https://docs.glean.com/administration/platform/mcp/security)).
   - Triggers API (webhooks on content events); access requests for protected chats ([Aug 2026](https://docs.glean.com/release-notes/releases/2026-08-18-august-release)).
   - Curated **Answers** ([docs](https://docs.glean.com/user-guide/knowledge/answers/what-are-answers-and-how-do-they-work)), a Slack **daily digest** ([docs](https://docs.glean.com/administration/platform/embedded-integrations/slackbot/use-glean-in-slack/daily-digest)), expert detection ([VentureBeat](https://venturebeat.com/ai/glean-launches-new-generative-ai-capabilities-to-enhance-search-and-discovery-across-organizations)).
-- **Onyx** v5.0.0 (2026-10-23):
-  - MCP server with OAuth; plugins page for MCP, OpenAPI actions and apps, with per-tool approvals.
-  - LLM gateway; usage and cost budgets; Teams/OneDrive with permission sync; voice mode ([changelog](https://docs.onyx.app/changelog)).
-  - Slack bot with citations ([docs](https://docs.onyx.app/overview/onyx_anywhere/slack)).
 - **Dust:** open and restricted "spaces" with separate data-access and agent-use controls ([docs](https://docs.dust.tt/docs/access-controls-and-permissions)); Slack bot.
 - **Guru:** Knowledge Agents (Jan 2026) verify content against plain-language rules, route critical content to experts and hide unverified content from search ([blog](https://getguru.com/blog/knowledge-agents-improve-your-info), [blog](https://www.getguru.com/blog/introducing-the-agentic-knowledge-base)).
 - **Microsoft 365 Copilot:**
@@ -289,7 +285,6 @@ Some parsers silently drop whole tables ([arXiv 2603.18652](https://arxiv.org/ht
 
 | Repo | Licence | Stars | Activity / standout |
 |---|---|---|---|
-| [onyx-dot-app/onyx](https://github.com/onyx-dot-app/onyx) | MIT core + `ee/` enterprise licence | 33.1k | Active; MCP server, Slack bot, permission sync |
 | [infiniflow/ragflow](https://github.com/infiniflow/ragflow) | Apache-2.0 | 93.2k | v1.0.0-rc3; deep document parsing, agent memory ([changelog](https://ragflow.io/changelog)) |
 | [langgenius/dify](https://github.com/langgenius/dify) | Modified Apache: **forbids running it multi-tenant without a commercial licence** | 160k | Workflow builder |
 | [open-webui/open-webui](https://github.com/open-webui/open-webui) | Custom BSD + branding clause | 157k | Chat UI, knowledge, RBAC |
@@ -310,11 +305,11 @@ Some parsers silently drop whole tables ([arXiv 2603.18652](https://arxiv.org/ht
 
 | Rank | Feature | Who ships it | Why it compounds for Strata | Effort |
 |---|---|---|---|---|
-| 1 | **MCP server** | Glean, Onyx, Guru, AnythingLLM | One permission-aware endpoint across a user's orgs with org-labelled citations; wraps existing search, chat and keys | S |
+| 1 | **MCP server** | Glean, Guru, AnythingLLM | One permission-aware endpoint across a user's orgs with org-labelled citations; wraps existing search, chat and keys | S |
 | 2 | **Knowledge-gap detection + doc requests** | Guru, Coveo, Glean Insights | Unanswered or low-confidence clusters per org; unique cross-org view "answered in org B, missing in org A" | S–M |
 | 3 | **Verified answers** | Glean Answers, Guru | Promote an answer with an owner and expiry; boosted in retrieval; reuses boost, hide and votes | S |
 | 4 | **Per-org audit log + compliance export** | Credal, Perplexity, Purview | Each org sees every query touching its data, including from other orgs; needed before regulated clients join | M |
-| 5 | **Slack / Teams bot** | Glean, Dust, Onyx | Slack is already a connector; channels map to org scopes; Slack Connect channels map to multi-org scopes | M |
+| 5 | **Slack / Teams bot** | Glean, Dust | Slack is already a connector; channels map to org scopes; Slack Connect channels map to multi-org scopes | M |
 | 6 | **Digests and watch alerts** | Glean, Copilot, Notion, Khoj, Quivr | Weekly change summary across orgs; reuses change detection and the job queue | M |
 | 7 | **Answer permalinks** | Glean, Copilot Notebooks | Each viewer sees only the citations they can access; request-access flow | S |
 | 8 | **Stale / contradictory content detection** | Guru | Conflicts within and across orgs using dates and records; feeds hide and verify | M |
