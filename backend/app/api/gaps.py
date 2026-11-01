@@ -25,6 +25,7 @@ from app.core.deps import OrgContext, admin_ctx
 from app.core.errors import ApiError
 from app.gaps import cluster as clustering
 from app.gaps import signals
+from app.gaps.signals import Signal  # a field below is named `signals`
 from app.models import Collection, Document, DocumentRequest, Membership, Organization
 from app.retrieval.access import visible_collections
 from app.schemas.common import (
@@ -56,7 +57,7 @@ class _Question:
     it was asked."""
 
     text: str
-    signals: list[signals.Signal] = field(default_factory=list)
+    signals: list[Signal] = field(default_factory=list)
 
     @property
     def last(self) -> datetime:

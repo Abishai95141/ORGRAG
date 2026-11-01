@@ -811,7 +811,7 @@ class AgentRun:
         max_turns = 1 if seed and seed[1] else MAX_TURNS["deep" if deep else "quick"]
         json_retries = 0
         turn = 0
-        evidence: list[str] = []  # research results so far, for the coverage check
+        evidence: list[tuple[str, str]] = []  # research results so far, for the coverage check
 
         caching = get_settings().prompt_caching
         system_blocks: str | list[dict[str, Any]] = system
@@ -943,13 +943,14 @@ class AgentRun:
                     result["is_error"] = True
                 results.append(result)
                 if not is_error and block.name in EVIDENCE_TOOLS:
-                    evidence.append(content if isinstance(content, str) else json.dumps(content))
+                    text = content if isinstance(content, str) else json.dumps(content)
+                    evidence.append((block.name, text))
             searched = any(b.name in EVIDENCE_TOOLS for b in tool_uses)
             if searched and (hint := await self._coverage_note(evidence)):
                 results.append({"type": "text", "text": hint})  # after the tool results
             messages.append({"role": "user", "content": results})
 
-    async def _coverage_note(self, evidence: list[str]) -> str | None:
+    async def _coverage_note(self, evidence: list[tuple[str, str]]) -> str | None:
         """Run the sufficient-context check (SUFFICIENCY_CHECK: deep mode, always or off;
         at most MAX_COVERAGE_CHECKS per answer) and return the note for the model, if
         facts are missing."""
@@ -960,9 +961,7 @@ class AgentRun:
         self.coverage_checks += 1
         step = await self.em.step_start("reflect", "Checking the sources cover the question")
         with telemetry.span("coverage check", "evaluator"):
-            verdict = await sufficiency.check(
-                self.req.question, "\n\n".join(evidence), on_usage=self._add_usage
-            )
+            verdict = await sufficiency.check(self.req.question, evidence, on_usage=self._add_usage)
         if verdict is None or verdict["sufficient"] or not verdict["missing"]:
             label = "Sources cover the question" if verdict else "Coverage check skipped"
             await self.em.step_update(step, label=label, status="done")

@@ -115,3 +115,42 @@ async def test_running_jobs_send_heartbeats(app, monkeypatch):
     beat.cancel()
     async with SessionLocal() as db:
         assert (await db.get(Job, job_id)).heartbeat_at > old
+
+
+async def test_a_job_that_breaks_its_own_error_handling_never_stops_the_worker(app, monkeypatch):
+    """Recording a failed job can fail too (a broken session): the failure is recorded on
+    a fresh session, and the loop goes on to the next job either way."""
+    from app.core.db import SessionLocal
+    from app.models import Job
+    from app.worker import __main__ as worker
+
+    ran = []
+
+    async def handler(db, job):
+        ran.append(job.id)
+        raise RuntimeError("boom")
+
+    monkeypatch.setitem(worker.HANDLERS, "extract_graph", handler)
+    real_finish, broken = worker.finish, []
+
+    async def finish(db, job, error=None):
+        if error and not broken:  # the first attempt to record the failure breaks
+            broken.append(job.id)
+            raise RuntimeError("session broken")
+        return await real_finish(db, job, error=error)
+
+    monkeypatch.setattr(worker, "finish", finish)
+    first, second = await _jobs(app, 2, same_source=False)
+    stop = asyncio.Event()
+    loop = asyncio.create_task(worker.job_loop(0, stop))
+    for _ in range(200):
+        if len(ran) == 2:
+            break
+        await asyncio.sleep(0.05)
+    stop.set()
+    await asyncio.wait_for(loop, 10)
+    assert sorted(ran) == sorted([first, second])  # the loop went on after the first
+    async with SessionLocal() as db:
+        for job_id in (first, second):
+            job = await db.get(Job, job_id)
+            assert job.error == "boom" and job.status == "queued"  # recorded, to retry

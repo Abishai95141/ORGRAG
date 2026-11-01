@@ -379,3 +379,61 @@ async def test_name_variants_merge_and_lists_show_links(app, monkeypatch):
         assert (
             "Cobalt Data [organization]" in listed.text and "linked: High Risk Tier" in listed.text
         )
+
+
+@pytest.mark.integration
+async def test_a_failing_document_doesnt_stop_the_graph_job(app, monkeypatch):
+    """A document whose extraction fails (its chunks replaced or deleted under it, as
+    when it is re-indexed or deleted mid-run) is retried later; the others are
+    extracted, and the job never touches an object its rollback expired (that raised
+    MissingGreenlet and took the worker down on the e2e scenario)."""
+    import uuid
+
+    from sqlalchemy import select
+
+    from app.core.db import SessionLocal
+    from app.graph import extract
+    from app.models import Document, Job
+    from app.worker import jobs
+
+    admin = await _signup(app, "admin")
+    org = await _org(admin, "Race Co")
+    slug = org["slug"]
+    cols = (await admin.get(f"/api/orgs/{slug}/collections")).json()
+    source = await _ingest(
+        admin,
+        slug,
+        _general(org, cols),
+        {
+            "alpha.md": "VENDOR-MARK one.",
+            "beta.md": "VENDOR-MARK two.",
+            "gamma.md": "VENDOR-MARK three.",
+        },
+    )
+    monkeypatch.setattr(extract, "complete_text", _fake_extractor({"VENDOR-MARK": VENDOR}))
+    real = jobs.extract_document
+
+    async def racing(db, doc, model):
+        if doc.title == "alpha":
+            raise RuntimeError("its chunks were replaced while it was read")
+        if doc.title == "beta":
+            async with SessionLocal() as other:  # deleted by someone else meanwhile
+                await other.delete(await other.get(Document, doc.id))
+                await other.commit()
+            raise RuntimeError("its chunks are gone")
+        return await real(db, doc, model)
+
+    monkeypatch.setattr(jobs, "extract_document", racing)
+    async with SessionLocal() as db:
+        job = Job(org_id=uuid.UUID(org["id"]), kind="extract_graph",
+                  payload={"source_id": source["id"]})  # fmt: skip
+        with pytest.raises(RuntimeError, match="failed for 1 of 3"):
+            await jobs.handle_extract_graph(db, job)
+    async with SessionLocal() as db:
+        rows = await db.execute(
+            select(Document).where(Document.source_id == uuid.UUID(source["id"]))
+        )
+        docs = {d.title: d for d in rows.scalars()}
+    assert set(docs) == {"alpha", "gamma"}  # beta was deleted, and isn't a failure
+    assert docs["gamma"].graph_hash == docs["gamma"].content_hash
+    assert docs["alpha"].graph_hash != docs["alpha"].content_hash  # left for the retry

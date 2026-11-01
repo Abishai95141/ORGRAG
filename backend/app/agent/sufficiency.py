@@ -15,8 +15,13 @@ from app.llm.client import structured_call
 
 log = logging.getLogger(__name__)
 
-MAX_EVIDENCE_CHARS = 24_000  # the latest results are kept when there's more
+MAX_EVIDENCE_CHARS = 24_000
 MAX_MISSING = 3
+# Results that are complete in themselves (every record matching, every entity, every
+# document a scan checked): always shown to the check, whole.
+EXACT_TOOLS = frozenset(
+    {"query_records", "resolve_role", "list_entities", "explore_entity", "scan"}
+)
 
 SYSTEM = """You check whether retrieved sources contain enough information to fully \
 answer a question. Don't answer the question. Decide whether every fact a complete, \
@@ -37,19 +42,46 @@ SCHEMA: dict[str, Any] = {
 }
 
 
-async def check(question: str, evidence: str, on_usage=None) -> dict[str, Any] | None:
+def fit(results: list[tuple[str, str]], limit: int = MAX_EVIDENCE_CHARS) -> str:
+    """The research results the check reads, as (tool, text), in order and only whole:
+    exact results first claim the room, then the latest others that fit. A result cut
+    mid-way (a records table missing its first rows) reads as evidence "cut off"."""
+    keep: set[int] = set()
+    used = 0
+    exact = [i for i, (tool, _) in enumerate(results) if tool in EXACT_TOOLS]
+    others = [i for i, (tool, _) in enumerate(results) if tool not in EXACT_TOOLS]
+    for i in [*reversed(exact), *reversed(others)]:
+        if used + len(results[i][1]) <= limit:
+            keep.add(i)
+            used += len(results[i][1])
+    parts = [results[i][1] for i in sorted(keep)]
+    if not parts and results:  # one result larger than the room: its end, marked as cut
+        tail = results[-1][1][-limit:]
+        parts = [
+            "(the start of this result was left out for length)\n" + tail[tail.find("\n") + 1 :]
+        ]
+    if left := len(results) - len(keep) - (1 if not keep and results else 0):
+        parts.insert(0, f"({left} earlier search result(s) left out for length.)")
+    return "\n\n".join(parts)
+
+
+async def check(
+    question: str, evidence: str | list[tuple[str, str]], on_usage=None
+) -> dict[str, Any] | None:
     """{"sufficient": bool, "missing": [...]}, or None if the check couldn't run.
-    `on_usage(model, usage)` counts the call in the answer's cost."""
+    `evidence` is the research results as (tool, text), or text. `on_usage(model,
+    usage)` counts the call in the answer's cost."""
+    if not isinstance(evidence, str):
+        evidence = fit(evidence)
+    elif len(evidence) > MAX_EVIDENCE_CHARS:
+        evidence = fit([("", evidence)])
     if not evidence.strip():
         return None
     try:
         verdict = await structured_call(
             model=get_settings().sufficiency_model,
             system=SYSTEM,
-            prompt=(
-                f"<question>\n{question}\n</question>\n\n"
-                f"<sources>\n{evidence[-MAX_EVIDENCE_CHARS:]}\n</sources>"
-            ),
+            prompt=(f"<question>\n{question}\n</question>\n\n<sources>\n{evidence}\n</sources>"),
             schema=SCHEMA,
             effort="low",
             max_tokens=4000,  # adaptive thinking at low effort: measured, it matters

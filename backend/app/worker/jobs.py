@@ -69,35 +69,37 @@ async def handle_extract_graph(db, job: Job) -> None:
     source = await db.get(Source, uuid.UUID(job.payload["source_id"]))
     if source is None:
         return
-    org = await db.get(Organization, source.org_id)
+    # Plain values only: a rollback after a failed document expires every loaded object,
+    # and touching one then is IO the async session can't do.
+    source_id, org_id = source.id, source.org_id
+    org = await db.get(Organization, org_id)
     model = get_settings().graph_extraction_model or OrgSettings(**(org.settings or {})).model
     pending = (
-        (
-            await db.execute(
-                select(Document)
-                .where(
-                    Document.source_id == source.id,
-                    or_(
-                        Document.graph_hash.is_(None), Document.graph_hash != Document.content_hash
-                    ),
-                )
-                .order_by(Document.title)
+        await db.execute(
+            select(Document.id, Document.title)
+            .where(
+                Document.source_id == source_id,
+                or_(Document.graph_hash.is_(None), Document.graph_hash != Document.content_hash),
             )
+            .order_by(Document.title)
         )
-        .scalars()
-        .all()
-    )
+    ).all()
     failed = 0
-    for doc in pending:
+    for doc_id, title in pending:
         try:
+            doc = await db.get(Document, doc_id, populate_existing=True)
+            if doc is None:  # deleted since the job started
+                continue
             stats = await extract_document(db, doc, model)
             await db.commit()
-            log.info("Graph: %s → %s", doc.title, stats)
+            log.info("Graph: %s → %s", title, stats)
         except Exception as exc:
             await db.rollback()
+            if await db.get(Document, doc_id) is None:
+                continue  # deleted while it was read: nothing left to extract
             failed += 1
-            log.warning("Graph extraction failed for %s: %s", doc.title, exc)
-    await prune_orphans(db, source.org_id)
+            log.warning("Graph extraction failed for %s: %s", title, exc)
+    await prune_orphans(db, org_id)
     await db.commit()
     if failed:
         # Retried by the queue (with backoff); finished documents aren't redone.

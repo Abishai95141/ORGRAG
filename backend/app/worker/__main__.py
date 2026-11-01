@@ -19,7 +19,7 @@ from app.core import audit, telemetry
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.ingestion.verified import expire_due
-from app.models import Source
+from app.models import Job, Source
 from app.worker.jobs import HANDLERS
 from app.worker.queue import (
     claim_next,
@@ -45,14 +45,23 @@ async def job_loop(n: int, stop: asyncio.Event) -> None:
             if job is None:
                 pass
             else:
-                await run_job(n, db, job)
+                job_id = job.id
+                try:
+                    await run_job(n, db, job)
+                except Exception:
+                    # A job must never stop the loop: its heartbeat stops, and
+                    # requeue_stale hands it out again.
+                    log.exception("[loop %d] job %s failed outside its handler", n, job_id)
                 continue
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(stop.wait(), timeout=poll)
 
 
 async def run_job(n: int, db, job) -> None:
-    handler = HANDLERS.get(job.kind)
+    # Plain values: a rollback expires `job`, and reading it then is IO the async
+    # session can't do (MissingGreenlet), which used to take the worker down.
+    job_id, kind = job.id, job.kind
+    handler = HANDLERS.get(kind)
     async with exclusive(job) as acquired:
         if not acquired:
             log.info("[loop %d] %s %s waits: its source is busy", n, job.kind, job.id)
@@ -73,10 +82,16 @@ async def run_job(n: int, db, job) -> None:
                 await handler(db, job)
                 await finish(db, job)
             except Exception as exc:
-                log.exception("Job %s failed", job.id)
+                log.exception("Job %s failed", job_id)
                 telemetry.set_attrs(span, **{"strata.job.error": str(exc)[:500]})
-                await db.rollback()
-                await finish(db, await db.get(type(job), job.id), error=str(exc)[:2000])
+                error = str(exc)[:2000]
+                try:
+                    await db.rollback()
+                    await finish(db, await db.get(Job, job_id), error=error)
+                except Exception:  # the session itself broke: record it on a fresh one
+                    log.exception("Job %s: recording the failure on a fresh session", job_id)
+                    async with SessionLocal() as fresh:
+                        await finish(fresh, await fresh.get(Job, job_id), error=error)
             finally:
                 beat.cancel()
 
