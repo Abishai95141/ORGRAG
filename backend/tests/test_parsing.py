@@ -9,7 +9,7 @@ import zipfile
 import pytest
 
 from app.ingestion import docling_parser, vision
-from app.ingestion.chunker import chunk_markdown, page_marker, table_passages
+from app.ingestion.chunker import MAX_CHUNK_CHARS, chunk_markdown, page_marker, table_passages
 from app.ingestion.docling_parser import ParseError, check_archive, debris_share
 
 
@@ -27,6 +27,45 @@ def test_large_tables_become_passages_that_repeat_the_header():
     stock = [c for c in chunks if c.heading == "Stock"]
     assert len(stock) > 1 and all(c.content.startswith("| Code |") for c in stock)
     assert chunks[-1].heading == "After" and chunks[-1].content == "Closing text."
+
+
+def _padded(rows: list[list[str]]) -> str:
+    """A table as Docling writes it: every cell padded to its column's widest."""
+    widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
+    rule = "|" + "|".join("-" * (w + 2) for w in widths) + "|"
+
+    def line(row: list[str]) -> str:
+        return "| " + " | ".join(c.ljust(w) for c, w in zip(row, widths, strict=True)) + " |"
+
+    return "\n".join([line(rows[0]), rule, *map(line, rows[1:])])
+
+
+def test_padded_tables_fit_the_cap_and_keep_every_cell():
+    guidance = " ".join(f"Sentence {i} of the guidance in one cell." for i in range(80))
+    rows = [["Field", "Value"], ["Purpose", guidance]] + [
+        [f"F{i}", f"value {i}"] for i in range(40)
+    ]
+    table = _padded(rows)
+    assert len(table.splitlines()[0]) > 3000  # the padding alone would fill a passage
+    chunks = chunk_markdown(f"# Record\n\n## Fields\n\n{table}", title="Record")
+    head = "| Field | Value |\n|---|---|"
+    assert all(len(c.content) <= MAX_CHUNK_CHARS for c in chunks)
+    assert all(c.content.startswith(head + "\n") for c in chunks)  # padding gone, repeated
+    body = "".join(c.content[len(head) :] for c in chunks)
+    cells = "".join("|" + "|".join("".join(c.split()) for c in r) + "|" for r in rows[1:])
+    assert "".join(body.split()) == cells  # every cell once, in order: split, never cut
+
+
+def test_a_header_too_long_for_column_names_isnt_repeated():
+    # A row Docling took for a header (a table continued from the page before).
+    lead = " ".join(f"Point {i} carried over from the previous page." for i in range(30))
+    table = f"| {lead} | Note |\n|---|---|\n" + "\n".join(
+        f"| Row {i} {'detail ' * 10}| n{i} |" for i in range(60)
+    )
+    pieces = table_passages(table)
+    assert len(pieces) > 1 and all(len(p) <= MAX_CHUNK_CHARS for p in pieces)
+    assert pieces[0].startswith(f"| {lead} |") and not any(lead in p for p in pieces[1:])
+    assert "\n".join(pieces) == table
 
 
 def test_small_tables_stay_with_their_prose():

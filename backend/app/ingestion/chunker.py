@@ -11,7 +11,8 @@ JSON), then by word, and a single giant token is cut by characters.
 
 A large Markdown table (a spreadsheet, a PDF table) becomes passages of its own: row
 groups under the section heading, each repeating the header row so every passage says
-what its columns are. Small tables stay inline with the prose around them.
+what its columns are. Small tables stay inline with the prose around them. Tables lose
+their cell padding first; a row too long for a passage is split, never cut.
 
 A CSV's rows (`### Row N` sections, each a list of `**Column**: value` lines) are packed
 whole into passages of consecutive rows, each row under its number, so a passage stands
@@ -38,6 +39,7 @@ OWN_PASSAGE_TABLE_CHARS = 1200  # tables larger than this get passages of their 
 ROW_PASSAGE_TOKENS = 400
 _PAGE = re.compile(r"^<!-- page (\d+) -->$")
 _TABLE_RULE = re.compile(r"^\|?\s*:?-{3,}")
+_PADDING = re.compile(r"(?<=\S) {2,}")
 _ROW = re.compile(r"^Row (\d+)$")
 _PIECE = re.compile(r"[^\W_]+|[^\w\s]|_")
 
@@ -71,25 +73,39 @@ def _is_table(para: str) -> bool:
     return len(lines) >= 2 and all(line.lstrip().startswith("|") for line in lines)
 
 
+def _squeeze_table(table: str) -> str:
+    """A Markdown table without its alignment padding. Docling pads every cell to its
+    column's widest, so one long cell can make every line, rule included, thousands of
+    characters of spaces and dashes."""
+    lines = table.splitlines()
+    for i, line in enumerate(lines):
+        if i == 1 and _TABLE_RULE.match(line.strip()):
+            lines[i] = re.sub(r"-{3,}", "---", line.replace(" ", ""))
+        else:
+            lines[i] = _PADDING.sub(" ", line)
+    return "\n".join(lines)
+
+
 def table_passages(table: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
-    """Row groups of a Markdown table, each under the table's header (and rule)."""
+    """Row groups of a Markdown table, each under the table's header (and rule). A header
+    over a third of a passage is a row Docling took for one, not column names, so it
+    leads the first passage only. A row too long for a passage is split like prose."""
     lines = table.splitlines()
     head_len = 2 if len(lines) > 1 and _TABLE_RULE.match(lines[1].strip()) else 1
     head, rows = "\n".join(lines[:head_len]), lines[head_len:]
-    room = max(max_chars - len(head) - 1, 200)
-    groups: list[str] = []
-    cur: list[str] = []
+    if len(head) > max_chars // 3:
+        head, rows = "", lines
+    room = max_chars - len(head) - 1 if head else max_chars
+    groups: list[list[str]] = [[]]
     size = 0
     for row in rows:
-        row = row if len(row) <= room else row[:room]  # one giant cell: cut, don't drop
-        if cur and size + len(row) + 1 > room:
-            groups.append(head + "\n" + "\n".join(cur))
-            cur, size = [], 0
-        cur.append(row)
-        size += len(row) + 1
-    if cur or not groups:
-        groups.append(head + ("\n" + "\n".join(cur) if cur else ""))
-    return groups
+        for piece in [row] if len(row) <= room else _split_oversized(row, PIECE_WORDS, room):
+            if groups[-1] and size + len(piece) + 1 > room:
+                groups.append([])
+                size = 0
+            groups[-1].append(piece)
+            size += len(piece) + 1
+    return ["\n".join([head, *g] if head else g) for g in groups]
 
 
 def estimate_tokens(text: str) -> int:
@@ -224,9 +240,9 @@ def _paragraphs(body: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
     paras = [p.strip() for p in re.split(r"\n\s*\n", body) if p.strip()]
     out: list[str] = []
     for p in paras:
-        if _is_table(p) or _PAGE.match(p):
-            out.append(p)  # placed whole by chunk_markdown
-        elif len(p.split()) <= 400 and len(p) <= max_chars:
+        if _is_table(p):
+            out.append(_squeeze_table(p))  # placed whole by chunk_markdown
+        elif _PAGE.match(p) or (len(p.split()) <= 400 and len(p) <= max_chars):
             out.append(p)
         else:
             # Very long paragraph (PDF page text, minified JSON, a code block…).
