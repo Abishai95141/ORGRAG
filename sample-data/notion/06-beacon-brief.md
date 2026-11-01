@@ -29,4 +29,4 @@ An internal assistant that answers staff questions from our handbook, standards,
 ## Risks
 
 - Answers citing superseded policies. Mitigation: mark superseded pages and prefer the newest.
-- Low adoption. Mitigation: weekly tips in #general.
+- Low adoption. Mitigation: weekly tips in #harbourline-general.

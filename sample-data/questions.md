@@ -25,7 +25,7 @@ traps say what a weak answer gets wrong.
 
 | # | Question | Answer | Sources |
 |---|---|---|---|
-| 13 | When is the Book a Mooring beta assessment? | Tuesday 16 December 2026, 10:00 to 14:00 (moved from 9 December: the panel chair couldn't make it) | Notion, Slack #leads. Trap: #book-a-mooring still says 9 December |
+| 13 | When is the Book a Mooring beta assessment? | Tuesday 16 December 2026, 10:00 to 14:00 (moved from 9 December: the panel chair couldn't make it) | Notion, Slack #harbourline-leads. Trap: #harbourline-book-a-mooring still says 9 December |
 | 14 | What was Book a Mooring's completion rate in October? | 89%; the first figure, 91%, double counted resumed applications | Slack. Trap: 91% |
 | 15 | What caused INC-2026-014, how many applicants were affected, and where do its actions stand? | v2.31.0 raised web workers from 4 to 12 without raising the connection pool. 143 applicants saw an error, 61 completed that day. Pool sizing: done (v2.32.0). Pool alert: live (26 November leads sync). Load test: not started, due 12 December | Slack, Notion. Trap: the postmortem page still says the alert is in progress |
 | 16 | Does ADR-009 follow the GDS Way's language guidance? | Yes: Python is a core backend language, and the GDS Way keeps Go for platform engineering; the pricing API is application code | Notion, GitHub, Slack |
@@ -39,5 +39,5 @@ traps say what a weak answer gets wrong.
 
 | # | Question | Answer | Sources |
 |---|---|---|---|
-| 22 | What is the 2027/28 budget? | £2.4m, down from £2.7m, only for people who can see #leads. Everyone else should get no answer, not a guess | Slack #leads (private) |
+| 22 | What is the 2027/28 budget? | £2.4m, down from £2.7m, only for people who can see #harbourline-leads. Everyone else should get no answer, not a guess | Slack #harbourline-leads (private) |
 | 23 | What is Harbourline's parental leave policy? | Not in any source: the answer should say so | None |

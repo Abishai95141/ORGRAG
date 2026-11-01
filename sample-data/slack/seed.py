@@ -24,14 +24,15 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PEOPLE = json.loads((HERE / "people.json").read_text())
+# Prefixed so the sample never posts into a workspace's real channels (#general).
 ORDER = [
-    "general",
-    "eng-standards",
-    "book-a-mooring",
-    "incidents",
-    "ai-beacon",
-    "data-team",
-    "leads",
+    "harbourline-general",
+    "harbourline-eng-standards",
+    "harbourline-book-a-mooring",
+    "harbourline-incidents",
+    "harbourline-ai-beacon",
+    "harbourline-data-team",
+    "harbourline-leads",
 ]
 
 

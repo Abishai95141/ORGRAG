@@ -1,9 +1,14 @@
 {
   "display_information": {
     "name": "Strata sample data",
-    "description": "Posts Strata's sample conversations; delete it afterwards"
+    "description": "Posts Strata sample conversations and can be Strata Slack source"
   },
-  "features": {"bot_user": {"display_name": "Strata sample data", "always_online": false}},
+  "features": {
+    "bot_user": {
+      "display_name": "Strata sample data",
+      "always_online": false
+    }
+  },
   "oauth_config": {
     "scopes": {
       "bot": [
@@ -15,9 +20,14 @@
         "chat:write.customize",
         "groups:history",
         "groups:read",
-        "groups:write"
+        "groups:write",
+        "users:read"
       ]
     }
   },
-  "settings": {"org_deploy_enabled": false, "socket_mode_enabled": false, "token_rotation_enabled": false}
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
 }

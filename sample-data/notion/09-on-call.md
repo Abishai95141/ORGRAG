@@ -1,6 +1,6 @@
 # On-call and incident process
 
-One person is on call each week, Monday 09:00 to Monday 09:00. The rota is announced in #general and swaps are agreed in #incidents.
+One person is on call each week, Monday 09:00 to Monday 09:00. The rota is announced in #harbourline-general and swaps are agreed in #harbourline-incidents.
 
 ## Severity
 
@@ -12,7 +12,7 @@ One person is on call each week, Monday 09:00 to Monday 09:00. The rota is annou
 
 ## During an incident
 
-1. Post in #incidents with the incident number (INC-year-number) and what users see.
+1. Post in #harbourline-incidents with the incident number (INC-year-number) and what users see.
 2. Name an incident lead and someone on comms.
 3. Put up the status banner if users are affected.
 4. Write the timeline in the thread as you go.

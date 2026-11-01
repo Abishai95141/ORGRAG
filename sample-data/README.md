@@ -18,7 +18,7 @@ publications. Its Slack and Notion content (written for this set) refers to them
 | GitHub | [alphagov/gds-way](https://github.com/alphagov/gds-way) and [alphagov/govuk-rfcs](https://github.com/alphagov/govuk-rfcs) | 67 and 102 documents |
 | Upload | 11 GDS publications: reports and playbooks (PDF), an ADR template (Word), a transparency template (Excel), 7,932 .gov.uk domains (CSV) | 12 MB |
 | Google Drive | 18 files in 4 folders: working group notes, steering board minutes, data maturity workbooks, procurement | 9 MB |
-| Slack | 7 channels, 62 messages with threads; `#leads` is private | `slack/*.txt` |
+| Slack | 7 channels, 62 messages with threads; `#harbourline-leads` is private | `slack/*.txt` |
 | Notion | 12 pages: directory, decision log, an ADR, a postmortem, assessment prep, project brief, meeting notes, OKRs | `notion/*.md` |
 
 ## 1. Download the files
@@ -53,25 +53,26 @@ Add source → Upload, then drop in everything in `sample-data/upload/`.
 
 ## 6. Slack
 
-Strata reads Slack with its own app (Add source → Slack shows the steps). Posting the
-sample conversations needs a second app with write scopes, which you can delete
-afterwards:
+Posting the sample conversations needs an app with write scopes. Its manifest also has
+the scopes Strata reads with, so the same token can be Strata's Slack source:
 
 1. At [api.slack.com/apps](https://api.slack.com/apps): Create New App → From a
    manifest → your workspace → paste `slack/seed-app-manifest.json` → Create.
-2. Install it to the workspace and copy its Bot User OAuth Token.
+   (Or create it with an App Configuration Token and `apps.manifest.create`.)
+2. Install it to the workspace and copy its Bot User OAuth Token (`xoxb-…`).
 3. Put it in the repo's `.env` as `SLACK_SEED_TOKEN=xoxb-…`, then:
 
 ```bash
 python3 sample-data/slack/seed.py
 ```
 
-It creates the channels and posts each message under the person's name. Running it again
-skips channels that are already seeded. Then type `/invite @Strata` in `#leads` so
-Strata's app can read it.
+It creates 7 channels, all named `harbourline-…` so nothing lands in a workspace's real
+channels, and posts each message under the person's name. Running it again skips
+channels that are already seeded. The app created `#harbourline-leads`, so it can read
+it; with a different app for Strata, type `/invite @Strata` there first.
 
 To test permissions, use two Slack sources: the public channels into a collection the
-whole org sees, and `#leads` into a restricted collection (question 22).
+whole org sees, and `#harbourline-leads` into a restricted collection (question 22).
 
 ## 7. Notion
 

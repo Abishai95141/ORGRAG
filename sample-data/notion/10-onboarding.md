@@ -6,7 +6,7 @@ Welcome to Harbourline Digital. Your line manager goes through this with you in 
 
 - [ ] Collect your laptop and pass from Pier House reception (3rd floor from 1 December)
 - [ ] Ask Marcus Feld for GitHub, AWS and Slack access
-- [ ] Join #general, #eng-standards and your team's channel
+- [ ] Join #harbourline-general, #harbourline-eng-standards and your team's channel
 
 ## Week 1
 
