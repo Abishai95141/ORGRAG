@@ -7,6 +7,10 @@ A complete answer is a gap when it is
 - *incomplete*: the sufficient-context check (app.agent.engine `_coverage_note`) still
   reported facts missing at the end of the run;
 - *downvoted*: the asker gave it a thumbs-down.
+An unanswered or incomplete answer asked in a Slack channel that left out restricted
+collections the asker can read (its `scope` trace step) is *restricted_in_channel*
+instead: channels search org-wide collections only, so the answer may be in one the
+asker would have searched in a DM, and the knowledge base may not lack it at all.
 A direct search (`POST /search`, MCP `search`) with zero hits is a gap too
 (*no_results*). Chat questions are read from their answers, not from `search_events`, so
 each counts once. An answer that cites a file attached to the conversation was about
@@ -36,7 +40,7 @@ from app.models import (
     VerifiedAnswer,
 )
 
-REASONS = ("unanswered", "incomplete", "downvoted", "no_results")
+REASONS = ("unanswered", "incomplete", "downvoted", "no_results", "restricted_in_channel")
 # What the engine labels a coverage check that found everything (engine._coverage_note);
 # tests/test_gaps.py runs the real check so a renamed label fails there.
 COVERED_LABEL = "Sources cover the question"
@@ -54,6 +58,9 @@ REPORTED_MISSING = '$[*] ? (@.kind == "reflect" && exists(@.detail.missing))'
 # A records lookup that found records answered from exact data, even when the answer
 # cites nothing (a count or a group-by registers no sources).
 RECORDS_FOUND = '$[*] ? (@.kind == "records" && @.detail.found > 0)'
+# A Slack channel left restricted collections the asker can read out of the search
+# (app.agent.engine `_note_scope`).
+RESTRICTED_SKIPPED = '$[*] ? (@.kind == "scope" && @.detail.restricted_skipped > 0)'
 COVERAGE_CHECKS = (
     '$[*] ? (@.kind == "reflect" && (exists(@.detail.missing) || @.label == "'
     + COVERED_LABEL
@@ -158,6 +165,7 @@ def gap_reasons(
     checks: list[dict[str, Any]] | None,
     feedback: str | None,
     records_found: bool = False,
+    restricted_skipped: bool = False,
 ) -> tuple[set[str], list[str]]:
     """Why a complete answer is a gap (empty: it isn't), and the facts the coverage
     check reported missing."""
@@ -173,6 +181,10 @@ def gap_reasons(
     missing = coverage_missing(checks)
     if missing:
         reasons.add("incomplete")
+    if reasons and restricted_skipped:
+        # What the channel didn't find may be in a collection it left out: not a fact
+        # the knowledge base is known to lack.
+        reasons, missing = {"restricted_in_channel"}, []
     if feedback == "down":
         reasons.add("downvoted")
     return reasons, missing
@@ -262,6 +274,7 @@ async def answer_signals(
             _checks().label("checks"),
             _asked().label("question"),
             func.jsonb_path_exists(Message.trace, _path(RECORDS_FOUND)).label("records"),
+            func.jsonb_path_exists(Message.trace, _path(RESTRICTED_SKIPPED)).label("restricted"),
         )
         .join(Conversation, Conversation.id == Message.conversation_id)
         .where(
@@ -283,17 +296,18 @@ async def answer_signals(
     rows = rows.all()
     out: list[Signal] = []
     out_of: int = len(rows)  # candidates read, before the reasons filter
-    for content, sources, feedback, at, user_id, did_research, checks, question, records in rows:
+    for row in rows:
         reasons, missing = gap_reasons(
-            content=content,
-            sources=sources,
-            researched=bool(did_research),
-            checks=checks,
-            feedback=feedback,
-            records_found=bool(records),
+            content=row.content,
+            sources=row.sources,
+            researched=bool(row.researched),
+            checks=row.checks,
+            feedback=row.feedback,
+            records_found=bool(row.records),
+            restricted_skipped=bool(row.restricted),
         )
-        if reasons and question and question.strip():
-            out.append(Signal(question.strip(), user_id, at, reasons, missing))
+        if reasons and row.question and row.question.strip():
+            out.append(Signal(row.question.strip(), row.user_id, row.created_at, reasons, missing))
     return out, out_of >= limit
 
 

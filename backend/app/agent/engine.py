@@ -157,6 +157,9 @@ class ChatRequest:
     collection_ids: list[uuid.UUID] | None
     attachment_ids: list[uuid.UUID] = field(default_factory=list)
     web_search: bool | None = None
+    # Restricted collections the asker can read that this place doesn't search (a Slack
+    # channel searches org-wide collections only); recorded as a `scope` trace step.
+    restricted_skipped: int = 0
 
 
 class Emitter:
@@ -469,6 +472,7 @@ class AgentRun:
             async with SessionLocal() as db:
                 await self._load(db)
                 history = await self._history(db) if llm else []
+            await self._note_scope()
             if not self.scope.collections and not self.attachments and not self.web_enabled:
                 await self.em.delta(
                     "There's no knowledge I can search in this scope yet. Add a source "
@@ -491,6 +495,20 @@ class AgentRun:
             log.exception("Agent run failed")
             await self._fail(exc)
         await self.em.queue.put(None)
+
+    async def _note_scope(self) -> None:
+        """Say in the trace what this place leaves out. Gaps read it (app.gaps.signals):
+        a channel answer that couldn't search a restricted collection isn't evidence the
+        knowledge base lacks the answer."""
+        if not (n := self.req.restricted_skipped):
+            return
+        step = await self.em.step_start(
+            "scope",
+            f"Org-wide collections only: {n} restricted collection{'s' if n != 1 else ''} "
+            "not searched in a Slack channel",
+            {"restricted_skipped": n},
+        )
+        await self.em.step_update(step, status="done")
 
     @property
     def tools(self) -> ToolBox:

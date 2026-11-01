@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { IconAnswer, IconChevronDown, IconGlobe, IconPlan, IconRead, IconReflect, IconScan, IconSearch, IconTable, IconWarning, Spinner } from "@/components/icons";
+import { IconAnswer, IconChevronDown, IconGlobe, IconLock, IconPlan, IconRead, IconReflect, IconScan, IconSearch, IconTable, IconWarning, Spinner } from "@/components/icons";
 import type { SourceRef, StepKind, TraceStep } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const STEP_ICON: Record<StepKind, typeof IconPlan> = {
   plan: IconPlan,
+  scope: IconLock,
   search: IconSearch,
   records: IconTable,
   scan: IconScan,

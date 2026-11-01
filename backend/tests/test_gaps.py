@@ -173,7 +173,13 @@ async def test_gaps_group_what_the_knowledge_base_did_not_answer(app):
     leave, deploys = gaps["clusters"]
     assert leave["label"] == "How long is parental leave?"
     assert leave["count"] == 3 and leave["askers"] == 2
-    assert leave["reasons"] == {"unanswered": 2, "incomplete": 1, "downvoted": 0, "no_results": 0}
+    assert leave["reasons"] == {
+        "unanswered": 2,
+        "incomplete": 1,
+        "downvoted": 0,
+        "no_results": 0,
+        "restricted_in_channel": 0,
+    }
     assert leave["missing"] == ["leave length for fathers"]
     assert leave["examples"] == [
         "How long is parental leave?",
@@ -319,6 +325,100 @@ async def test_an_answer_from_an_empty_knowledge_base_is_a_gap(app):
     (gap,) = gaps["clusters"]
     assert gap["label"] == "What is the expense limit for travel?" and gap["count"] == 1
     assert gap["reasons"]["unanswered"] == 1
+
+
+# What a Slack channel answer's trace starts with when it left out restricted
+# collections the asker can read (engine._note_scope).
+CHANNEL_SCOPE = {
+    "id": "sc",
+    "kind": "scope",
+    "label": "Org-wide collections only: 1 restricted collection not searched in a Slack channel",
+    "status": "done",
+    "detail": {"restricted_skipped": 1},
+}
+
+
+def test_a_channel_that_skipped_restricted_collections_has_its_own_reason():
+    from app.gaps.signals import gap_reasons
+
+    def reasons(*, restricted, feedback=None, checks=()):
+        return gap_reasons(
+            content=ABSTAINED,
+            sources=[],
+            researched=True,
+            checks=list(checks),
+            feedback=feedback,
+            restricted_skipped=restricted,
+        )
+
+    assert reasons(restricted=False) == ({"unanswered"}, [])
+    assert reasons(restricted=True) == ({"restricted_in_channel"}, [])
+    # What the coverage check found missing may be in the collection it left out.
+    missing = [_missing("SOC 2 expiry dates")]
+    assert reasons(restricted=False, checks=missing) == (
+        {"unanswered", "incomplete"},
+        ["SOC 2 expiry dates"],
+    )
+    assert reasons(restricted=True, checks=missing) == ({"restricted_in_channel"}, [])
+    # A thumbs-down is the asker's verdict wherever it was asked.
+    assert reasons(restricted=True, feedback="down") == (
+        {"restricted_in_channel", "downvoted"},
+        [],
+    )
+    # An answer the channel did find isn't a gap at all.
+    found = gap_reasons(
+        content="Two vendors [1].",
+        sources=[{"ref": 1, "origin": "knowledge"}],
+        researched=True,
+        checks=[],
+        feedback=None,
+        restricted_skipped=True,
+    )
+    assert found == (set(), [])
+
+
+async def test_channel_questions_about_restricted_data_are_not_unanswered_gaps(app):
+    """A Slack channel searches org-wide collections only. What it didn't find may be in a
+    restricted collection the asker reads in a DM, so it counts as restricted_in_channel,
+    not unanswered, and gaps asked only that way come after the rest. A question that
+    found nothing where everything was searched is still unanswered."""
+    admin = await _signup(app, "gchannel")
+    org = await _org(admin, "Gap Channel")
+    slug = org["slug"]
+    a = await _me(admin)
+    soc2 = "Which vendors' SOC 2 reports expire soon?"
+    await _ask(org, a, soc2, trace=[CHANNEL_SCOPE, *SEARCHED])
+    await _ask(
+        org,
+        a,
+        soc2,
+        trace=[CHANNEL_SCOPE, *SEARCHED, _missing("SOC 2 expiry dates")],
+        days_ago=1,
+    )
+    await _ask(org, a, "What is the office wifi password?")  # a DM or the web app
+
+    gaps = (await admin.get(f"/api/orgs/{slug}/gaps")).json()
+    assert gaps["questions"] == 3
+    wifi, vendors = gaps["clusters"]  # the bigger channel-only gap comes second
+    assert wifi["label"] == "What is the office wifi password?"
+    assert wifi["reasons"]["unanswered"] == 1 and wifi["reasons"]["restricted_in_channel"] == 0
+    assert vendors["label"] == soc2 and vendors["count"] == 2
+    assert vendors["reasons"] == {
+        "unanswered": 0,
+        "incomplete": 0,
+        "downvoted": 0,
+        "no_results": 0,
+        "restricted_in_channel": 2,
+    }
+    assert vendors["missing"] == []
+
+    # Asked where restricted collections were searched too, and still not found: a gap.
+    await _ask(org, a, soc2)
+    gaps = (await admin.get(f"/api/orgs/{slug}/gaps")).json()
+    vendors, wifi = gaps["clusters"]
+    assert vendors["label"] == soc2 and vendors["count"] == 3
+    assert vendors["reasons"]["unanswered"] == 1
+    assert vendors["reasons"]["restricted_in_channel"] == 2
 
 
 # ── answered in another org ──────────────────────────────────────────────────
@@ -667,6 +767,7 @@ async def test_requests_attach_to_their_gap_and_fulfilling_addresses_it(app):
         # "What collections are there?" lists; it doesn't look for an answer.
         ([{"kind": "search", "detail": {"listing": True}}], False),
         ([{"kind": "plan", "detail": {}}, {"kind": "answer", "detail": {}}], False),
+        ([CHANNEL_SCOPE], False),  # what a Slack channel left out isn't research
     ],
 )
 async def test_what_counts_as_researching_an_answer(app, trace, researched):

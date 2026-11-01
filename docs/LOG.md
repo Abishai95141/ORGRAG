@@ -31,7 +31,7 @@ organizations would.
 
 **Gaps found and left.**
 - Weak pages aren't shown to admins: `weak_pages` is stored on the document but neither the API nor the UI exposes it.
-- A Slack channel question about data held only in a restricted collection counts as an *unanswered* gap, though the document exists.
+- A Slack channel question about data held only in a restricted collection counted as an *unanswered* gap, though the document exists. Fixed since: the answer's trace starts with a `scope` step counting the restricted collections the channel left out, and gaps count such answers as `restricted_in_channel`, shown apart and sorted after real gaps ([API.md](API.md#knowledge-gaps)).
 
 **Results.**
 - Run 2 (before the fixes): 466/470 checks, plus the problems above found by reading the answers.

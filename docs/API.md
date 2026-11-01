@@ -161,7 +161,7 @@ type Attachment = {
 
 type TraceStep = {
   id: string;
-  kind: "plan" | "search" | "records" | "scan" | "web" | "read" | "reflect" | "answer";
+  kind: "plan" | "scope" | "search" | "records" | "scan" | "web" | "read" | "reflect" | "answer";
   label: string;                 // human label, e.g. "Searching 3 queries", "Found 8 of 60"
   status: "running" | "done" | "error";
   detail: {
@@ -173,6 +173,7 @@ type TraceStep = {
     record_type?: string;        // records
     total?: number; scanned?: number; matched?: number;  // scan: matched the filter, checked, matches
     failed?: number; unverified?: number;  // scan: checks that failed; matches dropped (quote not in the document)
+    restricted_skipped?: number; // scope: restricted collections the asker can read that a Slack channel didn't search
   };
   started_at: string; finished_at: string | null;
 };
@@ -492,7 +493,8 @@ an admin of that org. Needs `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` and
 - **Channels are public to their members.** In a channel only collections with
   `visibility: "org"` are searched (an allow-list in the retrieval scope, intersected with
   what the asker can read); restricted collections are searched only in DMs. The reply
-  footer says so when it left something out.
+  footer says so when it left something out, and the answer's trace starts with a
+  `scope` step counting them (`detail.restricted_skipped`), which knowledge gaps read.
 - **The answer** runs the chat path (`stream=false`) in a Strata conversation per thread
   and person, so it's in the asker's history, Insights and citations. A follow-up in the
   thread continues that conversation, unless it went on in the web app (then a new one
@@ -720,7 +722,14 @@ A question counts when its answer is `complete` and
   step with `detail.missing`) still names missing facts; a later check that found them
   clears it;
 - **downvoted** — the asker gave it a thumbs-down;
-- **no_results** — a direct search (`POST /search`, MCP `search`) found nothing.
+- **no_results** — a direct search (`POST /search`, MCP `search`) found nothing;
+- **restricted_in_channel** — would be unanswered or incomplete, but was asked in a
+  Slack channel that left out restricted collections the asker can read (its trace's
+  `scope` step). Channels search org-wide collections only, so the answer may be in
+  one the asker would have searched in a DM: it doesn't count as unanswered or
+  incomplete, and its coverage check's missing facts aren't listed. Asked where nothing
+  was left out (a DM, the web app, or by someone who reads no restricted collection),
+  the same question is unanswered as usual.
 
 Answers that cite a file attached to the conversation, small talk (no search), and
 failed or stopped runs never count; chat questions are counted from their answers, not
@@ -736,7 +745,9 @@ its most central question. 503 `embedding_error` when the embedding model is dow
 
 Open and fulfilled document requests attach to the cluster their question (or title)
 is most similar to, above the same threshold; a request fulfilled after the cluster's
-last question marks it `addressed`, and addressed clusters sort last.
+last question marks it `addressed`, and addressed clusters sort last. Clusters whose
+every question is `restricted_in_channel` sort after the other open ones: they may not
+be missing knowledge at all.
 
 **Answered elsewhere.** `answered_elsewhere` lists (up to 3) similar questions with a
 good answer in *another* org — complete, citing the knowledge base, not downvoted,
@@ -752,7 +763,7 @@ about the other org is returned — not its name, questions, answers or document
 key never gets hints: it's bound to its org.
 
 ```ts
-type GapReason = "unanswered" | "incomplete" | "downvoted" | "no_results";
+type GapReason = "unanswered" | "incomplete" | "downvoted" | "no_results" | "restricted_in_channel";
 type Gaps = {
   days: number; since: string;
   questions: number;          // gap questions considered
