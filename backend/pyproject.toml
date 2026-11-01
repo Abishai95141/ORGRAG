@@ -35,6 +35,10 @@ dependencies = [
 local-embeddings = ["fastembed>=0.4"]
 parsing = [
     "docling[rapidocr]==2.145.0",
+    # Named so the Linux source below applies: Docling's layout and table models run on
+    # the CPU, and PyPI's Linux wheels bring the CUDA toolkit (gigabytes) with them.
+    "torch",
+    "torchvision",
 ]
 
 [dependency-groups]
@@ -46,6 +50,15 @@ dev = [
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.ruff]
 line-length = 100

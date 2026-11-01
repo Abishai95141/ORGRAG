@@ -113,12 +113,16 @@ Edit `.env`:
 - Optional: `TAVILY_API_KEY` or `BRAVE_API_KEY` to enable the web search tool.
 
 ```bash
-docker compose up -d --build                    # first build takes a few minutes
+docker compose up -d --build                    # first build: about 10–15 minutes
 docker compose exec api python -m app.seed      # demo orgs, documents and users
 ```
 
 Open **http://localhost:3000** and sign in with a demo login (see below).
 Stop with `docker compose down`. Add `-v` to also delete the database.
+
+The API image (about 2 GB) includes rich parsing: Docling with its layout, table and
+OCR models, CPU-only PyTorch, and LibreOffice, so PDFs keep their tables, scans are
+OCRed, and Excel, PowerPoint, email and images can be uploaded.
 
 ### Option B — run natively (for development)
 
