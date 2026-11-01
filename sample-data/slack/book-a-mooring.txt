@@ -1,0 +1,13 @@
+# purpose: Book a Mooring: the online service for harbour mooring permits (currently in private beta).
+Tom Okafor: Beta assessment is booked for Tuesday 9 December 2026, 10:00 to 14:00, with the cross-government panel. The prep doc is in Notion: "Book a Mooring: beta assessment prep".
+Elin Hughes: Research round 6 is done: 8 participants, 2 of them screen reader users. The biggest problem was that 5 of 8 couldn't find the berth length field on mobile. Write-up is in Notion.
+  Grace Liu: I'll move the berth length field above the fold and give it a hint with an example ("for example, 12.5 metres").
+  Tom Okafor: Thanks both. Let's retest it in round 7.
+Grace Liu: The accessibility audit by Shoreline Access found 3 WCAG 2.2 AA failures: focus isn't visible on the date picker, the error summary doesn't link to its fields, and the vessel type select has no label. All three are planned for sprint 31.
+Tom Okafor: Decision: we're dropping the "pay later" option for beta. Only 2% of applicants chose it, and it doubled the number of payment states we have to handle. The product owner signed it off on 12 November.
+  Sam Doyle: Does that mean I can delete the pay-later reminder job?
+  Tom Okafor: Yes, but keep the database column until after beta in case we bring it back.
+Sam Doyle: Payments go through GOV.UK Pay. The test card numbers are in the repo README, so don't paste real cards into the staging environment.
+Tom Okafor: October service data: 1,284 applications, 91% completion rate, median time to complete 6 minutes 40 seconds, and 37 calls to the contact centre about the service.
+Tom Okafor: Correction to my October numbers: the completion rate was 89%, not 91%. The dashboard was double counting applications that people resumed later. The other figures are right.
+Elin Hughes: Reminder that round 7 research is on Thursday 4 December, in person at Pier House. We still need one more boat owner who has never applied online.

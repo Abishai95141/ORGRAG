@@ -1,0 +1,15 @@
+# purpose: Engineering standards at Harbourline Digital: languages, code review, dependencies. We follow the GDS Way.
+Priya Raman: Reminder for anyone starting something new: backend work goes in one of the GDS Way core languages, which are Java, Python, Ruby and JavaScript/Node.js. Go is only for platform engineering work (operators, CLIs, routing). Ours is Python 3 everywhere, so please stick to that.
+Sam Doyle: Could the permit pricing API be in Go? It's tiny and the latency budget is tight.
+  Priya Raman: No, that's application code, not platform work. Python 3 like the rest of Book a Mooring. I've written it up as ADR-009 in Notion.
+  Marcus Feld: Agree. The only Go we run is the ingress plugin, and the platform team owns that.
+  Sam Doyle: Fair enough. I'll profile the Python version before anyone worries about latency.
+Priya Raman: New code review rule from Monday 1 December: changes under terraform/ or helm/ need two approvals. Application code still needs one. And as the GDS Way says, only approve pull requests you fully understand. If you can't follow it, say so and tag someone who can.
+  Grace Liu: Does that include content-only changes in the templates?
+  Priya Raman: No, templates are application code: one approval.
+Marcus Feld: Python 3.12 is the minimum for new services from now on. Existing services on 3.10 images need rebuilding on 3.12 by Friday 30 January 2027.
+Marcus Feld: Dependency policy, since people keep asking: Dependabot pull requests are merged within 5 working days, and anything with a critical CVE within 48 hours. The platform on-call person chases the critical ones.
+  Sam Doyle: Does the 48 hours include weekends?
+  Marcus Feld: Yes, 48 clock hours for critical. That's why it goes to on-call.
+Sam Doyle: Do we still have to support Internet Explorer 11 on Book a Mooring?
+  Grace Liu: No, we dropped it in ADR-004 back in March. The Service Manual page on designing for different browsers and devices has the current list of browsers to test in.

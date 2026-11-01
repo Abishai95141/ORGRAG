@@ -1,0 +1,237 @@
+{
+  "licence": "Open Government Licence v3.0 (Crown copyright), https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+  "files": [
+    {
+      "to": "upload/blueprint-for-modern-digital-government-2025.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/678f6665f4ff8740d978864c/a-blueprint-for-modern-digital-government-web-optimised.pdf",
+      "title": "A blueprint for modern digital government (web optimised PDF)",
+      "publication": "A blueprint for modern digital government",
+      "published": "2025-01-21",
+      "bytes": 689642
+    },
+    {
+      "to": "upload/state-of-digital-government-review-2025.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/678a47649752f24aa1573589/state-of-digital-government.pdf",
+      "title": "State of digital government review",
+      "publication": "State of digital government review",
+      "published": "2025-01-21",
+      "bytes": 3947744
+    },
+    {
+      "to": "upload/ai-playbook-for-uk-government-2025.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/67aca2f7e400ae62338324bd/AI_Playbook_for_the_UK_Government__12_02_.pdf",
+      "title": "Artificial Intelligence Playbook for the UK Government (PDF)",
+      "publication": "AI Playbook for the UK Government",
+      "published": "2025-02-10",
+      "bytes": 2447202
+    },
+    {
+      "to": "upload/govs-005-digital-functional-standard.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/6ac79c84e8ef5609e7c933b4/GovS005_Digital_v2.2_2026.pdf",
+      "title": "Government Functional Standard - GovS 005: Digital (PDF)",
+      "publication": "Government Functional Standard GovS 005: Digital",
+      "published": "2026-10-01",
+      "bytes": 576162
+    },
+    {
+      "to": "upload/m365-copilot-experiment-findings-2025.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/683db42bd23a62e5d32680d0/M365_Copilot_Experiment_Findings_Report.pdf",
+      "title": "Microsoft 365 Copilot Experiment: Cross-Government Findings Report (PDF)",
+      "publication": "Microsoft 365 Copilot Experiment: Cross-Government Findings Report",
+      "published": "2025-06-01",
+      "bytes": 1071559
+    },
+    {
+      "to": "upload/ai-insights-rag-systems.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/68ee30f7e7b6794c076bbe00/ai-insights-rag-systems.pdf",
+      "title": "AI Insights: RAG Systems (PDF)",
+      "publication": "AI Insights",
+      "published": "2026-08-03",
+      "bytes": 555117
+    },
+    {
+      "to": "upload/ai-insights-agentic-ai.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/68076cba8c1316be7978e6a8/AI_Insights_-_Agentic_AI.pdf",
+      "title": "AI Insights: Agentic AI (PDF)",
+      "publication": "AI Insights",
+      "published": "2026-08-03",
+      "bytes": 174245
+    },
+    {
+      "to": "upload/performance-review-of-digital-spend-2025.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/67ceb0a4df9470296491605a/Performance_Review_of_Digital_Spend_-_for_publication_final_version.pdf",
+      "title": "Performance Review of  Digital Spend: Enabling  Strategic Investment and  Innovation",
+      "publication": "Performance Review of Digital Spend",
+      "published": "2025-03-12",
+      "bytes": 350829
+    },
+    {
+      "to": "upload/adr-template.docx",
+      "url": "https://assets.publishing.service.gov.uk/media/692471975f7777c304ba7ed7/ADR-000_Subject_of_Decision.docx",
+      "title": "ADR-000: Subject of Decision (Word)",
+      "publication": "Architectural Decision Record Framework",
+      "published": "2025-11-04",
+      "bytes": 1834933
+    },
+    {
+      "to": "upload/algorithmic-transparency-record-template.xlsx",
+      "url": "https://assets.publishing.service.gov.uk/media/681b8f20e26cd2f713d8705d/ATRS_V4.0__FINAL.xlsx",
+      "title": "Algorithmic Transparency Recording Standard - Template",
+      "publication": "Algorithmic Transparency Recording Standard template",
+      "published": "2025-05-08",
+      "bytes": 276411
+    },
+    {
+      "to": "upload/gov-uk-domain-names-2026-03-31.csv",
+      "url": "https://assets.publishing.service.gov.uk/media/69cbd582024cdf09254f3f7d/List_of_.gov.uk_domain_names_as_of_31_March_2026_1.csv",
+      "title": "List of .gov.uk domain names as of  31 March  2026",
+      "publication": "List of .gov.uk domain names",
+      "published": "2026-03-31",
+      "bytes": 209450
+    },
+    {
+      "to": "drive/Working groups/Vulnerabilities/vwg-notes-06.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/690382c05c84b1206832a891/Vulnerabilities_Working_Group_meeting_notes_6th_September_2025.pdf",
+      "title": "Vulnerabilities Working Group \u2013 Notes (6th Meeting) 24 September 2025 (PDF)",
+      "publication": "Vulnerabilities Working Group",
+      "published": "2025-10-31",
+      "bytes": 202883
+    },
+    {
+      "to": "drive/Working groups/Vulnerabilities/vwg-notes-05.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/6867b24efe1a249e937cbcbc/Vulnerabilities_Working_Group_meeting_notes_5th_May_2025.pdf",
+      "title": "Vulnerability Working Group - Notes 5th Meeting (PDF)",
+      "publication": "Vulnerabilities Working Group",
+      "published": "2025-10-31",
+      "bytes": 239064
+    },
+    {
+      "to": "drive/Working groups/Vulnerabilities/vwg-notes-04.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/66c4b0182e8f04b086cdf4cc/Vulnerability_Working_Group_-_Notes_4th_Meeting__PDF_.pdf",
+      "title": "Vulnerability Working Group - Notes 4th Meeting (PDF)",
+      "publication": "Vulnerabilities Working Group",
+      "published": "2025-10-31",
+      "bytes": 86928
+    },
+    {
+      "to": "drive/Working groups/Vulnerabilities/vwg-notes-03.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/66a75ceeab418ab055592e6b/Vulnerabilities_WG_Note_-_June24.pdf",
+      "title": "Vulnerability Working Group - Notes 3rd Meeting (PDF)",
+      "publication": "Vulnerabilities Working Group",
+      "published": "2025-10-31",
+      "bytes": 169063
+    },
+    {
+      "to": "drive/Working groups/Vulnerabilities/vwg-notes-02.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/65390f54e6c968000daa9ab4/Vulnerability_Working_Group_-_Notes_2nd_Meeting.pdf",
+      "title": "Vulnerability Working Group - Notes 2nd Meeting (PDF)",
+      "publication": "Vulnerabilities Working Group",
+      "published": "2025-10-31",
+      "bytes": 107049
+    },
+    {
+      "to": "drive/Working groups/Vulnerabilities/vwg-notes-01.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/65390f42e6c968000daa9ab2/Vulnerability_Working_Group_-_Notes_1st_Meeting.pdf",
+      "title": "Vulnerability Working Group - Notes 1st Meeting (PDF)",
+      "publication": "Vulnerabilities Working Group",
+      "published": "2025-10-31",
+      "bytes": 109791
+    },
+    {
+      "to": "drive/Data Standards Authority/Minutes/dsa-steering-board-2025-05-06.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/6827152c256994af4172ab28/Official_-_DSA_Steering_Board_MeetingNotes-_May25.pdf",
+      "title": "DSA Steering Board Minutes, Tuesday, 6 May 2025 (PDF)",
+      "publication": "Meeting Minutes for the Data Standards Authority governance boards",
+      "published": "2026-02-24",
+      "bytes": 233830
+    },
+    {
+      "to": "drive/Data Standards Authority/Minutes/dsa-steering-board-2025-03-10.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/67f639f790615dd92bc90d8f/Official_-_DSA_Steering_Board_MeetingNotes-_March25.pdf",
+      "title": "DSA Steering Board Minutes, Monday, 10 March 2025 (PDF)",
+      "publication": "Meeting Minutes for the Data Standards Authority governance boards",
+      "published": "2026-02-24",
+      "bytes": 204102
+    },
+    {
+      "to": "drive/Data Standards Authority/Minutes/dsa-steering-board-2025-01-08.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/6798a4c7cfd3deafa04fdeeb/Official_-_DSA_Steering_Board_MeetingNotes-_Jan25.pdf",
+      "title": "DSA Steering Board Minutes, Wednesday, 8 January 2025 (PDF)",
+      "publication": "Meeting Minutes for the Data Standards Authority governance boards",
+      "published": "2026-02-24",
+      "bytes": 157161
+    },
+    {
+      "to": "drive/Data Standards Authority/Minutes/dsa-steering-board-2024-02-08.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/66aa0477ce1fd0da7b593062/DSA_SB_Minutes_-_8_FEB_2024.pdf",
+      "title": "Steering Board Minutes Thursday, 8th February 2024 (PDF)",
+      "publication": "Meeting Minutes for the Data Standards Authority governance boards",
+      "published": "2026-02-24",
+      "bytes": 152444
+    },
+    {
+      "to": "drive/Data Standards Authority/Minutes/dsa-steering-board-2023-10-11.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/6538ec43d10f35000d9a68e7/Steering_Board_Minutes_-_Wed_11_October_2023.pdf",
+      "title": "Steering Board Minutes - Wed 11 October 2023 (PDF)",
+      "publication": "Meeting Minutes for the Data Standards Authority governance boards",
+      "published": "2026-02-24",
+      "bytes": 120622
+    },
+    {
+      "to": "drive/Data Standards Authority/Minutes/dsa-peer-review-2025-04-28.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/682c8ecea4a41a5b3eb00cbb/Official_-_DSA_Peer_Review_Group_MeetingNotes-_April25.pdf",
+      "title": "DSA Peer Review Group Minutes Tuesday, 28 April 2025 (PDF)",
+      "publication": "Meeting Minutes for the Data Standards Authority governance boards",
+      "published": "2026-02-24",
+      "bytes": 182044
+    },
+    {
+      "to": "drive/Data maturity/data-maturity-assessment-framework.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/64184bccd3bf7f79d9675dbd/Data_Maturity_Assessment_for_Government_-_FINAL_PDF.pdf",
+      "title": "Data Maturity Assessment for Government: Framework (PDF)",
+      "publication": "Data Maturity Assessment for Government: Framework",
+      "published": "2026-07-23",
+      "bytes": 1987087
+    },
+    {
+      "to": "drive/Data maturity/data-maturity-assessment-workbook.xlsx",
+      "url": "https://assets.publishing.service.gov.uk/media/642163645155a200136ad773/DataMaturityAssessment_RecordCalculateResults.xlsx",
+      "title": "Delivering the Data Maturity Assessment: record and calculate results",
+      "publication": "Delivering a Data Maturity Assessment: objectives and resources",
+      "published": "2026-07-23",
+      "bytes": 250155
+    },
+    {
+      "to": "drive/Data maturity/data-quality-action-plan-template.xlsx",
+      "url": "https://assets.publishing.service.gov.uk/media/690b8da814b040dfe829237f/DQAP_Supporting_Materials_Template.xlsx",
+      "title": "DQAP template",
+      "publication": "Implement a data quality action plan",
+      "published": "2026-04-16",
+      "bytes": 52533
+    },
+    {
+      "to": "drive/Procurement/cloud-challenge-book-2026.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/6a7ae23f9fad0e27bebabed0/GDS_CloudChallengeBook2026_Digital.pdf",
+      "title": "Cloud Challenge Book 2026 - PDF",
+      "publication": "Cloud Challenge Book 2026",
+      "published": "2026-10-29",
+      "bytes": 4192206
+    },
+    {
+      "to": "drive/Procurement/cloud-challenge-book-2026-clarifications.pdf",
+      "url": "https://assets.publishing.service.gov.uk/media/6ae1cc8cbdb574cf1c9b3ef5/Clarifications_on_the_Cloud_Challenge_Book_2026.pdf",
+      "title": "Clarifications on the Cloud Challenge Book 2026 - PDF",
+      "publication": "Cloud Challenge Book 2026",
+      "published": "2026-10-29",
+      "bytes": 141662
+    },
+    {
+      "to": "drive/Procurement/g-cloud-11-call-off-contract.docx",
+      "url": "https://assets.publishing.service.gov.uk/media/5ec394ef86650c279626e61b/RM1557.11-G-Cloud-11-Call-off-contract.docx",
+      "title": "G-Cloud 11 call-off contract",
+      "publication": "G-Cloud 11 call-off contract",
+      "published": "2019-06-27",
+      "bytes": 148086
+    }
+  ]
+}

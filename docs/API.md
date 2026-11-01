@@ -277,7 +277,8 @@ How connectors read:
 - **GitHub** downloads the repository as one archive (`github.com/{repo}/archive/{ref}.tar.gz`,
   or the API's tarball with a token), so a public repository needs no API request and no
   token (GitHub allows 60 unauthenticated API requests an hour per IP, often shared).
-  Markdown, text and the parseable types are indexed (under 1 MB each, not images); links
+  Markdown (Middleman's `.html.md.erb` pages too), text and the parseable types are
+  indexed (under 1 MB each, not images); links
   point at the indexed commit. A private repository needs a token with read access.
 - **Websites** are crawled from the start URL's links and its sitemaps (robots.txt
   `Sitemap:` lines, else `/sitemap.xml`), on the same host and under `include_paths` if

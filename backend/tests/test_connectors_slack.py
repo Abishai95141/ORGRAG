@@ -25,6 +25,9 @@ MESSAGES = [  # newest first, as conversations.history returns them
     {"ts": ts(DAY1, 16), "user": "U3", "subtype": "channel_join", "text": "joined"},
     {"ts": ts(DAY1, 15, 30), "user": "U1", "text": "see <https://x.com/a|the docs>",
      "files": [{"name": "plan.pdf"}]},
+    # An app posting under another name (chat:write.customize): Slack shows that name.
+    {"ts": ts(DAY1, 14, 30), "user": "UAPP", "bot_id": "B2", "username": "Priya Raman",
+     "subtype": "bot_message", "text": "standup moved to 10:15"},
     {"ts": ts(DAY1, 14), "bot_profile": {"name": "deploybot"}, "subtype": "bot_message",
      "text": "build #12 passed"},
 ]  # fmt: skip
@@ -163,6 +166,7 @@ async def test_full_sync_builds_thread_and_day_documents(fake):
     assert first_day.data.decode() == (
         f"# #general — {day1}\n\n"
         "**deploybot** (14:00): build #12 passed\n\n"
+        "**Priya Raman** (14:30): standup moved to 10:15\n\n"
         "**alice** (15:30): see [the docs](https://x.com/a) [file: plan.pdf]\n"
     )
     assert first_day.updated_at == DAY1 + timedelta(hours=15, minutes=30)
@@ -171,7 +175,8 @@ async def test_full_sync_builds_thread_and_day_documents(fake):
 
     # users.info is cached; the 429 on conversations.history was retried.
     assert sum(1 for m, _ in fake.calls if m == "users.info") == 2
-    assert sum(1 for m, _ in fake.calls if m == "conversations.history") == 4
+    # C1's three pages, the retry, G3.
+    assert sum(1 for m, _ in fake.calls if m == "conversations.history") == 5
 
 
 async def test_incremental_refetches_from_start_of_since_day(fake):

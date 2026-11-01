@@ -1,0 +1,11 @@
+# purpose: Beacon: our internal AI assistant pilot over the handbook, standards and Slack.
+Jonah Price: Beacon pilot kick-off. 40 staff for 8 weeks, starting Monday 3 November 2026. Success means 20 minutes saved per person per day and at least 80% of answers rated correct in the weekly sample. The cross-government M365 Copilot experiment reported 26 minutes a day, so 20 is deliberately conservative.
+Aisha Bello: Before we go live we need an Algorithmic Transparency Recording Standard record. The template is in the shared drive, and I'll own it.
+  Jonah Price: Thanks. Can it be done by 31 October so it's ready for the go/no-go?
+  Aisha Bello: Yes, a draft by 29 October and signed off by 31 October.
+Priya Raman: We're mapping Beacon against the AI Playbook's 10 principles. The panel will push hardest on principle 4, meaningful human control. Beacon never sends anything on its own: it drafts, and a person decides.
+Jonah Price: We had three options for the platform: Lighthouse (SaaS), Keel (open source, self-hosted) and building our own on our cloud account. Decision on 14 October: Keel for the pilot, because the data stays in our account and answers come with citations. We'll revisit in week 6.
+  Ruth Adeyemi: Agreed. Please put the cost comparison in the Notion brief.
+  Jonah Price: Done: Lighthouse came to £38k a year for 40 seats, Keel about £9k a year in hosting, and building our own an estimated 2 developers for 3 months.
+Elin Hughes: Pilot feedback from week 1: 31 of the 40 people were active. The top complaint was that answers sometimes cite an old version of a policy.
+Marcus Feld: Red team results: 0 of 25 prompt-injection attempts leaked data from a restricted collection. 2 of 25 got Beacon to ignore its instructions on formatting, which is harmless but logged.

@@ -1,0 +1,11 @@
+{
+  "Priya Raman": {"role": "Head of Engineering", "icon": ":technologist:"},
+  "Tom Okafor": {"role": "Delivery Manager, Book a Mooring", "icon": ":clipboard:"},
+  "Elin Hughes": {"role": "User Researcher", "icon": ":mag:"},
+  "Marcus Feld": {"role": "Platform Lead", "icon": ":gear:"},
+  "Aisha Bello": {"role": "Data Lead", "icon": ":bar_chart:"},
+  "Jonah Price": {"role": "Product Manager, Beacon", "icon": ":bulb:"},
+  "Grace Liu": {"role": "Content Designer and accessibility lead", "icon": ":pencil2:"},
+  "Sam Doyle": {"role": "Developer", "icon": ":hammer_and_wrench:"},
+  "Ruth Adeyemi": {"role": "Director of Digital", "icon": ":briefcase:"}
+}

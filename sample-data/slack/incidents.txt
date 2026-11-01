@@ -1,0 +1,9 @@
+# purpose: Live incidents and their timelines. Postmortems live in Notion.
+Marcus Feld: :rotating_light: Posting the timeline for INC-2026-014 (Tuesday 14 October): Book a Mooring returned 502 errors for about 22% of requests. Details are in this thread.
+  Marcus Feld: 14:05 Error rate alert fired. 14:12 I took incident lead, with Tom on comms.
+  Marcus Feld: 14:20 Suspected cause: release v2.31.0 raised the web workers from 4 to 12 per container but didn't raise the database connection pool, so the pool was exhausted.
+  Marcus Feld: 14:34 Rolled back to v2.30.4. 14:41 Error rate back under 0.1%. 15:30 Incident resolved.
+  Tom Okafor: Comms: a status banner went up at 14:18 and came down at 15:35. 143 applicants saw an error, and 61 of them went on to complete their application the same day.
+  Marcus Feld: Actions: size the connection pool from the worker count (Sam, by 31 October), and add an alert on pool saturation (me, by 7 November). The postmortem is in Notion.
+Marcus Feld: INC-2026-015 (Monday 27 October): confirmation emails were delayed by about 40 minutes. The problem was on the GOV.UK Notify side and their status page covered it. Nothing for us to do; closing it.
+Sam Doyle: The connection pool now follows the worker count (pool = workers × 2 + 2). It's deployed in v2.32.0, so INC-2026-014's first action is done.

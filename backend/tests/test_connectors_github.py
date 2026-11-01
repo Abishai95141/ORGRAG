@@ -116,6 +116,18 @@ async def test_failures_say_what_to_do(monkeypatch, status, token, message):
         await _docs({"repo": "acme/handbook"}, {"token": token} if token else None)
 
 
+async def test_markdown_templates_are_read_but_other_templates_are_not(monkeypatch):
+    files = {
+        "source/manuals/code-review.html.md.erb": b"# Code review\n\nTwo approvals.",
+        "app/views/index.html.erb": b"<%= render 'nav' %>",
+    }
+    _github(monkeypatch, lambda request: httpx.Response(200, content=_tarball(files)))
+    _, docs = await _docs({"repo": "alphagov/gds-way"})
+    assert [(d.external_id, d.mime) for d in docs] == [
+        ("source/manuals/code-review.html.md.erb", "text/markdown")
+    ]
+
+
 async def test_a_capped_listing_is_marked_incomplete(monkeypatch):
     monkeypatch.setattr(github, "MAX_FILES", 1)
     _github(monkeypatch, lambda request: httpx.Response(200, content=_tarball(FILES)))

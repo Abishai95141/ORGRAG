@@ -1,0 +1,23 @@
+{
+  "display_information": {
+    "name": "Strata sample data",
+    "description": "Posts Strata's sample conversations; delete it afterwards"
+  },
+  "features": {"bot_user": {"display_name": "Strata sample data", "always_online": false}},
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "channels:history",
+        "channels:join",
+        "channels:manage",
+        "channels:read",
+        "chat:write",
+        "chat:write.customize",
+        "groups:history",
+        "groups:read",
+        "groups:write"
+      ]
+    }
+  },
+  "settings": {"org_deploy_enabled": false, "socket_mode_enabled": false, "token_rotation_enabled": false}
+}

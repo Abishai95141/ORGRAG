@@ -204,4 +204,10 @@ def _download_error(repo: str, ref: str, resp: httpx.Response, has_token: bool) 
 
 def _ext(path: str) -> str:
     dot = path.rfind(".")
-    return path[dot:].lower() if dot != -1 else ""
+    ext = path[dot:].lower() if dot != -1 else ""
+    if ext == ".erb":
+        # A template of a text page (Middleman's `page.html.md.erb`) is read as that
+        # page; other templates (Rails views, `index.html.erb`) are code.
+        inner = _ext(path[:dot])
+        return inner if inner in _TEXT_EXT else ext
+    return ext

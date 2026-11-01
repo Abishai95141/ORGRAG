@@ -1,0 +1,8 @@
+# purpose: Harbourline Digital: team-wide announcements.
+Ruth Adeyemi: Office move: from Monday 1 December we're at Pier House, 3rd floor. Desk booking stays the same.
+Marcus Feld: On-call rota for December: week 1 Marcus, week 2 Sam, week 3 Priya, week 4 Marcus. Ask for swaps in #incidents.
+  Sam Doyle: Can I swap week 2 with someone? I'm away 8 to 12 December.
+  Priya Raman: I'll take week 2 and you take week 3. Marcus, please update the rota.
+  Marcus Feld: Updated: week 2 Priya, week 3 Sam.
+Ruth Adeyemi: Christmas closure: we're closed from Wednesday 24 December to Friday 2 January. On-call only.
+Grace Liu: Lunch and learn on Thursday 20 November: "Writing error messages people understand". Bring your worst examples.

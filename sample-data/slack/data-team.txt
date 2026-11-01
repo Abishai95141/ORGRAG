@@ -1,0 +1,7 @@
+# purpose: Data team: data maturity, data quality and data standards.
+Aisha Bello: We've finished the Data Maturity Assessment self-assessment using the government DMA workbook. Overall we're 2.6 out of 5. The lowest topic was data skills at 2.2 and the highest was data governance at 3.1. Our target is 3.0 overall by September 2027.
+Aisha Bello: Data quality action plan for the moorings register, from the DQAP template. I'm the owner, there are three actions, and all are due Friday 30 January 2027: (1) de-duplicate vessel records, where we found 3,412 duplicates; (2) validate berth lengths against harbour plans; (3) publish a monthly completeness report.
+  Sam Doyle: Is the de-duplication done in the register or in Book a Mooring?
+  Aisha Bello: In the register. Book a Mooring reads from it, so it gets the fix for free.
+Aisha Bello: Standards decision: dates in ISO 8601, and addresses keyed by UPRN, in line with the open standards the Data Standards Authority recommends. No more free-text addresses in new tables.
+Aisha Bello: Completeness report for October: 94.1% of vessel records have a valid berth length, up from 88.7% in September.

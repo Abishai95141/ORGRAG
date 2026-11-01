@@ -344,6 +344,10 @@ class SlackConnector(Connector):
         )
 
     async def _author(self, client: httpx.AsyncClient, msg: dict) -> str:
+        # An app can post under another name (chat:write.customize); Slack shows that
+        # name, not the app's bot user.
+        if msg.get("bot_id") and msg.get("username"):
+            return msg["username"]
         if user := msg.get("user"):
             return await self._user_name(client, user)
         return msg.get("username") or (msg.get("bot_profile") or {}).get("name") or "bot"
