@@ -13,6 +13,13 @@ A large Markdown table (a spreadsheet, a PDF table) becomes passages of its own:
 groups under the section heading, each repeating the header row so every passage says
 what its columns are. Small tables stay inline with the prose around them.
 
+A CSV's rows (`### Row N` sections, each a list of `**Column**: value` lines) are packed
+whole into passages of consecutive rows, each row under its number, so a passage stands
+alone. Passages are sized by an estimate of the embedder's tokens rather than characters:
+rows of names and codes run about 2.5 characters a token, half what `max_chars` assumes
+of prose, so a passage of `max_chars` would be embedded only halfway. A row too big to
+share a passage is chunked like any other section.
+
 Parsers that know page numbers (Docling) mark page starts with `<!-- page N -->`; each
 chunk records the page it starts on, and the markers aren't indexed."""
 
@@ -26,8 +33,13 @@ _SENTENCE = re.compile(r"(?<=[.!?])\s+")
 MAX_CHUNK_CHARS = 2600  # ≈ 512 embedder tokens of English prose
 PIECE_WORDS = 200  # target size of the pieces an oversized paragraph is cut into
 OWN_PASSAGE_TABLE_CHARS = 1200  # tables larger than this get passages of their own
+# Estimated embedder tokens per passage of CSV rows: 512, less room for the title and
+# heading in front of it and the estimate's error.
+ROW_PASSAGE_TOKENS = 400
 _PAGE = re.compile(r"^<!-- page (\d+) -->$")
 _TABLE_RULE = re.compile(r"^\|?\s*:?-{3,}")
+_ROW = re.compile(r"^Row (\d+)$")
+_PIECE = re.compile(r"[^\W_]+|[^\w\s]|_")
 
 
 @dataclass
@@ -41,6 +53,17 @@ class ChunkDraft:
 
 def page_marker(n: int) -> str:
     return f"<!-- page {n} -->"
+
+
+def row_heading(n: int) -> str:
+    return f"### Row {n}"
+
+
+def wordpieces(text: str) -> int:
+    """Roughly the embedder's token count: one per punctuation mark, one per word and one
+    more per further four characters of it. Within about 10% of bge-small's count on
+    rows of names and codes; somewhat high on prose."""
+    return sum(1 + (len(p) - 1) // 4 for p in _PIECE.findall(text))
 
 
 def _is_table(para: str) -> bool:
@@ -100,6 +123,59 @@ def _sections(markdown: str) -> list[tuple[list[str], str]]:
             buf.append(line)
     flush()
     return sections
+
+
+Rows = list[tuple[str, str]]  # (row number, its lines)
+
+
+def _row_runs(
+    sections: list[tuple[list[str], str]], max_chars: int
+) -> list[tuple[list[str], str, Rows]]:
+    """Sections as (path, body, []), except that consecutive rows small enough to share a
+    passage become one (parent path, "", rows)."""
+    out: list[tuple[list[str], str, Rows]] = []
+    for path, body in sections:
+        m = _ROW.match(path[-1]) if path else None
+        block = f"Row {m.group(1)}\n{body}" if m else ""
+        if (
+            not m
+            or "<!-- page " in body
+            or len(block) > max_chars
+            or wordpieces(block) > ROW_PASSAGE_TOKENS
+        ):
+            out.append((path, body, []))
+        elif out and out[-1][2] and out[-1][0] == path[:-1]:
+            out[-1][2].append((m.group(1), body))
+        else:
+            out.append((path[:-1], "", [(m.group(1), body)]))
+    # A row alone stays the section it was.
+    return [
+        (path + [f"Row {rows[0][0]}"], rows[0][1], []) if len(rows) == 1 else (path, body, rows)
+        for path, body, rows in out
+    ]
+
+
+def _row_passages(rows: Rows, max_chars: int) -> list[tuple[str, str]]:
+    """(heading, text) passages of consecutive whole rows, each row under its number."""
+    groups: list[Rows] = [[]]
+    tokens = chars = 0
+    for n, body in rows:
+        block = f"Row {n}\n{body}"
+        size = wordpieces(block)
+        if groups[-1] and (
+            tokens + size > ROW_PASSAGE_TOKENS or chars + len(block) + 2 > max_chars
+        ):
+            groups.append([])
+            tokens = chars = 0
+        groups[-1].append((n, body))
+        tokens += size
+        chars += len(block) + 2
+    return [
+        (f"Row {g[0][0]}", g[0][1])
+        if len(g) == 1
+        else (f"Rows {g[0][0]}–{g[-1][0]}", "\n\n".join(f"Row {n}\n{body}" for n, body in g))
+        for g in groups
+    ]
 
 
 def _fits(text: str, max_words: int, max_chars: int) -> bool:
@@ -168,10 +244,15 @@ def chunk_markdown(
 ) -> list[ChunkDraft]:
     drafts: list[ChunkDraft] = []
     page: int | None = None  # current page, from Docling's markers
-    for path, body in _sections(markdown) or [([], markdown)]:
+    for path, body, rows in _row_runs(_sections(markdown) or [([], markdown)], max_chars):
         # The document title is usually the H1; don't repeat it in every heading path.
         trail = [h for h in path if h.strip().lower() != title.strip().lower()]
         heading = " › ".join(trail)
+        if rows:
+            for label, text in _row_passages(rows, max_chars):
+                head = " › ".join([*trail, label])
+                drafts.append(ChunkDraft(len(drafts), head, text, len(text.split()), page))
+            continue
         window: list[str] = []
         words = chars = 0
         fresh = False  # window holds content not yet emitted (beyond the overlap tail)

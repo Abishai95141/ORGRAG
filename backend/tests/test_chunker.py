@@ -1,13 +1,17 @@
 import json
+import re
 
 import pytest
 
 from app.ingestion.chunker import (
     MAX_CHUNK_CHARS,
+    ROW_PASSAGE_TOKENS,
     chunk_markdown,
     embedding_text,
     estimate_tokens,
+    wordpieces,
 )
+from app.ingestion.parsers import parse
 
 DOC = """# Handbook
 
@@ -111,3 +115,53 @@ def test_normal_prose_chunks_are_unchanged_by_the_cap():
     capped = chunk_markdown(md)
     uncapped = chunk_markdown(md, max_chars=10**9)
     assert [c.content for c in capped] == [c.content for c in uncapped]
+
+
+# ── CSV rows (D82) ───────────────────────────────────────────────────────────
+def _row_numbers(text: str) -> list[int]:
+    return [int(n) for n in re.findall(r"^Row (\d+)$", text, re.MULTILINE)]
+
+
+def test_narrow_csv_rows_share_passages_that_stand_alone():
+    domains = [f"council{i}.gov.uk" for i in range(1, 2001)]
+    md, _ = parse(("Domain Name\n" + "\n".join(domains)).encode(), "text/csv")
+    chunks = chunk_markdown(md, title="Domains")
+    assert len(chunks) < 2000 / 10  # was one chunk per row
+    numbers = [n for c in chunks for n in _row_numbers(c.content)]
+    assert numbers == list(range(1, 2001))  # every row once, whole, in order
+    for c in chunks:
+        rows = _row_numbers(c.content)
+        assert c.heading == f"Rows {rows[0]}–{rows[-1]}"
+        assert c.content.count("- **Domain Name**: ") == len(rows)  # columns named
+        assert wordpieces(c.content) <= ROW_PASSAGE_TOKENS and len(c.content) <= MAX_CHUNK_CHARS
+    assert "- **Domain Name**: council1234.gov.uk" in next(
+        c.content for c in chunks if 1234 in _row_numbers(c.content)
+    )
+
+
+def test_wide_csv_rows_keep_a_chunk_each():
+    long = " ".join(["governance"] * 70)  # over ROW_PASSAGE_TOKENS for a row of two
+    rows = [[long, long], ["short", "x"], [long, long], ["a", "b"], ["c", "d"]]
+    csv = "Notes,Owner\n" + "\n".join(f'"{n}",{o}' for n, o in rows)
+    md, _ = parse(csv.encode(), "text/csv")
+    chunks = chunk_markdown(md, title="Register")
+    # A row alone between wide ones stays as it was; consecutive narrow rows pack.
+    assert [c.heading for c in chunks] == ["Row 1", "Row 2", "Row 3", "Rows 4–5"]
+    assert chunks[0].content == f"- **Notes**: {long}\n- **Owner**: {long}"
+    assert chunks[1].content == "- **Notes**: short\n- **Owner**: x"
+    assert (
+        chunks[3].content
+        == "Row 4\n- **Notes**: a\n- **Owner**: b\n\nRow 5\n- **Notes**: c\n- **Owner**: d"
+    )
+
+
+def test_row_passages_keep_their_section():
+    md = (
+        "# Stock\n\n## Items\n\n### Row 1\n- **Code**: A1\n\n### Row 2\n- **Code**: B2"
+        "\n\n## After\n\nClosing text."
+    )
+    chunks = chunk_markdown(md, title="Stock")
+    assert [(c.heading, c.content) for c in chunks] == [
+        ("Items › Rows 1–2", "Row 1\n- **Code**: A1\n\nRow 2\n- **Code**: B2"),
+        ("After", "Closing text."),
+    ]

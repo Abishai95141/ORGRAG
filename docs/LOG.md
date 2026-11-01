@@ -2,7 +2,22 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
 
-## 2026-11-01 (latest) — Connectors that work on first use: GitHub, websites, Drive and Slack setup
+## 2026-11-01 (latest) — A CSV's rows share passages
+
+Indexing the 11 sample uploads made 8,673 chunks. 7,932 of them came from one single-column CSV (`gov-uk-domain-names-2026-03-31.csv`), one chunk per row. Each chunk is embedded on its own and, where they're on, gets its own context and graph calls.
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D82 | **A CSV's consecutive rows are packed into passages, each row whole, under its number, with its column names** (heading `Rows 490–507`; in the text, `Row 500` then `- **Domain: Domain Name**: oxfordshire.gov.uk`). A passage holds up to 400 embedder tokens by an estimate (`wordpieces`: one per punctuation mark, one per word and one per further four characters of it), not 2,600 characters. A row too big to share a passage keeps a chunk of its own, as before. The stored Markdown is unchanged, and so are records, the document view and scan quotes. `make rechunk APPLY=1` rebuilds documents indexed one row per chunk. | `_csv` gives each row a `### Row N` heading so that it stands alone, and the chunker never lets a chunk span two headings. Rows of names and codes run about 2.5 characters per bge-small token (prose about 5), so 2,600 characters of rows is about 1,050 tokens: the embedder would read only the first half of each passage. | Chunks for the 11 sample files: 8,673 → **1,209**. The CSV: 7,932 → 468, 13–20 rows each; the other 10 files are unchanged. Every passage is at most 456 bge-small tokens, title and heading included. Indexing the CSV (local bge-small): 88 s → 35 s. 50 lookups through `hybrid_search` ("is oxfordshire.gov.uk on the list?" and 49 random domains): the row came back 50/50 with no reranker and with NVIDIA's (the configured one), and 47/50 with the local MiniLM cross-encoder (50/50 at one row per chunk). Tests: `test_narrow_csv_rows_share_passages_that_stand_alone`, `test_wide_csv_rows_keep_a_chunk_each`, `test_row_passages_keep_their_section`, `test_rechunk_packs_csv_rows_indexed_one_per_chunk`. | `ROW_PASSAGE_TOKENS = 0`: one chunk per row. |
+
+**The local reranker and packed rows.** MiniLM (`RERANK_PROVIDER=fastembed`, or `auto` without an NVIDIA key) judges a passage as a whole. The oxfordshire row scores 0.99 alone, 0.96 among 5 rows, 0.016 in its 18-row passage, and 0.0003 as the last of 11. So a passage with two near-misses (`oxfordshire-online.gov.uk`, `oxfordshireonline.gov.uk`) beat the right one, and the per-document cap of two left it out. Smaller passages didn't fix this: 47/50 at 200 tokens (971 chunks), 49/50 at 100 (1,984). The budget therefore stays at what the embedder reads. Giving the reranker only a passage's matching lines is left for later.
+
+**Found and left.** 29 chunks of the sample files are over 2,600 characters, in `algorithmic-transparency-record-template.xlsx` (up to 5,688) and `performance-review-of-digital-spend-2025.pdf` (up to 3,046). Docling pads table cells with spaces, so a header row can run past 1,800 characters, and every table passage repeats it (`table_passages`). This was so before D82.
+
+**Results.**
+- Suites: 406 passed, 1 skipped on both Postgres setups (Python 3.14), and the same under Python 3.12.
+
+## 2026-11-01 (morning) — Connectors that work on first use: GitHub, websites, Drive and Slack setup
 
 Three reports from real use:
 - A public GitHub repository failed with GitHub's 403 rate limit.

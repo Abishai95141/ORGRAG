@@ -35,7 +35,7 @@ seed:          ## Load demo orgs, documents and users
 		$(BACKEND) DATABASE_URL=$(DEV_DB_URL) $(UV_RUN) python -m app.seed; \
 	fi
 
-rechunk:       ## Report (or with APPLY=1, rebuild) documents with over-long chunks
+rechunk:       ## Report (or with APPLY=1, rebuild) documents with over-long or one-row chunks
 	$(BACKEND) DATABASE_URL=$(DEV_DB_URL) $(UV_RUN) python -m app.ingestion.rechunk $(if $(APPLY),--apply,)
 
 test:          ## Run the backend test suite (integration tests need TEST_DATABASE_URL)

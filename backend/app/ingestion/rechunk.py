@@ -1,7 +1,9 @@
-"""Re-chunk documents indexed before the chunk size cap (audit C2).
+"""Re-chunk documents indexed by an older chunker: before the chunk size cap (audit C2),
+or before a CSV's rows shared passages (D82).
 
 Chunks longer than the cap were embedded only up to ~512 tokens, so their tails are
-unsearchable. This rebuilds just those documents from their stored Markdown (no
+unsearchable. A CSV indexed one chunk per row costs an embedding (and any context or
+graph call) per row. This rebuilds just those documents from their stored Markdown (no
 connector fetch). Their knowledge-graph facts go with the old chunks, so they're
 marked for re-extraction (which costs model calls in orgs with the graph on).
 
@@ -14,8 +16,9 @@ import asyncio
 
 from sqlalchemy import func, select
 
+from app.core.config import get_settings
 from app.core.db import SessionLocal
-from app.ingestion.chunker import MAX_CHUNK_CHARS
+from app.ingestion.chunker import MAX_CHUNK_CHARS, chunk_markdown
 from app.ingestion.pipeline import write_chunks
 from app.models import Chunk, Document
 
@@ -25,10 +28,40 @@ async def oversized_documents(db) -> list[Document]:
     return list((await db.execute(select(Document).where(Document.id.in_(ids)))).scalars())
 
 
+async def row_chunked_documents(db) -> list[Document]:
+    """Documents with rows in chunks of their own that the chunker now packs together."""
+    settings = get_settings()
+    ids = (
+        select(Chunk.document_id)
+        .where(Chunk.heading.regexp_match(r"(^| › )Row [0-9]+$"))
+        .group_by(Chunk.document_id)
+        .having(func.count() > 1)
+    )
+    out = []
+    for doc in (await db.execute(select(Document).where(Document.id.in_(ids)))).scalars():
+        stored = await db.execute(
+            select(Chunk.heading).where(Chunk.document_id == doc.id).order_by(Chunk.ordinal)
+        )
+        drafts = chunk_markdown(
+            doc.content,
+            title=doc.title,
+            target_words=settings.chunk_words,
+            overlap_words=settings.chunk_overlap_words,
+        )
+        if [d.heading for d in drafts] != list(stored.scalars()):
+            out.append(doc)
+    return out
+
+
 async def main(apply: bool) -> None:
     async with SessionLocal() as db:
-        docs = await oversized_documents(db)
-        print(f"{len(docs)} document(s) have chunks over {MAX_CHUNK_CHARS} characters")
+        oversized = await oversized_documents(db)
+        rows = [d for d in await row_chunked_documents(db) if d not in oversized]
+        docs = oversized + rows
+        print(
+            f"{len(docs)} document(s) to rebuild: {len(oversized)} with chunks over "
+            f"{MAX_CHUNK_CHARS} characters, {len(rows)} with a chunk per table row"
+        )
         for doc in docs:
             if not apply:
                 print(f"  {doc.id}  {doc.title[:70]}")

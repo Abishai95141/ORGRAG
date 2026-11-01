@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING
 from bs4 import BeautifulSoup, NavigableString, Tag
 from bs4.element import PreformattedString
 
+from app.ingestion.chunker import row_heading
+
 if TYPE_CHECKING:
     from app.ingestion.docling_parser import Parsed
 
@@ -256,11 +258,12 @@ def _csv(text: str) -> str:
     if not rows:
         return ""
     header, body = rows[0], rows[1:]
-    # Render each record as a key/value block so rows chunk and retrieve independently.
+    # Render each record as a key/value block so every row stands alone, wherever the
+    # chunker puts it (narrow rows share a passage, a wide one gets its own).
     blocks = []
     for i, row in enumerate(body, start=1):
         pairs = [f"- **{h}**: {v}" for h, v in zip(header, row, strict=False) if v.strip()]
-        blocks.append(f"### Row {i}\n" + "\n".join(pairs))
+        blocks.append(f"{row_heading(i)}\n" + "\n".join(pairs))
     return "\n\n".join(blocks) if blocks else _md_table(rows)
 
 

@@ -52,3 +52,41 @@ async def test_rechunk_rebuilds_only_oversized_documents(app, monkeypatch, capsy
     assert longest <= MAX_CHUNK_CHARS and count > 10 and doc.graph_hash is None
     await rechunk.main(apply=False)
     assert "0 document(s)" in capsys.readouterr().out
+
+
+@pytest.mark.integration
+async def test_rechunk_packs_csv_rows_indexed_one_per_chunk(app, monkeypatch, capsys):
+    from app.core.db import SessionLocal
+    from app.ingestion import chunker, rechunk
+    from app.ingestion.pipeline import write_chunks
+    from app.models import Chunk, Document
+
+    admin = await _signup(app, "rr")
+    org = await _org(admin, "Rows Co")
+    slug = org["slug"]
+    cols = (await admin.get(f"/api/orgs/{slug}/collections")).json()
+    csv = "Domain Name\n" + "\n".join(f"council{i}.gov.uk" for i in range(1, 301))
+    await _ingest(admin, slug, _general(org, cols), {"domains.csv": csv})
+
+    async def count(doc_id) -> int:
+        async with SessionLocal() as db:
+            return (
+                await db.execute(select(func.count()).where(Chunk.document_id == doc_id))
+            ).scalar()
+
+    async with SessionLocal() as db:
+        doc = (await db.execute(select(Document).where(Document.title == "domains"))).scalar_one()
+        packed = await count(doc.id)
+        # Simulate the index before D82: one chunk per row.
+        with monkeypatch.context() as m:
+            m.setattr(chunker, "ROW_PASSAGE_TOKENS", 0)
+            await write_chunks(db, doc)
+        await db.commit()
+    assert packed < 30 and await count(doc.id) == 300
+
+    await rechunk.main(apply=False)
+    assert "1 document(s) to rebuild: 0 with chunks over" in capsys.readouterr().out
+    await rechunk.main(apply=True)
+    assert await count(doc.id) == packed
+    await rechunk.main(apply=False)
+    assert "0 document(s)" in capsys.readouterr().out
