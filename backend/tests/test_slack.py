@@ -720,6 +720,84 @@ async def test_restricted_collections_are_used_in_dms_but_never_in_channels(app,
     assert all(s["collection_name"] != "Board" for s in channel_answer.sources)
 
 
+async def test_a_channel_that_left_out_restricted_data_is_not_an_unanswered_gap(
+    app, slack, monkeypatch
+):
+    """Lena can read the restricted Vendors collection; a channel doesn't search it, so the
+    bot finds no register there. Admins see that question as restricted_in_channel, not
+    as missing knowledge. Questions that found nothing with everything searched (Lena's
+    DM, or Ivan's channel question when he reads no restricted collection) stay
+    unanswered."""
+    from app.agent import engine
+    from app.core.config import get_settings
+
+    admin = await _signup(app, "slackadmin")
+    lena = await _signup(app, "lena")
+    ivan = await _signup(app, "ivan")
+    org = await _org(admin, "Vendor Co")
+    slug = org["slug"]
+    await _join(admin, lena, slug)
+    await _join(admin, ivan, slug)
+    lena_id = (await lena.get("/api/auth/me")).json()["user"]["id"]
+    vendors = (
+        await admin.post(
+            f"/api/orgs/{slug}/collections",
+            json={"name": "Vendors", "visibility": "restricted", "allowed_user_ids": [lena_id]},
+        )
+    ).json()
+    await _ingest(
+        admin,
+        slug,
+        vendors["id"],
+        {"register.md": "# Vendor register\n\nDatadog: SOC 2 Type II expires 2027-02-01."},
+    )
+    await _connect(admin, slug, slack)
+    slack.user("ULENA", lena.email)
+    slack.user("UIVAN", ivan.email)
+    not_found = "The knowledge base doesn't contain a vendor register."
+    fake = FakeNvidia(
+        [
+            turn
+            for answer in (not_found, not_found, "I couldn't find the wifi password.", "No idea.")
+            for turn in (
+                _tool_turn("search_knowledge", '{"queries": ["q"]}'),
+                _answer_turn(answer),
+            )
+        ]
+    )
+    monkeypatch.setattr(get_settings(), "nvidia_api_key", "nv-test")
+    monkeypatch.setattr(engine.nvidia, "stream_chat", fake.stream_chat)
+
+    soc2 = "Which vendors' SOC 2 reports expire soon?"
+    for _ in range(2):  # asked twice in the channel, as in the end-to-end scenario
+        reply = await _ask(lena, slack, _mention("ULENA", soc2))
+        assert "Restricted collections are only searched in DMs with me" in reply
+    await _ask(lena, slack, _dm("ULENA", "What is the office wifi password?"))
+    reply = await _ask(ivan, slack, _mention("UIVAN", "Who approves Friday deploys?"))
+    assert "Restricted collections" not in reply  # Ivan reads none: nothing was left out
+
+    # The channel answer's trace says what it left out; the DM's doesn't.
+    convs = (await lena.get(f"/api/orgs/{slug}/conversations")).json()["items"]
+    traces = {}
+    for conv in convs:
+        detail = (await lena.get(f"/api/orgs/{slug}/conversations/{conv['id']}")).json()
+        question, answer = detail["messages"]
+        traces[question["content"]] = answer["trace"]
+    (scope,) = [s for s in traces[soc2] if s["kind"] == "scope"]
+    assert scope["detail"] == {"restricted_skipped": 1} and scope["status"] == "done"
+    assert not [s for s in traces["What is the office wifi password?"] if s["kind"] == "scope"]
+
+    gaps = (await admin.get(f"/api/orgs/{slug}/gaps")).json()
+    by_label = {c["label"]: c for c in gaps["clusters"]}
+    vendor_gap = by_label[soc2]
+    assert vendor_gap["count"] == 2 and vendor_gap["reasons"]["unanswered"] == 0
+    assert vendor_gap["reasons"]["restricted_in_channel"] == 2
+    assert gaps["clusters"][-1]["label"] == soc2  # after the gaps that are real
+    for question in ("What is the office wifi password?", "Who approves Friday deploys?"):
+        assert by_label[question]["reasons"]["unanswered"] == 1, question
+        assert by_label[question]["reasons"]["restricted_in_channel"] == 0, question
+
+
 # ── channel → org scope ──────────────────────────────────────────────────────
 async def test_channel_scope_mapping_rules(app, slack):
     alice = await _signup(app, "alice")  # admin of A and B

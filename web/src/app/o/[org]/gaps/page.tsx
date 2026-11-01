@@ -8,7 +8,7 @@ import { DocumentSheet } from "@/components/chat/document-sheet";
 import { FulfillDialog } from "@/components/gaps/fulfill-dialog";
 import { docSource } from "@/components/gaps/doc-source";
 import { RequestDocumentDialog } from "@/components/gaps/request-dialog";
-import { IconChat, IconCheck, IconChevronDown, IconFile, IconGap, IconPlus, IconRequest, IconSources, IconVerified, IconX } from "@/components/icons";
+import { IconChat, IconCheck, IconChevronDown, IconFile, IconGap, IconLock, IconPlus, IconRequest, IconSources, IconVerified, IconX } from "@/components/icons";
 import { Avatar, NoResultsArt, OrgMark } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
 import { Badge, Button, Card, Dialog, EmptyState, Field, PageHeader, Segmented, Skeleton, Stat, Textarea } from "@/components/ui";
@@ -23,6 +23,12 @@ const REASONS: { key: GapReason; label: string; tone: "err" | "warn" | "neutral"
   { key: "incomplete", label: "Incomplete", tone: "warn", hint: "The coverage check found facts missing from the sources" },
   { key: "downvoted", label: "Thumbs-down", tone: "neutral", hint: "The asker rated the answer not helpful" },
   { key: "no_results", label: "No search results", tone: "outline", hint: "A search that found nothing" },
+  {
+    key: "restricted_in_channel",
+    label: "Restricted, asked in a channel",
+    tone: "outline",
+    hint: "Asked in a Slack channel, which doesn't search the restricted collections the asker can read",
+  },
 ];
 
 export default function GapsPage() {
@@ -133,12 +139,15 @@ function GapCard({ gap, onOpenDocument }: { gap: GapCluster; onOpenDocument: (s:
   const [requesting, setRequesting] = useState(false);
   const others = gap.examples.filter((e) => e !== gap.label);
   const reasons = REASONS.filter((r) => gap.reasons[r.key] > 0);
+  // Every question came from a Slack channel that left out restricted collections the
+  // asker can read: the answer may already be in one of them.
+  const channelOnly = gap.reasons.restricted_in_channel === gap.count;
 
   return (
     <li>
       <Card className={cn("p-5", gap.addressed && "opacity-80")}>
         <div className="flex items-start gap-3">
-          <IconGap size={18} className={cn("mt-0.5 shrink-0", gap.addressed ? "text-ok" : "text-accent")} />
+          <IconGap size={18} className={cn("mt-0.5 shrink-0", gap.addressed ? "text-ok" : channelOnly ? "text-ink-3" : "text-accent")} />
           <div className="min-w-0 flex-1">
             <h3 className="text-[14.5px] leading-snug font-semibold">{gap.label}</h3>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-3">
@@ -217,16 +226,26 @@ function GapCard({ gap, onOpenDocument }: { gap: GapCluster; onOpenDocument: (s:
               </div>
             ) : null}
 
-            <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
-              <Link href={`/o/${org.slug}/sources`}>
-                <Button size="sm" variant="secondary">
-                  <IconSources size={14} /> Add a source
+            {channelOnly ? (
+              <p className="mt-4 flex gap-2 border-t border-line pt-3 text-[12.5px] leading-relaxed text-ink-3">
+                <IconLock size={14} className="mt-0.5 shrink-0" />
+                <span>
+                  Asked only in Slack channels, which search org-wide collections. The askers can read restricted collections that weren&apos;t
+                  searched, so the answer may already be there: in a DM, the bot searches them too.
+                </span>
+              </p>
+            ) : (
+              <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
+                <Link href={`/o/${org.slug}/sources`}>
+                  <Button size="sm" variant="secondary">
+                    <IconSources size={14} /> Add a source
+                  </Button>
+                </Link>
+                <Button size="sm" variant="ghost" onClick={() => setRequesting(true)}>
+                  <IconPlus size={14} /> Request a document
                 </Button>
-              </Link>
-              <Button size="sm" variant="ghost" onClick={() => setRequesting(true)}>
-                <IconPlus size={14} /> Request a document
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </Card>

@@ -805,6 +805,9 @@ class GapReasons(BaseModel):
     incomplete: int = 0  # the coverage check still reported facts missing
     downvoted: int = 0  # thumbs-down from the asker
     no_results: int = 0  # a direct search with zero hits
+    # Unanswered or incomplete in a Slack channel, which didn't search restricted
+    # collections the asker can read: the answer may be in one of them.
+    restricted_in_channel: int = 0
 
 
 class GapDocument(BaseModel):

@@ -187,7 +187,7 @@ export type Attachment = {
 
 export type MessageAttachment = Pick<Attachment, "id" | "filename" | "mime" | "size_bytes" | "token_count">;
 
-export type StepKind = "plan" | "search" | "records" | "scan" | "web" | "read" | "reflect" | "answer";
+export type StepKind = "plan" | "scope" | "search" | "records" | "scan" | "web" | "read" | "reflect" | "answer";
 
 export type TraceStep = {
   id: string;
@@ -215,6 +215,8 @@ export type TraceStep = {
     matched?: number;
     failed?: number;
     unverified?: number;
+    /** scope: restricted collections the asker can read that a Slack channel didn't search. */
+    restricted_skipped?: number;
   };
   started_at: string;
   finished_at: string | null;
@@ -474,7 +476,7 @@ export type RecordQueryResult = {
   groups: { value: RecordValue; count: number }[];
 };
 
-export type GapReason = "unanswered" | "incomplete" | "downvoted" | "no_results";
+export type GapReason = "unanswered" | "incomplete" | "downvoted" | "no_results" | "restricted_in_channel";
 
 export type DocRequestStatus = "pending" | "fulfilled" | "dismissed";
 

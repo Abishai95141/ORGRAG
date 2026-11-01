@@ -298,11 +298,13 @@ async def _bind_attachments(
 
 
 async def begin_answer(
-    ctx: OrgContext, conv: Conversation, body: MessageCreate
+    ctx: OrgContext, conv: Conversation, body: MessageCreate, *, restricted_skipped: int = 0
 ) -> tuple[asyncio.Queue, dict]:
     """Save the question, reserve the answer and start the agent run. Returns the run's
     event queue and the `start` payload. Shared by the chat route and the MCP `ask` tool,
-    so both apply the same scoping (an API key stays in its org, under its role)."""
+    so both apply the same scoping (an API key stays in its org, under its role).
+    `restricted_skipped`: restricted collections the asker can read that the caller left
+    out of `body.collection_ids` (a Slack channel), noted in the answer's trace."""
     if body.mode:
         conv.mode = body.mode
     if body.scope_org_slugs is not None:
@@ -364,6 +366,7 @@ async def begin_answer(
         collection_ids=collection_ids,
         attachment_ids=[a.id for a in attachments],
         web_search=body.web_search,
+        restricted_skipped=restricted_skipped,
     )
     # The run owns its own task and DB session: it finishes and persists even if
     # the client disconnects mid-stream. The task inherits who's asking (user, API key

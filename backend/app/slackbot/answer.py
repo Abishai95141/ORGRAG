@@ -244,7 +244,11 @@ async def _ask(
         body = MessageCreate(content=question).model_copy(
             update={"collection_ids": asked.collection_ids}
         )
-        queue, start = await begin_answer(ctx, conv, body)  # commits and closes `db`
+        # Commits and closes `db`. The trace notes the restricted collections a channel
+        # left out, so knowledge gaps don't count its answer as missing knowledge.
+        queue, start = await begin_answer(
+            ctx, conv, body, restricted_skipped=asked.restricted_skipped
+        )
         thread_id = thread.id
     message, error = None, None
     try:

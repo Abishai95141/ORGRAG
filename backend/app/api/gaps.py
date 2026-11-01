@@ -115,6 +115,12 @@ def _cluster_out(questions: list[_Question], members: list[int], label: int) -> 
     )
 
 
+def _channel_only(gap: GapCluster) -> bool:
+    """Every question in it was asked in a Slack channel that left out restricted
+    collections the asker can read: maybe not missing knowledge at all."""
+    return gap.reasons.restricted_in_channel == gap.count
+
+
 async def _link_requests(ctx: OrgContext, clusters: list[_Cluster], threshold: float) -> None:
     """Attach each open or fulfilled document request to the gap its question (or title)
     is most similar to, if it's similar enough."""
@@ -268,8 +274,9 @@ async def knowledge_gaps(
     limit: int = Query(50, ge=1, le=100, description="Most clusters returned"),
 ):
     """Clusters of questions the knowledge base didn't answer in the last `days` days
-    (calendar days, UTC, as Insights counts them), biggest first; gaps a fulfilled
-    document request has addressed since go last."""
+    (calendar days, UTC, as Insights counts them), biggest first; gaps asked only in
+    Slack channels that left out restricted collections come after the rest, and gaps a
+    fulfilled document request has addressed since go last."""
     since_date = datetime.now(UTC).date() - timedelta(days=days - 1)
     since = datetime.combine(since_date, datetime.min.time(), tzinfo=UTC)
     answers, capped = await signals.answer_signals(ctx.db, ctx.org_id, since, MAX_QUESTIONS)
@@ -293,7 +300,13 @@ async def knowledge_gaps(
     ]
     await _link_requests(ctx, clusters, threshold)
     clusters.sort(
-        key=lambda c: (c.out.addressed, -c.out.count, -c.out.askers, -c.out.last_seen.timestamp())
+        key=lambda c: (
+            c.out.addressed,
+            _channel_only(c.out),
+            -c.out.count,
+            -c.out.askers,
+            -c.out.last_seen.timestamp(),
+        )
     )
     shown = clusters[:limit]
     await _answered_elsewhere(ctx, shown, threshold)
