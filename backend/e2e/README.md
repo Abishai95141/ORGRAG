@@ -12,7 +12,7 @@ crosses features.
   - an org-wide handbook (policies in DOCX, PDF and HTML; a CSV team directory);
   - org-wide Engineering (14 postmortems, a runbook, an architecture doc);
   - restricted Vendors & Contracts (an XLSX register, contract summaries, a vendor's email, a scanned amendment as a PNG);
-  - restricted Leadership (compensation bands, a PPTX board update).
+  - restricted Leadership (compensation bands, a PPTX board update, a chart exported as an image).
 
 About 22 questions exercise the features the way people would:
 - record filters, counts and group-bys;

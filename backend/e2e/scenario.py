@@ -684,7 +684,7 @@ async def documents(U):
         S, "list documents", await p.get(f"/orgs/{nw}/documents", params={"limit": 100})
     ).json()
     STATE["docs"] = {d["title"]: d for d in page["items"]}
-    check(S, "32 documents", page["total"] == 32, page["total"])
+    check(S, "33 documents", page["total"] == 33, page["total"])
     print("   titles:", sorted(STATE["docs"]), flush=True)
 
     def doc(fragment):
@@ -718,7 +718,54 @@ async def documents(U):
     tom = expect(
         S, "Tom's documents", await U["tom"].get(f"/orgs/{nw}/documents", params={"limit": 100})
     ).json()
-    check(S, "Tom sees only org-wide docs", tom["total"] == page["total"] - 8 - 2, tom["total"])
+    check(S, "Tom sees only org-wide docs", tom["total"] == page["total"] - 8 - 3, tom["total"])
+    # Weak pages: the chart image is mostly a picture, and vision parsing is off.
+    chart = doc("headcount")
+    check(
+        S,
+        "chart image flagged as a weak page",
+        chart and chart["parse"] == {"pages": 1, "weak_pages": [1], "vision_pages": None},
+        chart and chart["parse"],
+    )
+    check(
+        S,
+        "a clean scan isn't weak",
+        doc("amendment")["parse"]["weak_pages"] == [],
+        doc("amendment")["parse"],
+    )
+    check(
+        S,
+        "pageless formats have no parse",
+        doc("employee handbook")["parse"] is None,
+        doc("employee handbook")["parse"],
+    )
+    weak = expect(
+        S, "weak=true filter", await p.get(f"/orgs/{nw}/documents", params={"weak": "true"})
+    ).json()
+    check(
+        S,
+        "only the chart may be missing text",
+        [d["title"] for d in weak["items"]] == [chart["title"]],
+        [d["title"] for d in weak["items"]],
+    )
+    srcs = {
+        x["id"]: x for x in expect(S, "sources list", await p.get(f"/orgs/{nw}/sources")).json()
+    }
+    check(
+        S,
+        "weak count on the Leadership source only",
+        srcs[STATE["src"]["leadership"]]["weak_document_count"] == 1
+        and sum(x["weak_document_count"] for x in srcs.values()) == 1,
+        {k: x["weak_document_count"] for k, x in srcs.items()},
+    )
+    weak_src = expect(
+        S,
+        "weak filter on a source",
+        await p.get(
+            f"/orgs/{nw}/sources/{STATE['src']['leadership']}/documents", params={"weak": "true"}
+        ),
+    ).json()
+    check(S, "source filter finds the chart", weak_src["total"] == 1, weak_src)
     vendor_doc = doc("vendor register")
     expect(
         S,
@@ -1303,8 +1350,8 @@ async def chat(U):
             "Zendesk",
             "Expensify",
             "Arrow",
-            "December 1|Dec 1|2026-12-01",
-            "December 10|Dec 10|2026-12-10",
+            "December 1|Dec 1|2026-12-01| 1 Dec| 1 December",
+            "December 10|Dec 10|2026-12-10|10 Dec|10 December",
         ),
         kinds=("records",),
     )
@@ -1315,7 +1362,7 @@ async def chat(U):
         "Zendesk emailed us about a price increase at renewal. Is that increase allowed under our contract, and by when do we have to give notice if we decide not to renew?",
         S,
         "Q4 email vs contract",
-        need=("12%", "7%", "December 1|Dec 1|2026-12-01"),
+        need=("12%", "7%", "December 1|Dec 1|2026-12-01| 1 Dec| 1 December"),
     )
     c3 = await conversation(p, nw, scope_org_slugs=[nw, hx])
     A["atlas"] = await ask(
@@ -1404,7 +1451,11 @@ async def chat(U):
         "When did Snowflake's notice-period amendment take effect, what did it change, and who signed it for us?",
         S,
         "Q13 OCR",
-        need=("September 1, 2026|2026-09-01|1 September 2026", "90|ninety", "Daniel Reyes"),
+        need=(
+            "September 1, 2026|2026-09-01|1 September 2026|1 Sep 2026",
+            "90|ninety",
+            "Daniel Reyes",
+        ),
     )
     A["germany"] = await ask(
         lena,
@@ -1460,7 +1511,7 @@ async def chat(U):
         "How many PTO days do I get, and how many can I carry over into next year?",
         S,
         "Q15 simple",
-        need=("25|twenty-five", "5 |five|5 days|5 unused", "March 31"),
+        need=("25|twenty-five", "5 |five|5 days|5 unused", "March 31|31 March|31 Mar"),
     )
     A["benefits"] = await ask(
         t,

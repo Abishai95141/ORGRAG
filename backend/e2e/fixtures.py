@@ -1250,6 +1250,33 @@ for title, bullets in [
         body.add_paragraph().text = b
 prs.save(NW / "leadership" / "board-update-q3-2026.pptx")
 
+# A slide exported as an image: a bar chart. Docling flags the page as weak (mostly a
+# picture), and without vision parsing its numbers aren't read: the weak-page notice.
+chart = Image.new("RGB", (1600, 1000), "white")
+draw = ImageDraw.Draw(chart)
+label, tick = _font(30), _font(22)
+draw.text((80, 40), "Headcount plan by office, end of 2027", font=label, fill="black")
+x0, y0 = 160, 880
+draw.line((x0, 140, x0, y0), fill="black", width=3)
+draw.line((x0, y0, 1500, y0), fill="black", width=3)
+for i, (office, now, plan) in enumerate(
+    [
+        ("San Francisco", 48, 55),
+        ("Austin", 39, 44),
+        ("Seattle", 21, 26),
+        ("Lisbon", 9, 14),
+        ("Berlin", 7, 25),
+    ]
+):
+    bx = x0 + 60 + i * 260
+    for j, (v, colour) in enumerate([(now, (70, 110, 180)), (plan, (230, 140, 60))]):
+        draw.rectangle((bx + j * 90, y0 - v * 12, bx + j * 90 + 70, y0), fill=colour)
+        draw.text((bx + j * 90 + 12, y0 - v * 12 - 30), str(v), font=tick, fill="black")
+    draw.text((bx, y0 + 15), office, font=tick, fill="black")
+for v in range(0, 61, 10):
+    draw.text((x0 - 50, y0 - v * 12 - 12), str(v), font=tick, fill="black")
+chart.save(NW / "leadership" / "headcount-plan-2027.png")
+
 # Uploaded later, to fulfil a document request.
 (NW / "later" / "germany-parental-leave-addendum.md").write_text("""# Country addendum: Germany
 

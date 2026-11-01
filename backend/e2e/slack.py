@@ -311,6 +311,23 @@ async def main():
         not any(v in reply for v in ("Twilio", "HubSpot", "Snowflake", "2026-11-30", "2027-01-20")),
         reply[:600],
     )
+    # The channel answer's trace says what it left out, so gaps don't count it as missing
+    # knowledge (the same question in a DM was answered from the register).
+    convs = (await lena.get(f"/api/orgs/{nw}/conversations")).json()["items"]
+    detail = (await lena.get(f"/api/orgs/{nw}/conversations/{convs[0]['id']}")).json()
+    scope_steps = [st for st in detail["messages"][-1]["trace"] if st["kind"] == "scope"]
+    check(
+        "channel answer's trace notes the restricted collections it skipped",
+        scope_steps and scope_steps[0]["detail"].get("restricted_skipped", 0) >= 1,
+        [st["kind"] for st in detail["messages"][-1]["trace"]],
+    )
+    gaps = (await priya.get(f"/api/orgs/{nw}/gaps")).json()["clusters"]
+    soc = [c for c in gaps if "SOC 2" in c["label"] and c["reasons"].get("restricted_in_channel")]
+    check(
+        "the channel question is restricted_in_channel, not unanswered",
+        soc and soc[0]["reasons"]["unanswered"] == 0,
+        [(c["label"], c["reasons"]) for c in gaps],
+    )
     check(
         "channel footer says restricted collections are DM-only",
         "Restricted collections are only searched in DMs with me" in reply,

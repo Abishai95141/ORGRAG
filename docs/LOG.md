@@ -2,6 +2,33 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
 
+## 2026-11-01 (latest) — Merged gaps and weak pages; what the merged runs and Docker found
+
+The two follow-ups (weak pages shown to admins; `restricted_in_channel` gaps) were
+reviewed and merged. Then the whole system was re-verified:
+- both Postgres suites;
+- the suite under Python 3.12 (what CI and the image run);
+- the scenario and the Slack run on the merged code;
+- the scenario against the Docker stack itself.
+
+The scenario now has a chart exported as an image (a weak page) and checks the new
+`scope` step and gap reason.
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D70 | **The coverage check reads whole results only.** Exact ones (records, roles, graph lists, scans) always fit first, then the latest searches; nothing is cut mid-way (`sufficiency.fit`). | It kept the last 24,000 characters of the joined text, so after a few searches a records table found first arrived without its first rows. The check then reported the register "cut off" (run 7, Q3). | Runs 8 and 9: "Sources cover the question" on Q3. `tests/test_sufficiency.py`. | — |
+| D71 | **No job takes the worker down.** `run_job` reads the job's values before running it. The graph job uses plain values and fresh loads; a document deleted mid-extraction isn't a failure. The loop catches whatever escapes a job. | Run 8's worker process exited. Graph extraction raced a document deletion (a foreign-key error), then the error handlers read expired objects (`MissingGreenlet`). That made **any** exception escaping a job handler fatal to the worker. | `test_a_failing_document_doesnt_stop_the_graph_job`, `test_a_job_that_breaks_its_own_error_handling_never_stops_the_worker` (each reproduced the crash first). Run 9: no tracebacks in the worker log. | — |
+| D72 | **Python 3.12 is what runs**: the full suite is run under 3.12 before a push. | `app/api/gaps.py` annotated a dataclass field `signals` as `list[signals.Signal]`. Python 3.14 (the local venv) evaluates annotations lazily; 3.12 evaluates them at class creation, where `signals` is the field. The API couldn't start in the image, and CI (3.12) had been red since `9c7bbea`. | Under 3.12: 384 passed, 1 skipped. The API container starts. | — |
+| D73 | **The Docker image ships rich parsing**: Docling with its layout, table and OCR models baked in, LibreOffice, and torch from PyTorch's CPU index on Linux (`pyproject.toml`; PyPI's Linux wheels bring the CUDA toolkit). Compose passes `.env` to the API and worker. | The image installed neither Docling nor LibreOffice, so a Docker deployment lost OCR, PDF tables, Excel, PowerPoint, email and images. Compose forwarded a fixed list of variables, silently dropping 19 documented settings, `VISION_PARSING` (which the weak-page notice tells admins to turn on) among them. | API image 1.97 GB (first build about 12 minutes); web 74 MB; Postgres with pg_textsearch built (its first verified build). In the container: runs as `strata`, `soffice` present, models baked, torch `2.15.0+cpu`, `.env` settings arrive. The scenario against the stack: see Results. | — |
+
+**Results.**
+- Suites: 380 passed on both Postgres setups (Python 3.14), and 384 under Python 3.12.
+- Web: typecheck and production build pass.
+- Merged scenario, run 9: 508/509. The one miss was a check that didn't accept "1 December 2026" as a date; date checks now accept day-first formats.
+- Slack: 60/60. The channel answer's trace has its `scope` step, and its gap is `restricted_in_channel`.
+- In the browser: the sources list flags the Leadership upload; the chart document shows its notice; the gaps page shows the channel-only gap with the lock note, after real gaps.
+- **The scenario against the Docker stack** (the images above, `docker compose` with its own ports): **509/509** checks in 8 minutes. Every parser ran in the container (OCR, slides through LibreOffice, Excel, email, the weak chart page), as did records, scan, graph, chat, MCP and the audit log, with no tracebacks in the API or worker containers.
+
 ## 2026-11-01 (late night) — End-to-end verification on a realistic scenario
 
 `backend/e2e/` (README there) drives a running API and worker the way two real
@@ -30,7 +57,7 @@ organizations would.
 **OCR and vision.** RapidOCR dropped a clause from a scan that was tilted 0.6° with its title running off the page. The weak-page detector flagged the page (debris 0.32 ≥ 0.06), and `VISION_PARSING=true` recovered every word for $0.0004. With the text inside the page, OCR reads every clause. `VISION_PARSING` stays off by default (indexing uses no LLM).
 
 **Gaps found and left.**
-- Weak pages aren't shown to admins: `weak_pages` is stored on the document but neither the API nor the UI exposes it.
+- Weak pages weren't shown to admins: `weak_pages` was stored on the document but neither the API nor the UI exposed it. Fixed since: documents carry `parse` (pages, weak pages, pages the vision pass re-read), `?weak=true` filters, sources count them, and admins see a notice on the document and its source ([API.md](API.md#documents)). The scenario now includes a chart exported as an image, which Docling flags and, with vision parsing off, reads only the title of.
 - A Slack channel question about data held only in a restricted collection counted as an *unanswered* gap, though the document exists. Fixed since: the answer's trace starts with a `scope` step counting the restricted collections the channel left out, and gaps count such answers as `restricted_in_channel`, shown apart and sorted after real gaps ([API.md](API.md#knowledge-gaps)).
 
 **Results.**
