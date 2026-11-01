@@ -86,6 +86,7 @@ export type Source = {
   error: string | null;
   document_count: number;
   chunk_count: number;
+  weak_document_count: number;
   sync_interval_minutes: number | null;
   last_synced_at: string | null;
   created_at: string;
@@ -114,7 +115,11 @@ export type DocumentRow = {
   feedback_down: number;
   source_updated_at: string | null;
   updated_at: string;
+  parse: DocumentParse | null;
 };
+
+/** A page-by-page parse (PDFs, slides, images). `vision_pages` is null when the vision pass didn't run. */
+export type DocumentParse = { pages: number; weak_pages: number[]; vision_pages: number[] | null };
 
 export type Vote = "up" | "down";
 

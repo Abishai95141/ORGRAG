@@ -257,6 +257,58 @@ async def test_upload_ingest_documents_and_reindex(app):
     assert r.status_code == 400 and r.json()["code"] == "unsupported_file"
 
 
+async def test_documents_show_pages_that_may_have_been_read_poorly(app, monkeypatch):
+    """The parse's weak pages reach the API, so an admin can see a scan lost text even
+    with vision parsing off: on each document, as a filter, and as a count per source."""
+    from app.ingestion import pipeline
+    from app.ingestion.docling_parser import Parsed
+
+    infos = {
+        "scan": {"parser": "docling", "pages": 3, "weak_pages": [2, 3]},  # vision off
+        "deck": {"parser": "docling", "pages": 3, "weak_pages": [2, 3], "vision_pages": [2]},
+        "chart": {"parser": "docling", "pages": 1, "weak_pages": [1], "vision_pages": [1]},
+    }
+
+    async def parse(data: bytes, mime: str) -> Parsed:
+        text = data.decode()
+        return Parsed(text, None, infos.get(text.split()[-1], {}))
+
+    monkeypatch.setattr(pipeline, "parse_document", parse)
+    admin = await _signup(app, "admin")
+    org = await _org(admin, "Scans Co")
+    slug = org["slug"]
+    cols = (await admin.get(f"/api/orgs/{slug}/collections")).json()
+    source = await _ingest(
+        admin,
+        slug,
+        _general(org, cols),
+        {
+            "amendment.md": "Notice is ninety days. scan",
+            "board.md": "Revenue grew. deck",
+            "growth.md": "Cloud led. chart",
+            "notes.md": "Plain notes.",
+        },
+    )
+    assert source["document_count"] == 4 and source["weak_document_count"] == 2
+
+    base = f"/api/orgs/{slug}/sources/{source['id']}/documents"
+    parse_of = {d["title"]: d["parse"] for d in (await admin.get(base)).json()["items"]}
+    assert parse_of == {
+        "amendment": {"pages": 3, "weak_pages": [2, 3], "vision_pages": None},
+        "board": {"pages": 3, "weak_pages": [2, 3], "vision_pages": [2]},
+        "growth": {"pages": 1, "weak_pages": [1], "vision_pages": [1]},
+        "notes": None,  # parsed without pages
+    }
+    weak = (await admin.get(f"{base}?weak=true")).json()["items"]
+    assert sorted(d["title"] for d in weak) == ["amendment", "board"]
+    rest = (await admin.get(f"/api/orgs/{slug}/documents?weak=false")).json()["items"]
+    assert sorted(d["title"] for d in rest) == ["growth", "notes"]
+
+    scan = next(d for d in weak if d["title"] == "amendment")
+    detail = (await admin.get(f"/api/orgs/{slug}/documents/{scan['id']}")).json()
+    assert detail["parse"] == {"pages": 3, "weak_pages": [2, 3], "vision_pages": None}
+
+
 # ── chat ─────────────────────────────────────────────────────────────────────
 def _parse_sse(text: str) -> list[tuple[str, dict]]:
     events = []

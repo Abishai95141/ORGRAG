@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.serializers import WEAKLY_READ, document_parse
 from app.core import audit
 from app.core.config import get_settings
 from app.core.deps import OrgContext, admin_ctx, org_context
@@ -45,6 +46,9 @@ SORTS = {
 }
 
 
+WEAK_FILTER = "Filter on having weak pages the vision pass didn't re-read"
+
+
 def _row(doc: Document, chunks: int) -> DocumentRow:
     return DocumentRow(
         id=doc.id,
@@ -61,6 +65,7 @@ def _row(doc: Document, chunks: int) -> DocumentRow:
         feedback_down=doc.feedback_down,
         source_updated_at=doc.source_updated_at,
         updated_at=doc.updated_at,
+        parse=document_parse(doc.meta),
     )
 
 
@@ -140,6 +145,7 @@ async def list_documents(
     collection_id: uuid.UUID | None = None,
     source_id: uuid.UUID | None = None,
     hidden: bool | None = Query(None, description="Filter on the hidden flag"),
+    weak: bool | None = Query(None, description=WEAK_FILTER),
     sort: Literal["title", "updated", "feedback", "boost"] = "title",
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0, le=MAX_OFFSET),
@@ -152,6 +158,8 @@ async def list_documents(
         where.append(Document.source_id == source_id)
     if hidden is not None:
         where.append(Document.hidden.is_(hidden))
+    if weak is not None:
+        where.append(WEAKLY_READ if weak else ~WEAKLY_READ)
     return await document_page(ctx.db, where, q=q, limit=limit, offset=offset, sort=sort)
 
 

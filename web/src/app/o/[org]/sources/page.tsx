@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { SourceKindIcon, SOURCE_KIND_LABEL } from "@/components/chat/source-kind";
-import { IconMore, IconPlus, IconRefresh, IconTrash } from "@/components/icons";
+import { IconMore, IconPlus, IconRefresh, IconScan, IconTrash } from "@/components/icons";
 import { ConduitArt } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
 import { AddSourceDialog } from "@/components/sources/add-source-dialog";
@@ -115,6 +115,11 @@ function SourcesInner() {
                       ) : null}
                     </div>
                     {s.status === "error" && s.error ? <div className="mt-1 truncate text-[12px] text-err">{s.error}</div> : null}
+                    {isAdmin && s.weak_document_count ? (
+                      <div className="mt-1 flex items-center gap-1 text-[12px] text-warn">
+                        <IconScan size={12} /> {s.weak_document_count} {s.weak_document_count === 1 ? "document" : "documents"} may be missing text from poorly read pages
+                      </div>
+                    ) : null}
                     <div className="mt-2 max-w-sm empty:hidden">
                       <SyncProgress source={s} />
                     </div>

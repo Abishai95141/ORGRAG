@@ -214,7 +214,7 @@ export const api = {
     }
     return { accepted, source: source as Source };
   },
-  documents: (slug: string, sourceId: string, params: { limit?: number; offset?: number; q?: string } = {}) =>
+  documents: (slug: string, sourceId: string, params: { limit?: number; offset?: number; q?: string; weak?: boolean } = {}) =>
     request<Page<DocumentRow>>(`${o(slug)}/sources/${sourceId}/documents?${query(params)}`),
   orgDocuments: (
     slug: string,
@@ -223,6 +223,7 @@ export const api = {
       collection_id?: string;
       source_id?: string;
       hidden?: boolean;
+      weak?: boolean;
       sort?: DocumentSort;
       limit?: number;
       offset?: number;

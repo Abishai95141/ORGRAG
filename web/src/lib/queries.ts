@@ -14,8 +14,8 @@ export const qk = {
   collections: (slug: string) => ["org", slug, "collections"] as const,
   sources: (slug: string) => ["org", slug, "sources"] as const,
   source: (slug: string, id: string) => ["org", slug, "sources", id] as const,
-  documents: (slug: string, sourceId: string, q: string, offset: number) =>
-    ["org", slug, "sources", sourceId, "documents", q, offset] as const,
+  documents: (slug: string, sourceId: string, q: string, offset: number, weak = false) =>
+    ["org", slug, "sources", sourceId, "documents", q, offset, weak] as const,
   document: (slug: string, id: string) => ["org", slug, "document", id] as const,
   agents: (slug: string) => ["org", slug, "agents"] as const,
   conversations: (slug: string) => ["org", slug, "conversations"] as const,

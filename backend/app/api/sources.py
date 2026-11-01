@@ -6,8 +6,8 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 from sqlalchemy import func, select
 
-from app.api.documents import document_page
-from app.api.serializers import sources_out
+from app.api.documents import WEAK_FILTER, document_page
+from app.api.serializers import WEAKLY_READ, sources_out
 from app.connectors.registry import CONNECTORS, get_connector_class
 from app.connectors.upload import storage_dir
 from app.core import audit
@@ -274,8 +274,10 @@ async def list_documents(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0, le=MAX_OFFSET),
     q: str | None = Query(None, max_length=200),
+    weak: bool | None = Query(None, description=WEAK_FILTER),
 ):
     source = await _get_source(ctx, source_id)
-    return await document_page(
-        ctx.db, [Document.source_id == source.id], q=q, limit=limit, offset=offset
-    )
+    where = [Document.source_id == source.id]
+    if weak is not None:
+        where.append(WEAKLY_READ if weak else ~WEAKLY_READ)
+    return await document_page(ctx.db, where, q=q, limit=limit, offset=offset)
