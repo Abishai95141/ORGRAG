@@ -2,6 +2,7 @@
 name = "strata-backend"
 version = "0.1.0"
 description = "Strata — multi-organization agentic RAG backend"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
