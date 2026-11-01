@@ -1,5 +1,7 @@
 """Unit tests for ranking signals, provider plumbing and small API helpers."""
 
+from types import SimpleNamespace
+
 import pytest
 
 from app.agent.tools import openai_tools, paginate, tool_definitions
@@ -7,7 +9,8 @@ from app.core.config import get_settings
 from app.core.ratelimit import RateLimiter
 from app.llm.models import LLMUnavailable, resolve_model
 from app.llm.nvidia import ToolCall, _ThinkSplitter, extract_json
-from app.retrieval.hybrid import adjusted_score
+from app.retrieval import hybrid
+from app.retrieval.hybrid import adjusted_score, focus
 from app.retrieval.rerank import sigmoid
 from app.retrieval.web import WebSearchError, fetch_page
 
@@ -164,3 +167,57 @@ def test_weak_secret_key_is_refused_over_https():
             Settings(secret_key=weak, cookie_secure=True)
     assert Settings(secret_key=DEV_SECRET_KEY, cookie_secure=False).secret_key == DEV_SECRET_KEY
     assert Settings(secret_key="k" * 40, cookie_secure=True).cookie_secure
+
+
+# ── what the reranker reads of a list (D84) ──────────────────────────────────
+ROWS = "\n\n".join(
+    f"Row {i}\n- **Domain**: {'oxfordshire' if i == 7 else f'council{i}'}.gov.uk"
+    for i in range(1, 21)
+)
+
+
+def test_the_reranker_reads_the_rows_of_a_list_that_match_the_query():
+    assert focus(ROWS, "is oxfordshire.gov.uk on the list?", 4) == (
+        "Row 7\n- **Domain**: oxfordshire.gov.uk"
+    )
+    table = (
+        "| Vendor | Notice (days) |\n|---|---|\n"
+        + "\n".join(
+            f"| {name} | {days} |" for name, days in [(f"Vendor {i}", 30) for i in range(12)]
+        )
+        + "\n| Acme | 90 |"
+    )
+    assert focus(table, "What notice period does Acme need?", 4) == (
+        "| Vendor | Notice (days) |\n|---|---|\n| Acme | 90 |"
+    )
+
+
+def test_prose_short_lists_and_unmatched_lists_are_read_whole():
+    prose = "The access review runs every quarter. Oxfordshire is mentioned once."
+    short = "\n\n".join(ROWS.split("\n\n")[:5])
+    assert focus(prose, "oxfordshire", 4) == prose
+    assert focus(short, "council3", 4) == short  # too few rows to cut
+    assert focus(ROWS, "kent.gov.uk", 4) == ROWS  # no row holds a rare query word
+    assert focus(ROWS, "which gov.uk domains", 4) == ROWS  # every row holds them
+    assert focus(ROWS, "oxfordshire", 0) == ROWS  # off
+
+
+async def test_rerank_scores_each_query_against_its_own_rows(monkeypatch):
+    seen: dict[str, list[str]] = {}
+
+    class Reranker:
+        name = "fake"
+
+        async def score(self, query, passages):
+            seen[query] = passages
+            return [0.0] * len(passages)
+
+    monkeypatch.setattr(hybrid, "get_reranker", lambda: Reranker())
+    row = SimpleNamespace(id=1, title="Domains", heading="Rows 1–20", content=ROWS)
+    await hybrid._rerank(["is oxfordshire.gov.uk listed?", "council12.gov.uk"], [row])
+    assert seen["is oxfordshire.gov.uk listed?"] == [
+        "Domains\nRows 1–20\nRow 7\n- **Domain**: oxfordshire.gov.uk"
+    ]
+    assert seen["council12.gov.uk"] == [
+        "Domains\nRows 1–20\nRow 12\n- **Domain**: council12.gov.uk"
+    ]

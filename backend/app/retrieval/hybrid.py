@@ -31,6 +31,10 @@ MAX_CHUNKS_PER_DOCUMENT = 2
 # document can't crowd everything else out of the candidate set (as in Onyx).
 MAX_CANDIDATES_PER_DOCUMENT = 3
 RERANK_PASSAGE_CHARS = 2000
+# A list-like passage (a CSV's rows, a table) is shown to the reranker as at most this
+# many of its rows: those sharing the query's rarest words (0: the whole passage).
+FOCUS_ROWS = 4
+MIN_LIST_ROWS = 8  # fewer rows than this is read whole
 
 # Recency bias: score × ((1 - w) + w · 0.5^(age / half-life)). "low" barely nudges
 # ties; "high" lets a fresh document beat a slightly more relevant stale one.
@@ -172,20 +176,72 @@ async def _rerank_scores(queries: list[str], rows) -> dict[uuid.UUID, float] | N
         return await _rerank(queries, rows)
 
 
+_TERM = re.compile(r"\w+")
+_ROW_BLOCK = re.compile(r"^Row \d+\n")
+_TABLE_RULE = re.compile(r"^\|?\s*:?-{3,}")
+_STOPWORDS = frozenset(
+    [
+        "a", "an", "and", "any", "are", "as", "at", "be", "by", "can", "do", "does", "for",
+        "from", "has", "have", "how", "i", "in", "is", "it", "its", "list", "of", "on", "or",
+        "our", "that", "the", "their", "there", "this", "to", "was", "we", "were", "what",
+        "when", "where", "which", "who", "why", "will", "with",
+    ]
+)  # fmt: skip
+
+
+def _list_rows(content: str) -> tuple[list[str], list[str], str] | None:
+    """A list-like passage as (lead, rows, separator): a CSV's rows packed into a passage,
+    or a table's rows under its header. None for anything else."""
+    blocks = content.split("\n\n")
+    if len(blocks) >= MIN_LIST_ROWS and all(_ROW_BLOCK.match(b) for b in blocks):
+        return [], blocks, "\n\n"
+    lines = content.splitlines()
+    if all(line.lstrip().startswith("|") for line in lines):
+        head = 2 if len(lines) > 1 and _TABLE_RULE.match(lines[1].strip()) else 0
+        if len(lines) - head >= MIN_LIST_ROWS:
+            return lines[:head], lines[head:], "\n"
+    return None
+
+
+def focus(content: str, query: str, keep: int) -> str:
+    """What the reranker reads of a passage. A cross-encoder judges a passage as a whole,
+    so one matching row among twenty reads as an unrelated list (D84). A list-like
+    passage is cut to its `keep` rows that best share the query's words, each word
+    weighted by how few of the rows hold it; anything else, or a list where no row holds
+    such a word, is read whole."""
+    parsed = _list_rows(content) if keep else None
+    if parsed is None:
+        return content
+    lead, rows, sep = parsed
+    words = [set(_TERM.findall(row.lower())) for row in rows]
+    weight = {}
+    for term in set(_TERM.findall(query.lower())) - _STOPWORDS:
+        holding = sum(term in w for w in words)
+        if 0 < holding < len(rows):
+            weight[term] = math.log(len(rows) / holding)
+    scores = [sum(weight.get(t, 0.0) for t in w) for w in words]
+    best = sorted((i for i, s in enumerate(scores) if s > 0), key=lambda i: -scores[i])[:keep]
+    if not best:
+        return content
+    return sep.join([*lead, *(rows[i] for i in sorted(best))])
+
+
 async def _rerank(queries: list[str], rows) -> dict[uuid.UUID, float] | None:
     """Best cross-encoder probability per chunk across the queries; None if reranking
     is unavailable or fails (callers fall back to fusion scores)."""
     reranker = get_reranker()
     if reranker is None or not rows:
         return None
-    passages = [
-        f"{r.title}\n{r.heading}\n{r.content}"[:RERANK_PASSAGE_CHARS]
-        if r.heading
-        else f"{r.title}\n{r.content}"[:RERANK_PASSAGE_CHARS]
-        for r in rows
-    ]
+
+    def passages(query: str) -> list[str]:
+        out = []
+        for r in rows:
+            head = f"{r.title}\n{r.heading}" if r.heading else r.title
+            out.append(f"{head}\n{focus(r.content, query, FOCUS_ROWS)}"[:RERANK_PASSAGE_CHARS])
+        return out
+
     try:
-        per_query = await asyncio.gather(*(reranker.score(q, passages) for q in queries))
+        per_query = await asyncio.gather(*(reranker.score(q, passages(q)) for q in queries))
     except Exception as exc:  # reranking is an optimisation; search must still work
         log.warning("Reranking with %s failed, using fusion scores: %s", reranker.name, exc)
         return None
