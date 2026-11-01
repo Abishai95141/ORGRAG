@@ -114,7 +114,9 @@ function query(params: Record<string, string | number | boolean | null | undefin
 }
 
 const UPLOAD_BATCH_FILES = 20;
-const UPLOAD_BATCH_BYTES = 90 * 1024 * 1024; // under the API's 100 MB multipart cap
+// Under the web server's 30 MB proxy limit (next.config.ts); a single file of up to the
+// API's 25 MB still goes alone.
+const UPLOAD_BATCH_BYTES = 24 * 1024 * 1024;
 
 function uploadBatches(files: File[]): File[][] {
   const batches: File[][] = [];
@@ -202,7 +204,7 @@ export const api = {
   deleteSource: (slug: string, id: string) => request<void>(`${o(slug)}/sources/${id}`, { method: "DELETE" }),
   syncSource: (slug: string, id: string) => request<Source>(`${o(slug)}/sources/${id}/sync`, { method: "POST" }),
   uploadFiles: async (slug: string, id: string, files: File[]) => {
-    // The API takes at most 20 files / 100 MB per request, so send larger selections in batches.
+    // Requests are capped (20 files, and the proxy's body limit), so send larger selections in batches.
     let accepted = 0;
     let source: Source | undefined;
     for (const batch of uploadBatches(files)) {

@@ -22,6 +22,11 @@ const csp = [
 const config: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  experimental: {
+    // Bodies proxied to the API are cut at 10 MB by default. Uploads are sent in
+    // batches under this (lib/api.ts); it fits one file at the API's 25 MB limit.
+    proxyClientMaxBodySize: "30mb",
+  },
   // Same-origin proxy so the httpOnly session cookie just works.
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${backend}/api/:path*` }];
