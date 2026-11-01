@@ -23,6 +23,24 @@ def test_html_keeps_structure_and_drops_chrome():
     assert "Menu" not in md and "©" not in md
 
 
+def test_html_built_from_divs_keeps_its_text_once():
+    """Most pages put text in <div>s and <span>s, not <p>s: all of it is kept, a table
+    becomes a Markdown table, and a list item's paragraph isn't repeated."""
+    html = """<body><div class="card"><span>Model</span><div>gpt-oss-20b</div></div>
+    <section>Runtime: <b>llama.cpp</b> server<!-- a comment --></section>
+    <table><tr><th>Plan</th><th>Seats</th></tr><tr><td>Growth</td><td>40</td></tr></table>
+    <ul><li><p>Cut review time</p><ul><li>from days</li></ul></li></ul>
+    <h5>Small heading</h5><button>Ask the twin</button></body>"""
+    md, _ = html_to_markdown(html)
+    blocks = md.split("\n\n")
+    assert "Model" in blocks and "gpt-oss-20b" in blocks
+    assert "Runtime: llama.cpp server" in blocks and "comment" not in md
+    assert "| Plan | Seats |\n| --- | --- |\n| Growth | 40 |" in md
+    assert "- Cut review time" in blocks and "- from days" in blocks
+    assert md.count("Cut review time") == 1
+    assert "##### Small heading" in blocks and "Ask the twin" in md
+
+
 def test_csv_rows_become_records():
     md, _ = parse(b"plan,price\nGrowth,1200\nStarter,0\n", "text/csv")
     assert "### Row 1" in md and "**plan**: Growth" in md and "**price**: 0" in md

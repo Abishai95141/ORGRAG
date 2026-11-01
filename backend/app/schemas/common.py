@@ -315,6 +315,29 @@ class ConnectorInfo(BaseModel):
     name: str
     description: str
     config_schema: dict[str, Any]
+    checkable: bool = False  # POST …/connectors/{kind}/check lists what it can reach
+
+
+class ConnectorCheckIn(BaseModel):
+    config: dict[str, Any] = {}  # the form's values, secrets included
+    # Re-check an existing source: its stored secrets fill in the ones not sent.
+    source_id: uuid.UUID | None = None
+
+
+class ConnectorCheckItem(BaseModel):
+    id: str
+    name: str
+    kind: str  # shared_drive, folder, channel, private_channel
+    detail: str | None = None
+    ready: bool = True  # False: can't be indexed until `note` is done
+    note: str | None = None
+
+
+class ConnectorCheckOut(BaseModel):
+    identity: str  # who the credentials act as
+    field: str  # the config field picked ids go into
+    items: list[ConnectorCheckItem]
+    warnings: list[str] = []
 
 
 # ── search ───────────────────────────────────────────────────────────────────

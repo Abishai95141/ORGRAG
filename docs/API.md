@@ -253,7 +253,8 @@ the same list applies to agents).
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| GET | `/connectors` | – (signed in) | `{kind, name, description, config_schema}[]` — catalogue for the "Add source" dialog |
+| GET | `/connectors` | – (signed in) | `{kind, name, description, config_schema, checkable}[]` — catalogue for the "Add source" dialog |
+| POST | `/orgs/{slug}/connectors/{kind}/check` `[admin]` | `{config, source_id?}` (the form's values, secrets included; with `source_id`, that source's stored secrets fill in the ones not sent) | `{identity, field, items: {id, name, kind, detail?, ready, note?}[], warnings: string[]}`: what the credentials reach (Drive shared drives and folders, Slack channels), for the form to offer as a list; picked `id`s go into `config[field]`. Nothing is saved. Only `checkable` kinds (`400 check_unsupported`); the service's refusal is `400 connector_error`, a timeout (45 s) or network failure `502 connector_unreachable` |
 | GET | `/orgs/{slug}/sources` | – | `Source[]` |
 | POST | `/orgs/{slug}/sources` `[admin]` | `{kind, name, collection_id, config, sync_interval_minutes?}` (github `config.token` accepted, never returned; `sync_interval_minutes` 15–43200) | `Source` (sync job enqueued for web/github) |
 | GET | `/orgs/{slug}/sources/{id}` | – | `Source` |
@@ -270,6 +271,27 @@ documents that no longer exist upstream. Scheduled syncs are **incremental** for
 Slack and Notion (only changes since the last sync, with a 30-minute overlap) and prune
 against the connector's id listing where it has one; a full sync runs at least daily. A
 listing that comes back empty never deletes anything (it usually means lost access).
+
+How connectors read:
+
+- **GitHub** downloads the repository as one archive (`github.com/{repo}/archive/{ref}.tar.gz`,
+  or the API's tarball with a token), so a public repository needs no API request and no
+  token (GitHub allows 60 unauthenticated API requests an hour per IP, often shared).
+  Markdown, text and the parseable types are indexed (under 1 MB each, not images); links
+  point at the indexed commit. A private repository needs a token with read access.
+- **Websites** are crawled from the start URL's links and its sitemaps (robots.txt
+  `Sitemap:` lines, else `/sitemap.xml`), on the same host and under `include_paths` if
+  set, up to `max_pages` and `max_depth`. A page that is a
+  JavaScript app shell (scripts, almost no text) is rendered in headless Chromium when
+  the backend's `browser` extra is installed; every request the page makes goes through
+  the crawler's own fetcher (public addresses only, size-capped), and images, fonts and
+  media aren't loaded. Without the extra, a site of shells fails the sync with what to
+  install instead of indexing nothing.
+- **Google Drive** reads what is shared with the service account (or, with
+  domain-wide delegation, a user's drive); `folder_ids` limits it, empty is everything.
+- **Slack** reads the channels the bot is in (`channels` limits it). With the
+  `channels:join` scope it joins the public channels it's asked for; private ones need
+  `/invite`.
 
 ## Documents
 

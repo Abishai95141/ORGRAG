@@ -98,6 +98,27 @@ export type ConnectorSpec = {
   name: string;
   description: string;
   config_schema: Record<string, unknown>;
+  /** POST …/connectors/{kind}/check lists what the credentials can reach. */
+  checkable?: boolean;
+};
+
+export type ConnectorCheckItem = {
+  id: string;
+  name: string;
+  kind: "shared_drive" | "folder" | "channel" | "private_channel" | string;
+  detail: string | null;
+  /** False: can't be indexed until `note` is done (e.g. invite the bot). */
+  ready: boolean;
+  note: string | null;
+};
+
+/** What a connector's credentials can reach, to pick from instead of typing ids. */
+export type ConnectorCheck = {
+  identity: string;
+  /** The config field the picked ids go into. */
+  field: string;
+  items: ConnectorCheckItem[];
+  warnings: string[];
 };
 
 export type DocumentRow = {

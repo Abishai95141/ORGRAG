@@ -39,6 +39,8 @@ class Connector(ABC):
     config_schema: ClassVar[dict[str, Any]]
     # True when `iter_documents(since=...)` yields only documents changed after `since`.
     supports_incremental: ClassVar[bool] = False
+    # True when `check()` can list what the credentials reach (the add-source picker).
+    can_check: ClassVar[bool] = False
 
     def __init__(self, config: dict[str, Any], secrets: dict[str, Any]):
         self.config = config
@@ -71,6 +73,13 @@ class Connector(ABC):
     ) -> AsyncIterator[RawDocument]:
         """Yield documents. `since=None` means a full sync; otherwise connectors with
         `supports_incremental` may yield only documents changed after it."""
+
+    async def check(self) -> dict[str, Any]:
+        """What these credentials can reach, for the add-source form to pick from:
+        `{identity, field, items: [{id, name, kind, detail?, ready, note?}], warnings}`
+        (`field` is the config field picked ids go into). ConnectorError when the
+        credentials can't be used, with what to fix."""
+        raise NotImplementedError
 
     async def list_ids(self) -> set[str] | None:
         """Every external id that currently exists upstream, without fetching content.

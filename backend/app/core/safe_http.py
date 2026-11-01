@@ -15,7 +15,7 @@ import asyncio
 import ipaddress
 import socket
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
@@ -33,6 +33,7 @@ class Fetched:
     body: bytes
     truncated: bool
     charset: str | None = None
+    headers: dict[str, str] = field(default_factory=dict)  # the final response's
 
     @property
     def text(self) -> str:
@@ -85,7 +86,13 @@ def check_url(url: str) -> tuple[str, str, int | None]:
     return parts.scheme, parts.hostname, port
 
 
-async def _pinned_request(client: httpx.AsyncClient, url: str) -> httpx.Request:
+async def _pinned_request(
+    client: httpx.AsyncClient,
+    url: str,
+    method: str = "GET",
+    headers: dict[str, str] | None = None,
+    content: bytes | None = None,
+) -> httpx.Request:
     scheme, host, port = check_url(url)
     ip = await public_address(host)
     netloc = f"[{ip}]" if ":" in ip else ip
@@ -95,7 +102,11 @@ async def _pinned_request(client: httpx.AsyncClient, url: str) -> httpx.Request:
     target = urlunsplit((scheme, netloc, parts.path or "/", parts.query, ""))
     host_header = host if not port else f"{host}:{port}"
     return client.build_request(
-        "GET", target, headers={"Host": host_header}, extensions={"sni_hostname": host}
+        method,
+        target,
+        headers={**(headers or {}), "Host": host_header},
+        content=content,
+        extensions={"sni_hostname": host},
     )
 
 
@@ -106,15 +117,20 @@ async def fetch(
     max_bytes: int,
     max_redirects: int = 4,
     follow: Callable[[str], bool] | None = None,
+    method: str = "GET",
+    headers: dict[str, str] | None = None,
+    content: bytes | None = None,
 ) -> Fetched:
-    """GET `url` with the checks above. `follow(next_url)` can refuse a redirect (the
-    3xx response is then returned as is). The client must not follow redirects itself."""
+    """`url` with the checks above (GET unless `method` says otherwise; `headers` and
+    `content` are sent as given). `follow(next_url)` can refuse a redirect (the 3xx
+    response is then returned as is); only GETs follow redirects. The client must not
+    follow redirects itself."""
     for _ in range(max_redirects + 1):
-        request = await _pinned_request(client, url)
+        request = await _pinned_request(client, url, method, headers, content)
         response = await client.send(request, stream=True)
         try:
             location = response.headers.get("location")
-            if response.is_redirect and location:
+            if method == "GET" and response.is_redirect and location:
                 nxt = urljoin(url, location)
                 if follow is None or follow(nxt):
                     url = nxt
@@ -129,7 +145,10 @@ async def fetch(
                     del body[max_bytes:]
                     truncated = True
                     break
-            return Fetched(url, response.status_code, kind, bytes(body), truncated, charset)
+            return Fetched(
+                url, response.status_code, kind, bytes(body), truncated, charset,
+                dict(response.headers),
+            )  # fmt: skip
         finally:
             await response.aclose()
     raise UnsafeURL("Too many redirects")

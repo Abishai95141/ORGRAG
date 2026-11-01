@@ -1,13 +1,16 @@
+import asyncio
 import re
 import shutil
 import uuid
 from pathlib import Path
 
+import httpx
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 from sqlalchemy import func, select
 
 from app.api.documents import WEAK_FILTER, document_page
 from app.api.serializers import WEAKLY_READ, sources_out
+from app.connectors.base import ConnectorError
 from app.connectors.registry import CONNECTORS, get_connector_class
 from app.connectors.upload import storage_dir
 from app.core import audit
@@ -20,9 +23,12 @@ from app.models import Collection, Document, Source
 from app.retrieval.access import visible_collections
 from app.schemas.common import (
     MAX_OFFSET,
+    ConnectorCheckIn,
+    ConnectorCheckOut,
     ConnectorInfo,
     DocumentPage,
     SourceCreate,
+    SourceKind,
     SourceOut,
     SourcePatch,
     UploadResult,
@@ -30,6 +36,7 @@ from app.schemas.common import (
 from app.worker.queue import enqueue_sync
 
 router = APIRouter(tags=["sources"])
+CHECK_SECONDS = 45  # a connector check answers the form, so it can't take long
 
 
 @router.get("/connectors", response_model=list[ConnectorInfo], dependencies=[Depends(current_user)])
@@ -42,9 +49,37 @@ async def connector_catalogue():
             name=c.display_name,
             description=c.description,
             config_schema=c.config_schema,
+            checkable=c.can_check,
         )
         for c in CONNECTORS.values()
     ]
+
+
+@router.post("/orgs/{slug}/connectors/{kind}/check", response_model=ConnectorCheckOut)
+async def check_connector(
+    kind: SourceKind, body: ConnectorCheckIn, ctx: OrgContext = Depends(admin_ctx)
+):
+    """What the given credentials can reach (Drive folders and shared drives, Slack
+    channels), so the form can offer them as a list instead of asking for ids. Nothing
+    is saved."""
+    connector_cls = get_connector_class(kind)
+    if not connector_cls.can_check:
+        raise bad_request(f"{connector_cls.display_name} has nothing to check", "check_unsupported")
+    config, secrets = _validated_config(kind, body.config)
+    if body.source_id is not None:
+        source = await _get_source(ctx, body.source_id)
+        if source.kind != kind:
+            raise not_found("Source")
+        secrets = {**(source.secrets or {}), **secrets}
+    try:
+        result = await asyncio.wait_for(connector_cls(config, secrets).check(), CHECK_SECONDS)
+    except ConnectorError as exc:
+        raise bad_request(str(exc), "connector_error") from exc
+    except (httpx.HTTPError, TimeoutError) as exc:
+        raise ApiError(
+            502, f"Couldn't reach {connector_cls.display_name}; try again", "connector_unreachable"
+        ) from exc
+    return ConnectorCheckOut(**result)
 
 
 async def _visible_collection_ids(ctx: OrgContext) -> set[uuid.UUID]:

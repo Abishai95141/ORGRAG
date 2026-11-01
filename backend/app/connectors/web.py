@@ -1,12 +1,22 @@
 """Same-domain breadth-first crawler that honours robots.txt.
 
-Every request (robots.txt, pages, redirects) goes through `app.core.safe_http`, so a
-start URL or a redirect can't point the crawler at internal addresses."""
+Pages are found from links and from the site's sitemap (robots.txt `Sitemap:` lines,
+else /sitemap.xml), so routes a JavaScript app only links to from its scripts are
+found too. A page that is an app shell (scripts, almost no text) is rendered in
+headless Chromium when the `browser` extra is installed (`app.connectors.render`).
+
+Every request (robots.txt, sitemaps, pages, redirects, and a rendered page's own
+requests) goes through `app.core.safe_http`, so a start URL or a redirect can't point
+the crawler at internal addresses."""
 
 import asyncio
+import contextlib
 import ipaddress
+import logging
+import re
 from collections.abc import AsyncIterator
 from datetime import datetime
+from html import unescape as html_unescape
 from typing import Any
 from urllib.parse import urldefrag, urljoin, urlparse
 from urllib.robotparser import RobotFileParser
@@ -14,12 +24,17 @@ from urllib.robotparser import RobotFileParser
 import httpx
 from bs4 import BeautifulSoup
 
+from app.connectors import render
 from app.connectors.base import Connector, ConnectorError, ProgressFn, RawDocument
 from app.core.safe_http import UnsafeURL, fetch
+
+log = logging.getLogger("strata.web")
 
 USER_AGENT = "StrataBot/0.1 (+https://github.com/strata-rag)"
 MAX_PAGE_BYTES = 5_000_000
 _SKIP_EXT = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".zip", ".gz", ".mp4", ".css", ".js", ".ico")
+MAX_SITEMAPS = 5  # sitemap files read per crawl (an index counts, and each it lists)
+_LOC = re.compile(r"<loc>\s*([^<\s]+)\s*</loc>", re.IGNORECASE)
 
 
 class WebConnector(Connector):
@@ -75,6 +90,29 @@ class WebConnector(Connector):
             rp.parse([])
         return rp
 
+    async def _sitemap_urls(
+        self, client: httpx.AsyncClient, robots: RobotFileParser, root: str
+    ) -> list[str]:
+        """Page URLs from the site's sitemaps (an index's children included)."""
+        todo = list(robots.site_maps() or []) or [urljoin(root, "/sitemap.xml")]
+        pages: list[str] = []
+        read = 0
+        while todo and read < MAX_SITEMAPS:
+            url = todo.pop(0)
+            read += 1
+            try:
+                got = await fetch(client, url, max_bytes=MAX_PAGE_BYTES)
+            except (httpx.HTTPError, UnsafeURL):
+                continue
+            if got.status != 200:
+                continue
+            locs = [html_unescape(u) for u in _LOC.findall(got.text)]
+            if "<sitemapindex" in got.text[:2000].lower():
+                todo.extend(locs)
+            else:
+                pages.extend(locs)
+        return pages
+
     async def iter_documents(
         self, progress: ProgressFn, since: datetime | None = None
     ) -> AsyncIterator[RawDocument]:
@@ -83,10 +121,16 @@ class WebConnector(Connector):
         host = urlparse(start).netloc
         seen: set[str] = {start}
         queue: list[tuple[str, int]] = [(start, 0)]
-        fetched = 0
-        async with httpx.AsyncClient(
-            headers={"User-Agent": USER_AGENT}, timeout=20, follow_redirects=False
-        ) as client:
+        fetched = with_text = shells = 0
+        sitemap_read = False
+        renderer: render.Renderer | None = None
+        rendering = render.available()
+        async with contextlib.AsyncExitStack() as stack:
+            client = await stack.enter_async_context(
+                httpx.AsyncClient(
+                    headers={"User-Agent": USER_AGENT}, timeout=20, follow_redirects=False
+                )
+            )
             robots = await self._robots(client, start)
             while queue and fetched < cfg["max_pages"]:
                 url, depth = queue.pop(0)
@@ -117,6 +161,20 @@ class WebConnector(Connector):
                 fetched += 1
                 await progress(fetched, cfg["max_pages"], page.url)
                 html = page.text
+                if render.is_app_shell(html):
+                    shells += 1
+                    if rendering and renderer is None:
+                        try:
+                            renderer = await stack.enter_async_context(
+                                render.Renderer(client, USER_AGENT)
+                            )
+                        except Exception as exc:  # no browser installed, or it won't start
+                            log.warning("Headless browser unavailable: %s", exc)
+                            rendering = False
+                    if renderer is not None:
+                        html = await renderer.render(page.url) or html
+                if len(render.visible_text(html)) >= render.SHELL_TEXT_CHARS:
+                    with_text += 1
                 soup = BeautifulSoup(html, "lxml")
                 if depth < cfg["max_depth"]:
                     for a in soup.find_all("a", href=True):
@@ -132,10 +190,26 @@ class WebConnector(Connector):
                     mime="text/html",
                     url=page.url,
                 )
+                if not sitemap_read:  # once the start page has settled the host
+                    sitemap_read = True
+                    for link in await self._sitemap_urls(client, robots, page.url):
+                        link = urldefrag(link)[0]
+                        if link not in seen and self._allowed(link, host, cfg["include_paths"]):
+                            seen.add(link)
+                            queue.append((link, 1))
                 delay = robots.crawl_delay(USER_AGENT)
                 await asyncio.sleep(min(float(delay), 5.0) if delay else 0.2)
             if queue:
                 self.complete = False  # stopped at max_pages: unvisited pages aren't gone
+        if fetched and not with_text and shells:
+            raise ConnectorError(
+                f"{start} builds its pages with JavaScript, so there was no text to "
+                "index. Install the server's `browser` extra (headless Chromium) to "
+                "render them: `uv sync --extra browser`, then `playwright install chromium`"
+                if not rendering
+                else f"{start} builds its pages with JavaScript, and rendering them "
+                "produced no text either"
+            )
 
 
 def _looks_public(host: str) -> bool:

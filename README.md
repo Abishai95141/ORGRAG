@@ -38,10 +38,13 @@ what changed.
     into ranking.
 - **Connectors.**
   - File upload: PDF, DOCX, Markdown, HTML, CSV, JSON, text; with the `parsing` extra (Docling), also Excel, PowerPoint, email and images, scanned PDFs through OCR, tables kept as tables, and page numbers on citations (legacy .doc/.ppt/.xls need LibreOffice).
-  - Website crawler: same domain only, respects robots.txt.
-  - GitHub repositories.
+  - Website crawler: same domain only, respects robots.txt, reads sitemaps; with the
+    `browser` extra, sites that build their pages with JavaScript are rendered in
+    headless Chromium.
+  - GitHub repositories, read as one archive download (public ones need no token).
   - Google Drive (service account), Slack (bot token) and Notion (integration token),
-    with incremental syncs.
+    with incremental syncs. For Drive and Slack the Add source dialog walks through
+    creating the credential, then lists the folders or channels it can reach to pick from.
   - Documents deleted upstream are removed from the index; an empty listing never wipes
     a source.
 - **Files in chat.** Attach PDFs, Word files and more to a question; they're read into
@@ -120,9 +123,10 @@ docker compose exec api python -m app.seed      # demo orgs, documents and users
 Open **http://localhost:3000** and sign in with a demo login (see below).
 Stop with `docker compose down`. Add `-v` to also delete the database.
 
-The API image (about 2 GB) includes rich parsing: Docling with its layout, table and
+The API image (about 2.3 GB) includes rich parsing: Docling with its layout, table and
 OCR models, CPU-only PyTorch, and LibreOffice, so PDFs keep their tables, scans are
-OCRed, and Excel, PowerPoint, email and images can be uploaded.
+OCRed, and Excel, PowerPoint, email and images can be uploaded. It also has headless
+Chromium, for websites that build their pages with JavaScript.
 
 ### Option B — run natively (for development)
 
@@ -135,7 +139,10 @@ git clone https://github.com/Abishai95141/ORGRAG.git
 cd ORGRAG
 cp .env.example .env          # set SECRET_KEY; add NVIDIA_API_KEY or ANTHROPIC_API_KEY
 make setup                    # uv sync (with local embeddings) + pnpm install
-# Optional: rich parsing (Docling: ~1 GB of packages incl. PyTorch, ~0.5 GB of models): cd backend && uv sync --extra parsing
+# Optional extras; uv sync keeps only the extras it's given, so name them all:
+#   parsing: rich parsing (Docling: ~1 GB of packages incl. PyTorch, ~0.5 GB of models)
+#   browser: render websites built with JavaScript (then install Chromium's headless shell)
+# cd backend && uv sync --extra local-embeddings --extra parsing --extra browser && uv run playwright install --only-shell chromium
 make dev-db                   # Postgres 17 + pgvector + pg_textsearch on :5432
 make migrate                  # create tables and indexes
 make seed                     # demo data (first run downloads the ~70 MB embedding model)

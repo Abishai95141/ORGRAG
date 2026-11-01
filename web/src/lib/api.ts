@@ -6,6 +6,7 @@ import type {
   Attachment,
   AuditEvent,
   Collection,
+  ConnectorCheck,
   ConnectorSpec,
   Conversation,
   DocRequest,
@@ -182,6 +183,8 @@ export const api = {
 
   // sources
   connectors: () => request<ConnectorSpec[]>("/connectors"),
+  checkConnector: (slug: string, kind: string, body: { config: Record<string, unknown>; source_id?: string }) =>
+    request<ConnectorCheck>(`${o(slug)}/connectors/${kind}/check`, { method: "POST", json: body }),
   sources: (slug: string) => request<Source[]>(`${o(slug)}/sources`),
   source: (slug: string, id: string) => request<Source>(`${o(slug)}/sources/${id}`),
   createSource: (

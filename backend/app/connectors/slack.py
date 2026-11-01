@@ -38,6 +38,16 @@ _MAX_LOOKBACK = 730
 _transport: httpx.AsyncBaseTransport | None = None
 
 
+# What indexing needs; channels:join lets the bot join public channels by itself.
+REQUIRED_SCOPES = (
+    "channels:history",
+    "channels:read",
+    "groups:history",
+    "groups:read",
+    "users:read",
+)
+
+
 class SlackConnector(Connector):
     kind = "slack"
     display_name = "Slack"
@@ -61,6 +71,8 @@ class SlackConnector(Connector):
             },
         },
     }
+
+    can_check = True
 
     def __init__(self, config: dict[str, Any], secrets: dict[str, Any]):
         super().__init__(config, secrets)
@@ -153,12 +165,76 @@ class SlackConnector(Connector):
                     "Channel not found or not visible to the bot: "
                     + ", ".join(f"#{m}" for m in missing)
                 )
+            # The bot joins public channels itself (channels:join); a private channel
+            # only opens to an invite.
+            for ch in found:
+                if not ch.get("is_member") and not ch.get("is_private"):
+                    try:
+                        await self._call(client, "conversations.join", channel=ch["id"])
+                        ch["is_member"] = True
+                    except ConnectorError:
+                        pass  # no channels:join scope: reported below
             if outside := [c["name"] for c in found if not c.get("is_member")]:
                 raise ConnectorError(
-                    "Invite the bot to these channels first (/invite @bot): "
+                    "Invite the bot to these channels first (/invite @bot in each), or "
+                    "add the channels:join scope for public ones: "
                     + ", ".join(f"#{n}" for n in outside)
                 )
         return found
+
+    async def check(self) -> dict[str, Any]:
+        """The workspace, and the channels the token can see, to pick from."""
+        async with self._client() as client:
+            resp = await client.get("/auth.test")
+            data = resp.json() if resp.status_code == 200 else {}
+            if not data.get("ok"):
+                raise ConnectorError(
+                    _error_message("auth.test", data or {"error": resp.status_code})
+                )
+            scopes = {
+                s.strip() for s in resp.headers.get("x-oauth-scopes", "").split(",") if s.strip()
+            }
+            bot = data.get("user") or "the bot"
+            can_join = "channels:join" in scopes
+            items: list[dict[str, Any]] = []
+            async for ch in self._paginate(
+                client,
+                "conversations.list",
+                "channels",
+                types="public_channel,private_channel"
+                if "groups:read" in scopes
+                else "public_channel",
+                exclude_archived="true",
+            ):
+                member, private = bool(ch.get("is_member")), bool(ch.get("is_private"))
+                ready = member or (can_join and not private)
+                note = None
+                if not member:
+                    note = (
+                        "Joined when indexed" if ready else f"Invite the bot first: /invite @{bot}"
+                    )
+                items.append({
+                    "id": ch["id"], "name": f"#{ch.get('name', ch['id'])}",
+                    "kind": "private_channel" if private else "channel",
+                    "detail": f"{ch.get('num_members', 0)} members" if not private else "Private",
+                    "ready": ready, "note": note,
+                })  # fmt: skip
+        warnings = []
+        if missing := [s for s in REQUIRED_SCOPES if s not in scopes]:
+            warnings.append(
+                "The Slack app is missing these scopes (add them under OAuth & "
+                "Permissions, then reinstall the app): " + ", ".join(missing)
+            )
+        if not can_join:
+            warnings.append(
+                "Without the channels:join scope, invite the bot to each channel to index."
+            )
+        return {
+            "identity": f"@{bot} in {data.get('team', 'the workspace')}",
+            "field": "channels",
+            "items": items,
+            "warnings": warnings,
+        }
 
     async def _user_name(self, client: httpx.AsyncClient, user_id: str) -> str:
         if user_id not in self._users:

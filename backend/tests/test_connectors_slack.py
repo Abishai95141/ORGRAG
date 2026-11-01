@@ -50,6 +50,7 @@ class FakeSlack:
             {"id": "C2", "name": "random", "is_member": False},
             {"id": "G3", "name": "secret", "is_member": True, "is_private": True},
         ]
+        self.scopes = "channels:history,channels:read,groups:history,groups:read,users:read"
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         assert request.headers["Authorization"] == "Bearer xoxb-test"
@@ -61,15 +62,23 @@ class FakeSlack:
             return httpx.Response(429, headers={"Retry-After": "0"})
         if method in self.errors:
             return httpx.Response(200, json={"ok": False, **self.errors[method]})
+        if method == "conversations.join" and "channels:join" not in self.scopes:
+            return httpx.Response(200, json={"ok": False, "error": "missing_scope"})
         return httpx.Response(
-            200, json={"ok": True, **getattr(self, method.replace(".", "_"))(params)}
+            200,
+            headers={"x-oauth-scopes": self.scopes},
+            json={"ok": True, **getattr(self, method.replace(".", "_"))(params)},
         )
 
+    def conversations_join(self, params):
+        channel = next(c for c in self.channels if c["id"] == params["channel"])
+        channel["is_member"] = True
+        return {"channel": channel}
+
     def auth_test(self, _):
-        return {"team": "Acme", "url": "https://acme.slack.com/"}
+        return {"team": "Acme", "user": "strata", "url": "https://acme.slack.com/"}
 
     def conversations_list(self, params):
-        assert params["types"] == "public_channel,private_channel"
         if params.get("cursor") == "page2":
             return {"channels": self.channels[1:], "response_metadata": {"next_cursor": ""}}
         return {"channels": self.channels[:1], "response_metadata": {"next_cursor": "page2"}}
@@ -206,3 +215,73 @@ async def test_errors(fake):
     fake.errors["auth.test"] = {"error": "invalid_auth"}
     with pytest.raises(ConnectorError, match="rejected the bot token \\(invalid_auth\\)"):
         await _collect(_conn())
+
+
+async def test_public_channels_are_joined_with_channels_join(fake):
+    """With channels:join the bot joins a public channel it was picked for; without it,
+    and for private channels always, it must be invited."""
+    fake.scopes += ",channels:join"
+    await _collect(_conn(channels=["random", "C1"]))
+    assert ("conversations.join", {"channel": "C2"}) in fake.calls
+    fake.channels.append({"id": "G4", "name": "board", "is_member": False, "is_private": True})
+    with pytest.raises(ConnectorError, match="Invite the bot.*#board"):
+        await _collect(_conn(channels=["board"]))
+    assert not any(c == ("conversations.join", {"channel": "G4"}) for c in fake.calls)
+
+
+async def test_check_lists_channels_with_what_each_needs(fake):
+    fake.channels.append({"id": "G4", "name": "board", "is_member": False, "is_private": True})
+    found = await _conn().check()
+    assert found["identity"] == "@strata in Acme" and found["field"] == "channels"
+    by_name = {i["name"]: i for i in found["items"]}
+    assert by_name["#general"]["ready"] and by_name["#general"]["note"] is None
+    assert by_name["#random"]["ready"] is False  # no channels:join: an invite is needed
+    assert "/invite @strata" in by_name["#random"]["note"]
+    assert by_name["#board"]["kind"] == "private_channel" and not by_name["#board"]["ready"]
+    assert any("channels:join" in w for w in found["warnings"])
+    fake.scopes = "channels:read,channels:join"  # no history scopes, no private channels
+    found = await _conn().check()
+    assert {i["name"]: i["ready"] for i in found["items"]}["#random"] is True
+    assert any("groups:history" in w and "channels:history" in w for w in found["warnings"])
+    fake.errors["auth.test"] = {"error": "invalid_auth"}
+    with pytest.raises(ConnectorError, match="rejected the bot token"):
+        await _conn().check()
+
+
+@pytest.mark.integration
+async def test_check_route_is_admin_only_and_reuses_a_sources_stored_token(app, fake):
+    from tests.test_api_integration import _join, _org, _signup
+
+    admin = await _signup(app, "admin")
+    member = await _signup(app, "member")
+    org = await _org(admin, "Check Co")
+    slug = org["slug"]
+    await _join(admin, member, slug)
+    url = f"/api/orgs/{slug}/connectors/slack/check"
+    r = await admin.post(url, json={"config": {"token": "xoxb-test"}})
+    assert r.status_code == 200, r.text
+    assert r.json()["identity"] == "@strata in Acme" and len(r.json()["items"]) == 3
+    assert (await member.post(url, json={"config": {"token": "xoxb-test"}})).status_code == 403
+    # Re-checking a saved source: the token stays server-side and is reused.
+    cols = (await admin.get(f"/api/orgs/{slug}/collections")).json()
+    source = (
+        await admin.post(
+            f"/api/orgs/{slug}/sources",
+            json={
+                "kind": "slack",
+                "name": "Slack",
+                "collection_id": cols[0]["id"],
+                "config": {"token": "xoxb-test", "channels": ["general"]},
+            },  # fmt: skip
+        )
+    ).json()
+    r = await admin.post(url, json={"config": {}, "source_id": source["id"]})
+    assert r.status_code == 200 and r.json()["field"] == "channels"
+    fake.errors["auth.test"] = {"error": "invalid_auth"}
+    r = await admin.post(url, json={"config": {"token": "xoxb-test"}})
+    assert r.status_code == 400 and r.json()["code"] == "connector_error"
+    assert "rejected the bot token" in r.json()["detail"]
+    r = await admin.post(f"/api/orgs/{slug}/connectors/web/check", json={"config": {}})
+    assert r.status_code == 400 and r.json()["code"] == "check_unsupported"
+    connectors = {c["kind"]: c for c in (await admin.get("/api/connectors")).json()}
+    assert connectors["slack"]["checkable"] and not connectors["web"]["checkable"]

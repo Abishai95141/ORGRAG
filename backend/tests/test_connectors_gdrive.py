@@ -307,3 +307,40 @@ async def test_auth_errors(fake, secrets):
     drive.token_response = httpx.Response(200, json={"access_token": "tok", "expires_in": 3600})
     with pytest.raises(ConnectorError, match="Folder missingFolder1 not found"):
         await _collect(GoogleDriveConnector({"folder_ids": ["missingFolder1"]}, secrets))
+
+
+async def test_check_lists_what_the_account_can_read(monkeypatch, secrets):
+    """The picker: shared drives and folders shared with the service account; with
+    nothing shared, a warning naming the email to share with."""
+    shared = {"drives": [{"id": "0AAdrive", "name": "Policies"}], "folders": [], "files": 0}
+
+    def drive(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "oauth2.googleapis.com":
+            return httpx.Response(200, json={"access_token": "tok", "expires_in": 3600})
+        path, params = request.url.path.removeprefix("/drive/v3"), dict(request.url.params)
+        if path == "/drives":
+            return httpx.Response(200, json={"drives": shared["drives"]})
+        q = params["q"]
+        assert "sharedWithMe" in q
+        if f"mimeType = '{FOLDER}'" in q:
+            return httpx.Response(200, json={"files": shared["folders"]})
+        return httpx.Response(
+            200, json={"files": [{"id": f"f{i}"} for i in range(shared["files"])]}
+        )
+
+    monkeypatch.setattr(gdrive, "_transport", httpx.MockTransport(drive))
+    shared["folders"] = [{"id": "1Folder", "name": "Contracts",
+                          "owners": [{"emailAddress": "legal@acme.test"}]}]  # fmt: skip
+    found = await GoogleDriveConnector({}, secrets).check()
+    email = json.loads(secrets["service_account_json"])["client_email"]
+    assert found["identity"] == email and found["field"] == "folder_ids"
+    assert [(i["id"], i["kind"]) for i in found["items"]] == [
+        ("0AAdrive", "shared_drive"), ("1Folder", "folder"),
+    ]  # fmt: skip
+    assert found["items"][1]["detail"] == "Shared by legal@acme.test" and not found["warnings"]
+    shared.update(drives=[], folders=[], files=0)
+    found = await GoogleDriveConnector({}, secrets).check()
+    assert found["items"] == [] and email in found["warnings"][0]
+    shared["files"] = 3
+    found = await GoogleDriveConnector({}, secrets).check()
+    assert "3 file(s) are shared with it directly" in found["warnings"][0]

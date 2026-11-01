@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment, type ReactNode } from "react";
 import { Field, Input, Switch, Textarea } from "@/components/ui";
 
 /** The subset of JSON Schema connector config forms use. */
@@ -61,53 +62,66 @@ export function SchemaForm({
   values,
   onChange,
   idPrefix,
+  after,
+  hide,
 }: {
   schema: ConfigSchema;
   values: FormValues;
   onChange: (v: FormValues) => void;
   idPrefix: string;
+  /** Rendered right after a field (e.g. "Check access" after the credential). */
+  after?: Record<string, ReactNode>;
+  /** Fields not to render (a picker fills them instead). */
+  hide?: string[];
 }) {
   const props = Object.entries(schema.properties ?? {});
   // Secrets first: they're what the user must fetch from the other service.
   props.sort(([, a], [, b]) => Number(!!b.secret) - Number(!!a.secret));
   return (
     <>
-      {props.map(([name, spec], i) => {
-        const id = `${idPrefix}-${name}`;
-        const { label, hint, example } = labelParts(spec.title ?? name);
-        const set = (v: string | boolean) => onChange({ ...values, [name]: v });
-        if (spec.type === "boolean") {
-          return <Switch key={name} checked={!!values[name]} onCheckedChange={set} label={label} description={hint} />;
-        }
-        const fieldHint = spec.secret ? `${hint ? `${hint}. ` : ""}Stored server-side and never shown again.` : hint;
-        return (
-          <Field key={name} label={label} htmlFor={id} hint={fieldHint}>
-            {spec.format === "textarea" || spec.type === "array" ? (
-              <Textarea
-                id={id}
-                value={String(values[name] ?? "")}
-                onChange={(e) => set(e.target.value)}
-                autoFocus={i === 0}
-                spellCheck={false}
-                className={spec.format === "textarea" ? "min-h-28 font-mono text-[12px]" : "min-h-16"}
-                placeholder={spec.type === "array" ? "One per line, or comma separated" : spec.secret ? '{ "type": "service_account", … }' : undefined}
-              />
-            ) : (
-              <Input
-                id={id}
-                type={spec.secret ? "password" : spec.type === "integer" || spec.type === "number" ? "number" : spec.format === "email" ? "email" : "text"}
-                autoComplete="off"
-                min={spec.minimum}
-                max={spec.maximum}
-                value={String(values[name] ?? "")}
-                onChange={(e) => set(e.target.value)}
-                autoFocus={i === 0}
-                placeholder={example}
-              />
-            )}
-          </Field>
-        );
-      })}
+      {props.map(([name, spec], i) => (
+        <Fragment key={name}>
+          {hide?.includes(name) ? null : field(name, spec, i)}
+          {after?.[name]}
+        </Fragment>
+      ))}
     </>
   );
+
+  function field(name: string, spec: PropSpec, i: number) {
+    const id = `${idPrefix}-${name}`;
+    const { label, hint, example } = labelParts(spec.title ?? name);
+    const set = (v: string | boolean) => onChange({ ...values, [name]: v });
+    if (spec.type === "boolean") {
+      return <Switch key={name} checked={!!values[name]} onCheckedChange={set} label={label} description={hint} />;
+    }
+    const fieldHint = spec.secret ? `${hint ? `${hint}. ` : ""}Stored server-side and never shown again.` : hint;
+    return (
+      <Field key={name} label={label} htmlFor={id} hint={fieldHint}>
+        {spec.format === "textarea" || spec.type === "array" ? (
+          <Textarea
+            id={id}
+            value={String(values[name] ?? "")}
+            onChange={(e) => set(e.target.value)}
+            autoFocus={i === 0}
+            spellCheck={false}
+            className={spec.format === "textarea" ? "min-h-28 font-mono text-[12px]" : "min-h-16"}
+            placeholder={spec.type === "array" ? "One per line, or comma separated" : spec.secret ? '{ "type": "service_account", … }' : undefined}
+          />
+        ) : (
+          <Input
+            id={id}
+            type={spec.secret ? "password" : spec.type === "integer" || spec.type === "number" ? "number" : spec.format === "email" ? "email" : "text"}
+            autoComplete="off"
+            min={spec.minimum}
+            max={spec.maximum}
+            value={String(values[name] ?? "")}
+            onChange={(e) => set(e.target.value)}
+            autoFocus={i === 0}
+            placeholder={example}
+          />
+        )}
+      </Field>
+    );
+  }
 }

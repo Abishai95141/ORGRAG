@@ -2,7 +2,28 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
 
-## 2026-11-01 (latest) — Merged gaps and weak pages; what the merged runs and Docker found
+## 2026-11-01 (latest) — Connectors that work on first use: GitHub, websites, Drive and Slack setup
+
+Three reports from real use:
+- A public GitHub repository failed with GitHub's 403 rate limit.
+- A company website synced as "Ready" with 0 documents.
+- Connecting a particular Drive folder or Slack channel meant finding ids by hand.
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D74 | **GitHub reads a repository from one archive download** (`github.com/{repo}/archive/{ref}.tar.gz`; with a token, the API's tarball). A public repository makes no API request. Links pin the indexed commit (from the archive). Images aren't indexed. A 403 or 429 says when the token's limit resets, or that a token avoids it. | The connector made one API request per file, plus the tree. GitHub allows 60 unauthenticated API requests an hour per IP (often shared behind carrier NAT), so a 92-file repository could never finish a sync without a token. | The reported repository: 92 documents, 560 chunks, one download, no token. `tests/test_connectors_github.py` (no API request for a public repository; the token isn't sent on to codeload; failures say what to do; a capped listing doesn't prune). | — |
+| D75 | **HTML becomes Markdown by walking the DOM**: headings, lists, tables, code and quotes by element, every other block recursed into, inline text joined. | The old converter kept only headings, `p`, `li`, `pre`, `td` and `blockquote`, so text directly in a `div` or `span` was dropped. 27 HTML files in that repository indexed empty. | 0 empty documents after re-parsing. `test_html_built_from_divs_keeps_its_text_once`. | — |
+| D76 | **Websites: sitemaps, and JavaScript rendered in headless Chromium** (the `browser` extra, Playwright). The crawler reads robots.txt `Sitemap:` lines (else `/sitemap.xml`, up to 5 sitemaps, indexes included). It renders a page only when it is an app shell: scripts and under 200 characters of visible text. The browser makes no connection of its own. Each request a page makes goes through `safe_http`: public addresses only, pinned, size-capped, 150 per page, no images, fonts or media, and only GET, POST, HEAD and OPTIONS. Without the extra, a site of shells fails the sync with what to install. | The site was a Vite single-page app: every page was an empty `<div id="root">` and its links existed only after JavaScript ran. So the crawl found one page with no text and reported success. Stylesheets must load: Vite waits for a route's CSS before rendering it. With them blocked, the home page rendered 0 characters; with them, 6,119. | The reported site: 0 → 29 pages, 394 chunks. `tests/test_connectors_web.py`: sitemap pages; shells without a browser fail; shells rendered and their links followed; the proxy refuses internal addresses, other schemes, images and other methods without a request. | Drop the extra: shells then fail the sync with the install hint. |
+| D77 | **Guided setup for Drive and Slack, with a check that lists what the credentials reach.** `POST /connectors/{kind}/check` returns the account, its shared drives and folders (Drive) or channels (Slack), and warnings. The dialog shows numbered steps: the Google Cloud links, then the service account's email (read from the pasted key) to share folders with; for Slack, an app manifest link with the scopes filled in. Picking from the list fills `folder_ids` or `channels`. Slack's connector joins the public channels it's given (`channels:join`). | The form asked for folder ids and a service-account JSON with no path from "I have a folder" to a working source, and the same for Slack channels. The bot also had to be invited to every public channel by hand. | In the browser: with a fake key, Google's refusal is shown (`invalid_grant`). With a fake token, Slack's (`invalid_auth`). With a mocked success, the picker sends `folder_ids: [the two picked]` with the key. Tests: the route (with Slack faked), the Drive check, and channel joining. | — |
+| D78 | **The Docker image ships Chromium's headless shell** (`playwright install --with-deps --only-shell chromium`, under `/opt/playwright` so the `strata` user can run it). | D76 applies to Docker deployments too. | In the container, as `strata`: the reported site crawls to 29 pages, as natively. Cost: one 598 MB layer (unpacked: the shell and its system libraries); the image is 2.31 GB by `docker image inspect` (D73 recorded 1.97 GB). | Drop `--extra browser` and the install step. |
+
+**Re-parsing.** A document's content hash is of its raw bytes, so a parser change doesn't re-parse unchanged files. The reported sources were re-parsed by clearing their documents' hashes and syncing.
+
+**Results.**
+- Suites: 401 passed, 1 skipped on both Postgres setups, and the same under Python 3.12 without Playwright installed (as in CI).
+- Web: typecheck and production build pass.
+
+## 2026-11-01 (small hours) — Merged gaps and weak pages; what the merged runs and Docker found
 
 The two follow-ups (weak pages shown to admins; `restricted_in_channel` gaps) were
 reviewed and merged. Then the whole system was re-verified:

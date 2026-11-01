@@ -73,6 +73,8 @@ class GoogleDriveConnector(Connector):
         },
     }
 
+    can_check = True
+
     def __init__(self, config: dict[str, Any], secrets: dict[str, Any]):
         super().__init__(config, secrets)
         self._token: str | None = None
@@ -109,7 +111,9 @@ class GoogleDriveConnector(Connector):
         if not raw:
             raise ConnectorError("Add the service account key (JSON) to this source")
         try:
-            info = json.loads(raw) if isinstance(raw, str) else dict(raw)
+            # strict=False: a key whose private_key newlines were unescaped by whatever
+            # it was copied from still parses.
+            info = json.loads(raw, strict=False) if isinstance(raw, str) else dict(raw)
         except (ValueError, TypeError) as exc:
             raise ConnectorError("The service account key is not valid JSON") from exc
         if (
@@ -312,6 +316,61 @@ class GoogleDriveConnector(Connector):
         if resp.status_code != 200 or len(resp.content) > _MAX_BYTES:
             return None
         return resp.content, mime
+
+    async def check(self) -> dict[str, Any]:
+        """The shared drives and folders this account can read, to pick from."""
+        info = self._service_account()
+        account = info["client_email"]
+        acting = self.config.get("impersonate_email")
+        items: list[dict[str, Any]] = []
+        async with self._client() as client:
+            if self.config.get("include_shared_drives", True):
+                resp = await self._get(client, "/drives", pageSize=100, fields="drives(id,name)")
+                _check(resp, "listing shared drives")
+                items += [
+                    {
+                        "id": d["id"],
+                        "name": d["name"],
+                        "kind": "shared_drive",
+                        "detail": "Shared drive",
+                        "ready": True,
+                    }  # fmt: skip
+                    for d in resp.json().get("drives", [])
+                ]
+            # Impersonating: the user's own top-level folders; else what was shared with
+            # the service account.
+            where = "'root' in parents" if acting else "sharedWithMe"
+            query = f"mimeType = '{_FOLDER}' and trashed = false and {where}"
+            fields = "nextPageToken,files(id,name,owners(emailAddress))"
+            async for f in self._list(client, query, fields):
+                owner = next(iter(f.get("owners") or []), {}).get("emailAddress")
+                items.append({"id": f["id"], "name": f["name"], "kind": "folder",
+                              "detail": f"Shared by {owner}" if owner else "Folder",
+                              "ready": True})  # fmt: skip
+                if len(items) >= 300:
+                    break
+            loose = 0
+            if not acting:
+                query = f"mimeType != '{_FOLDER}' and trashed = false and sharedWithMe"
+                async for _ in self._list(client, query, "nextPageToken,files(id)"):
+                    loose += 1
+                    if loose >= 100:
+                        break
+        warnings = []
+        if not items and not loose:
+            warnings.append(
+                f"Nothing is shared with {account} yet. In Google Drive, share a folder "
+                "with it (Share, then add the email as a Viewer), or add it to a shared "
+                "drive as a member, and check again."
+            )
+        elif loose:
+            warnings.append(
+                f"{loose}{'+' if loose >= 100 else ''} file(s) are shared with it directly "
+                "rather than in a folder; leave the folders unselected to index everything "
+                "it can see, those included."
+            )
+        identity = f"{account} acting as {acting}" if acting else account
+        return {"identity": identity, "field": "folder_ids", "items": items, "warnings": warnings}
 
     async def list_ids(self) -> set[str] | None:
         self.config = self.validate_config(self.config)

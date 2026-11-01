@@ -13,7 +13,8 @@ import re
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString, Tag
+from bs4.element import PreformattedString
 
 if TYPE_CHECKING:
     from app.ingestion.docling_parser import Parsed
@@ -147,33 +148,98 @@ def _docx(data: bytes) -> tuple[str, str | None]:
     return "\n\n".join(lines), title
 
 
+# Elements that start a new block of text; anything else (span, a, strong, …) is inline
+# and joins the text around it.
+_BLOCK = frozenset(
+    [
+        "address", "article", "aside", "blockquote", "caption", "center", "dd", "details",
+        "dialog", "div", "dl", "dt", "fieldset", "figcaption", "figure", "h1", "h2", "h3",
+        "h4", "h5", "h6", "hr", "li", "main", "ol", "p", "pre", "section", "summary", "table",
+        "tbody", "td", "tfoot", "th", "thead", "tr", "ul",
+    ]
+)  # fmt: skip
+_CHROME = ["script", "style", "noscript", "svg", "nav", "footer", "header", "form", "template",
+           "iframe", "canvas"]  # fmt: skip
+_HEADING = re.compile(r"^h([1-6])$")
+
+
 def html_to_markdown(html: str) -> tuple[str, str | None]:
+    """Markdown from HTML: headings, lists, code, quotes and tables keep their shape, and
+    every other block's text is a paragraph. (Keeping only <p>, <li> and headings lost
+    pages built from <div>s and <span>s, which is most of them.)"""
     soup = BeautifulSoup(html, "lxml")
-    for tag in soup(["script", "style", "noscript", "svg", "nav", "footer", "header", "form"]):
+    for tag in soup(_CHROME):
         tag.decompose()
     title = soup.title.get_text(strip=True) if soup.title else None
     root = soup.find("main") or soup.find("article") or soup.body or soup
-    lines: list[str] = []
-    for el in root.find_all(["h1", "h2", "h3", "h4", "p", "li", "pre", "td", "blockquote"]):
-        text = el.get_text(" ", strip=True)
-        if not text:
-            continue
-        name = el.name
-        if name in ("h1", "h2", "h3", "h4"):
-            lines.append(f"{'#' * int(name[1])} {text}")
-        elif name == "li":
-            lines.append(f"- {text}")
-        elif name == "pre":
-            lines.append(f"```\n{el.get_text()}\n```")
-        elif name == "blockquote":
-            lines.append(f"> {text}")
-        else:
-            lines.append(text)
+    blocks: list[str] = []
+    _blocks(root, blocks)
     deduped: list[str] = []
-    for line in lines:
-        if not deduped or deduped[-1] != line:
-            deduped.append(line)
+    for block in blocks:
+        if not deduped or deduped[-1] != block:
+            deduped.append(block)
     return "\n\n".join(deduped), title
+
+
+def _text(el) -> str:
+    return " ".join(el.get_text(" ").split())
+
+
+def _has_block(el: Tag) -> bool:
+    return any(d.name in _BLOCK for d in el.find_all(True))
+
+
+def _blocks(el: Tag, out: list[str]) -> None:
+    inline: list[str] = []
+
+    def flush() -> None:
+        text = " ".join(" ".join(inline).split())
+        if text:
+            out.append(text)
+        inline.clear()
+
+    for child in el.children:
+        if isinstance(child, PreformattedString):  # comments, doctype, CDATA
+            continue
+        if isinstance(child, NavigableString):
+            inline.append(str(child))
+            continue
+        if not isinstance(child, Tag):
+            continue
+        name = child.name
+        if name not in _BLOCK and not _has_block(child):
+            inline.append(child.get_text(" "))
+            continue
+        flush()
+        if heading := _HEADING.match(name):
+            if text := _text(child):
+                out.append(f"{'#' * int(heading.group(1))} {text}")
+        elif name == "pre":
+            out.append(f"```\n{child.get_text().strip(chr(10))}\n```")
+        elif name == "li":
+            if not _has_block(child):
+                if text := _text(child):
+                    out.append(f"- {text}")
+            else:
+                nested: list[str] = []
+                _blocks(child, nested)
+                if nested:
+                    out.append(f"- {nested[0]}")
+                    out.extend(nested[1:])
+        elif name == "blockquote":
+            quoted: list[str] = []
+            _blocks(child, quoted)
+            out.extend(f"> {q}" for q in quoted)
+        elif name == "table":
+            rows = [[_text(c) for c in tr.find_all(["th", "td"])] for tr in child.find_all("tr")]
+            rows = [r for r in rows if any(r)]
+            if len(rows) > 1 and max(len(r) for r in rows) > 1:
+                out.append(_md_table(rows))
+            else:
+                out.extend(" ".join(r) for r in rows)
+        elif name != "hr":
+            _blocks(child, out)
+    flush()
 
 
 def _md_table(rows: list[list[str]]) -> str:

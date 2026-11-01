@@ -33,6 +33,11 @@ dependencies = [
 
 [project.optional-dependencies]
 local-embeddings = ["fastembed>=0.4"]
+# Headless Chromium for websites that build their pages with JavaScript (the web
+# connector renders them; `playwright install chromium` fetches the browser).
+browser = [
+    "playwright>=1.48",
+]
 parsing = [
     "docling[rapidocr]==2.145.0",
     # Named so the Linux source below applies: Docling's layout and table models run on

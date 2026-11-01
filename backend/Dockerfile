@@ -6,6 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_LINK_MODE=copy \
     FASTEMBED_CACHE_PATH=/opt/fastembed \
     DOCLING_ARTIFACTS_PATH=/opt/docling-models \
+    PLAYWRIGHT_BROWSERS_PATH=/opt/playwright \
     PATH="/app/.venv/bin:$PATH"
 
 # LibreOffice turns slides into pages and legacy Office files (.doc, .xls, .ppt) into
@@ -20,9 +21,15 @@ COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
 WORKDIR /app
 
 # Docling (the `parsing` extra) reads PDFs with OCR and tables, Office files, email and
-# images. Its torch comes from PyTorch's CPU index (pyproject.toml).
+# images. Its torch comes from PyTorch's CPU index (pyproject.toml). Playwright (the
+# `browser` extra) renders websites that build their pages with JavaScript.
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --extra local-embeddings --extra parsing --no-install-project
+RUN uv sync --frozen --no-dev --extra local-embeddings --extra parsing --extra browser \
+    --no-install-project
+
+# Chromium's headless shell and the libraries it needs, outside any home directory so
+# the `strata` user can run it.
+RUN playwright install --with-deps --only-shell chromium && rm -rf /var/lib/apt/lists/*
 
 # Bake the models in so the first boot and the first upload need no download: the
 # default embedding model, and Docling's layout, table and OCR models.

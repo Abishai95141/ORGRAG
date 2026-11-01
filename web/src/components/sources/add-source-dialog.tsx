@@ -8,8 +8,9 @@ import { IconArrowLeft, IconChannel, IconDrive, IconFile, IconGlobe, IconRepo, I
 import { Button, Dialog, Field, Input, Select } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { qk, useCollections, useConnectors } from "@/lib/queries";
-import type { SourceKind } from "@/lib/types";
+import type { ConnectorCheck, SourceKind } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { AccessCheck, SetupSteps } from "./connector-setup";
 import { type ConfigSchema, type FormValues, initialValues, missingSecrets, SchemaForm, toConfig } from "./schema-form";
 import { Dropzone, INTERVALS } from "./shared";
 
@@ -25,12 +26,12 @@ const KINDS: { kind: SourceKind; title: string; body: string; icon: typeof IconF
 /** Connectors whose form is generated from their config schema. */
 const SCHEMA_KINDS = new Set<SourceKind>(["gdrive", "slack", "notion"]);
 
-/** Where to get the credential, shown above the generated form. */
+/** Where to get the credential, shown above the generated form (Drive and Slack have
+ * numbered steps instead: SetupSteps). */
 const SETUP_HINT: Partial<Record<SourceKind, string>> = {
-  gdrive: "Create a service account in Google Cloud, download its JSON key, then share the folders (or shared drives) with its email.",
-  slack: "Create a Slack app with channels:history, channels:read, groups:history, groups:read and users:read, install it, and invite the bot to the channels to index.",
   notion: "Create an internal integration at notion.so/my-integrations, then share the pages to index with it (… → Connections).",
 };
+const GUIDED = new Set<SourceKind>(["gdrive", "slack"]);
 
 export function AddSourceDialog({ open, onOpenChange, slug }: { open: boolean; onOpenChange: (v: boolean) => void; slug: string }) {
   const router = useRouter();
@@ -46,6 +47,7 @@ export function AddSourceDialog({ open, onOpenChange, slug }: { open: boolean; o
   const schema = (connectors.data?.find((c) => c.kind === kind)?.config_schema ?? {}) as ConfigSchema;
   const [form, setForm] = useState<FormValues>({});
   const [files, setFiles] = useState<File[]>([]);
+  const [check, setCheck] = useState<ConnectorCheck | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +60,7 @@ export function AddSourceDialog({ open, onOpenChange, slug }: { open: boolean; o
       setWeb({ url: "", max_pages: "50", max_depth: "2" });
       setGh({ repo: "", branch: "", paths: "", token: "" });
       setForm({});
+      setCheck(null);
       setInterval_("0");
     }
   }, [open]);
@@ -65,7 +68,29 @@ export function AddSourceDialog({ open, onOpenChange, slug }: { open: boolean; o
   // Fresh defaults whenever a schema-driven connector is picked.
   useEffect(() => {
     if (kind && SCHEMA_KINDS.has(kind)) setForm(initialValues(schema));
+    setCheck(null);
   }, [kind, connectors.data]);
+
+  const spec = connectors.data?.find((c) => c.kind === kind);
+  const secretField = Object.entries(schema.properties ?? {}).find(([, p]) => p.secret)?.[0];
+  const listed = (field: string) =>
+    String(form[field] ?? "")
+      .split(/[\n,]/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+  const picked = check ? listed(check.field) : [];
+  // The typed field gives way to the list only when the list shows everything in it.
+  const pickedAllListed = !!check?.items.length && picked.every((p) => check.items.some((i) => i.id === p));
+
+  /** A check's list arrived: what was typed by name ("general", "#general") becomes the id it lists. */
+  function onCheck(result: ConnectorCheck | null) {
+    setCheck(result);
+    if (!result?.items.length) return;
+    const byName = new Map(result.items.map((i) => [i.name.replace(/^#/, "").toLowerCase(), i.id]));
+    const typed = listed(result.field);
+    const ids = typed.map((t) => byName.get(t.replace(/^#/, "").toLowerCase()) ?? t);
+    if (ids.some((id, n) => id !== typed[n])) setForm((f) => ({ ...f, [result.field]: ids.join("\n") }));
+  }
 
   useEffect(() => {
     if (!collectionId && collections.data?.length) setCollectionId(collections.data[0].id);
@@ -208,10 +233,36 @@ export function AddSourceDialog({ open, onOpenChange, slug }: { open: boolean; o
 
           {kind && SCHEMA_KINDS.has(kind) ? (
             <>
+              {GUIDED.has(kind) ? <SetupSteps kind={kind} secret={secretField ? String(form[secretField] ?? "") : ""} /> : null}
               {SETUP_HINT[kind] ? (
                 <p className="rounded-[10px] border border-line bg-surface-2/50 px-3 py-2.5 text-[12.5px] leading-relaxed text-ink-2">{SETUP_HINT[kind]}</p>
               ) : null}
-              {schema.properties ? <SchemaForm schema={schema} values={form} onChange={setForm} idPrefix={`src-${kind}`} /> : null}
+              {schema.properties ? (
+                <SchemaForm
+                  schema={schema}
+                  values={form}
+                  onChange={setForm}
+                  idPrefix={`src-${kind}`}
+                  hide={check && pickedAllListed ? [check.field] : undefined}
+                  after={
+                    spec?.checkable && secretField
+                      ? {
+                          [secretField]: (
+                            <AccessCheck
+                              slug={slug}
+                              kind={kind}
+                              config={() => toConfig(schema, form)}
+                              ready={!!String(form[secretField] ?? "").trim()}
+                              picked={picked}
+                              onPick={(field, ids) => setForm({ ...form, [field]: ids.join("\n") })}
+                              onResult={onCheck}
+                            />
+                          ),
+                        }
+                      : undefined
+                  }
+                />
+              ) : null}
             </>
           ) : null}
 
