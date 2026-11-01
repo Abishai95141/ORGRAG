@@ -416,6 +416,23 @@ async def test_sharing_access_requests_and_verified_answers_are_recorded(app, mo
     assert share["token"] not in json.dumps(actions)
 
 
+async def test_agent_changes_are_recorded_with_their_diff(app):
+    owner = await _signup(app, "owner")
+    slug = (await _org(owner, "Agent Co"))["slug"]
+    body = {"name": "Helper", "instructions": "Be brief.", "mode": "quick", "collection_ids": []}
+    agent = (await owner.post(f"/api/orgs/{slug}/agents", json=body)).json()
+    r = await owner.patch(
+        f"/api/orgs/{slug}/agents/{agent['id']}", json={"name": "Desk", "mode": "deep"}
+    )
+    assert r.status_code == 200, r.text
+    assert (await owner.delete(f"/api/orgs/{slug}/agents/{agent['id']}")).status_code == 204
+    events = await _events(owner, slug, action="agent")
+    assert [e["action"] for e in events] == ["agent.deleted", "agent.updated", "agent.created"]
+    changes = events[1]["details"]["changes"]
+    assert changes["name"] == {"from": "Helper", "to": "Desk"}
+    assert changes["mode"] == {"from": "quick", "to": "deep"}
+
+
 async def test_a_change_that_fails_records_nothing(app):
     owner = await _signup(app, "owner")
     org = await _org(owner, "Atomic Co")

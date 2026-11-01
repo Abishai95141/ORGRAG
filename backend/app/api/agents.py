@@ -91,7 +91,7 @@ async def update_agent(agent_id: uuid.UUID, body: AgentPatch, ctx: OrgContext = 
             setattr(agent, key, value)
     after = {k: getattr(agent, k) for k in AUDITED}
     if changed := audit.changes(_plain(before), _plain(after)):
-        audit.record_event(ctx, "agent.updated", "agent", agent.id, agent.name, **changed)
+        audit.record_event(ctx, "agent.updated", "agent", agent.id, agent.name, changes=changed)
     await ctx.db.commit()
     return agent
 

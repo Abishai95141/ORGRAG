@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Collection, Document, RecordSchema
 from app.records.tables import Structure, Table, clean, find_structure, normalize
-from app.records.values import infer_type
+from app.records.values import infer_type, is_measure
 
 MIN_ROWS = 3  # a register needs at least this many rows to be worth a schema
 MIN_DOCS = 2  # per-document tables and field lines must recur across documents
@@ -76,11 +76,25 @@ def _key_field(fields: list[dict], rows: list[dict[str, str]], titles: list[str]
         )  # fmt: skip
         if rows and hits / len(rows) >= 0.6:
             return name
-    for f in fields:
-        values = [clean(r.get(f["name"], "")) for r in rows if r.get(f["name"])]
-        if f["type"] in ("text", "number") and values and len(set(values)) >= 0.9 * len(values):
-            return f["name"]
+    for kinds in (("text", "number"), ("date",)):
+        for f in fields:
+            values = [clean(r.get(f["name"], "")) for r in rows if r.get(f["name"])]
+            unique = values and len(set(values)) >= 0.9 * len(values)
+            # "47 minutes" or "$12,000" measures a thing; it doesn't name it.
+            if f["type"] in kinds and unique and sum(map(is_measure, values)) < len(values) / 2:
+                return f["name"]
     return names[0]
+
+
+def _named_by_titles(titles: list[str], collection: Collection) -> tuple[str, str]:
+    """A per-document record type's name and label: the prefix most of its documents'
+    titles share ("Postmortem: Map sync corruption" → postmortem), else the collection's."""
+    prefixes = Counter(clean(t).split(":")[0] for t in titles if ":" in t)
+    if prefixes:
+        prefix, n = prefixes.most_common(1)[0]
+        if n >= 0.6 * len(titles):
+            return _slug(prefix), _label(prefix)
+    return _slug(collection.name), collection.name
 
 
 def _rows_of(table: Table) -> list[dict[str, str]]:
@@ -114,12 +128,11 @@ def suggest_from(
             row_titles.append(doc.title)
         keep = {n: v for n, v in values.items() if len(v) >= max(MIN_DOCS, FIELD_SHARE * len(rows))}
         fields = _fields(keep, labels)
-        prefix = Counter(clean(d.title).split(":")[0] for d, _ in per_doc).most_common(1)[0][0]
-        name = _slug(prefix) if ":" in per_doc[0][0].title else _slug(collection.name)
+        name, label = _named_by_titles([d.title for d, _ in per_doc], collection)
         out.append(
             Suggestion(
                 name=name,
-                label=clean(prefix) if ":" in per_doc[0][0].title else collection.name,
+                label=label,
                 origin="fields_table",
                 fields=fields,
                 key_field=_key_field(fields, rows, row_titles),
@@ -185,10 +198,11 @@ def suggest_from(
                         values[n].append(line.value.text)
                 rows.append(row)
             fields = _fields(values, labels)
+            name, label = _named_by_titles([d.title for d, _ in line_docs], collection)
             out.append(
                 Suggestion(
-                    name=_slug(collection.name),
-                    label=collection.name,
+                    name=name,
+                    label=label,
                     origin="field_lines",
                     fields=fields,
                     key_field=_key_field(fields, rows, [d.title for d, _ in line_docs]),
@@ -208,6 +222,10 @@ def suggest_from(
     return sorted(out, key=lambda s: -s.records)[:MAX_SCHEMAS]
 
 
+def _shape(origin: str, fields: list[dict]) -> tuple[str, frozenset[str]]:
+    return origin, frozenset(f["name"] for f in fields)
+
+
 async def suggest(db: AsyncSession, collection: Collection, user_id=None) -> list[RecordSchema]:
     """Suggestions for a collection, saved as `suggested` schemas (an active or archived
     schema of the same name is left as the admin set it)."""
@@ -221,17 +239,20 @@ async def suggest(db: AsyncSession, collection: Collection, user_id=None) -> lis
         ).scalars()
     )
     found = suggest_from([(d, find_structure(d.content)) for d in docs], collection)
-    existing = {
-        s.name: s
-        for s in (
+    saved = list(
+        (
             await db.execute(
                 select(RecordSchema).where(RecordSchema.collection_id == collection.id)
             )
         ).scalars()
-    }
+    )
+    existing = {s.name: s for s in saved}
+    # The same structure under another name (an earlier suggester named it differently)
+    # is the same record type: an admin's active or archived one stands.
+    decided = {_shape(s.origin, s.fields): s for s in saved if s.status != "suggested"}
     out = []
     for s in found:
-        schema = existing.get(s.name)
+        schema = existing.get(s.name) or decided.get(_shape(s.origin, s.fields))
         if schema is not None and schema.status != "suggested":
             out.append(schema)
             continue

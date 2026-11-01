@@ -57,6 +57,15 @@ def test_values_and_offsets():
     cell = table.rows[2][1]
     assert doc[cell.start : cell.end] == cell.text == "**Executed** — reviewed by Procurement"
     assert parse_number("$96,000") == 96000 and parse_number("INC-2264") is None
+    assert parse_number("$186,000 (2026)") == 186000  # a year alongside is a note
+    assert parse_number("1 hour 25 minutes") is None  # two quantities: not one number
+    assert parse_number("$5,000 to $25,000") is None
+    durations = ["47 minutes", "2 hours 10 minutes", "5 hours", "1 day", "3 days"]
+    assert infer_type(durations)["type"] == "text"
+    assert infer_type(["12 months", "24 months", "36 months", "12 months"])["type"] == "number"
+    owners = ["Kenji Watanabe", "Marcus Bell", "Kenji Watanabe", "Rachel Moore", "Marcus Bell"]
+    assert infer_type(owners)["type"] == "text"  # the next new owner must not be dropped
+    assert infer_type(["Active", "Terminated", "Active", "Active"])["type"] == "choice"
     assert parse_date("Jul 9") is None and parse_date("Jul 9", 2026) == "2026-07-09"
     assert infer_type(["Low", "High", "Low", "Medium", "High"])["type"] == "choice"
     # Field names start with a letter, as the API requires ("2FA enabled" → f_2fa_enabled).
@@ -154,6 +163,10 @@ async def test_schemas_are_suggested_activated_extracted_and_queried(app):
     hidden = await member.get(f"/api/orgs/{slug}/records/{rec['basalt analytics']}")
     assert hidden.status_code == 404  # its document is hidden
 
+    # Renaming is audited like any other edit.
+    r = await admin.patch(one, json={"label": "Vendor file"})
+    assert r.status_code == 200 and r.json()["label"] == "Vendor file"
+
     # Archiving removes the records; members no longer see the type.
     await admin.patch(
         f"/api/orgs/{slug}/record-schemas/{vendor['id']}", json={"status": "archived"}
@@ -168,7 +181,10 @@ async def test_schemas_are_suggested_activated_extracted_and_queried(app):
     assert actions.count("record_schema.archived") == 1
     assert "record_schema.suggested" in actions
     activated = next(e for e in events["items"] if e["action"] == "record_schema.activated")
-    assert activated["details"]["status"] == {"from": "suggested", "to": "active"}
+    assert activated["details"]["changes"]["status"] == {"from": "suggested", "to": "active"}
+    renamed = next(e for e in events["items"] if e["action"] == "record_schema.updated")
+    assert renamed["details"]["changes"]["label"]["to"] == "Vendor file"
+    assert renamed["target_label"] == "Vendor file"
     member_id = (await member.get("/api/auth/me")).json()["user"]["id"]
     reads = (await admin.get(f"/api/orgs/{slug}/audit/access?actor_id={member_id}")).json()
     searches = [e for e in reads["items"] if e["kind"] == "search"]
@@ -257,6 +273,16 @@ async def test_only_changed_documents_are_extracted_again(app):
     high = {"schema": "vendor_record", "mode": "count",
             "filters": [{"field": "risk_tier", "op": "eq", "value": "High"}]}  # fmt: skip
     assert (await admin.post(f"/api/orgs/{slug}/records/query", json=high)).json()["total"] == 3
+    # An active type saved under another name (as an earlier suggester named it) is the
+    # same structure: suggesting again returns it, not a duplicate under the new name.
+    async with SessionLocal() as db:
+        (await db.get(RecordSchema, uuid.UUID(vendor["id"]))).name = "general"
+        await db.commit()
+    again = (await admin.post(suggest)).json()
+    same = [s for s in again if s["origin"] == "fields_table"]
+    assert [(s["id"], s["name"], s["status"]) for s in same] == [
+        (vendor["id"], "general", "active")
+    ]
 
 
 @pytest.mark.integration
@@ -287,13 +313,41 @@ async def test_the_agent_queries_records_and_cites_them(app, monkeypatch):
             "filters": [{"field": "business_associate_agreement", "op": "eq", "value": "Executed"}],
         },
     )
+    # The fields the answer needs become the columns; the rest are named as not shown.
+    narrow = NS(
+        type="tool_use",
+        id="toolu_f",
+        name="query_records",
+        input={**call.input, "fields": ["annual_cost"]},
+    )
+    typo = NS(
+        type="tool_use", id="toolu_t", name="query_records",
+        input={"record_type": "vendor_record", "fields": ["cost"]},
+    )  # fmt: skip
     answer = "Two vendors have an executed BAA: Basalt Analytics [1] and Harbor Cloud [2]."
-    fake = FakeClient([([], NS(stop_reason="tool_use", content=[call])), _answer_turn(answer)])
+    fake = FakeClient(
+        [
+            ([], NS(stop_reason="tool_use", content=[call])),
+            ([], NS(stop_reason="tool_use", content=[narrow, typo])),
+            _answer_turn(answer),
+        ]
+    )
     from app.agent import engine
     from app.core.config import get_settings
 
     monkeypatch.setattr(get_settings(), "anthropic_api_key", "test-key")
     monkeypatch.setattr(engine, "get_client", lambda: fake)
+    # The coverage check reads the records too, not only search passages.
+    from app.agent import sufficiency
+
+    checked = []
+
+    async def fake_check(**kwargs):
+        checked.append(kwargs["prompt"])
+        return {"sufficient": True, "missing": []}
+
+    monkeypatch.setattr(get_settings(), "sufficiency_check", "always")
+    monkeypatch.setattr(sufficiency, "structured_call", fake_check)
     conv = (await admin.post(f"/api/orgs/{slug}/conversations", json={})).json()
     r = await admin.post(
         f"/api/orgs/{slug}/conversations/{conv['id']}/messages?stream=false",
@@ -308,6 +362,12 @@ async def test_the_agent_queries_records_and_cites_them(app, monkeypatch):
     result = fake.calls[1]["messages"][-1]["content"][0]["content"]
     assert "2 matching record(s)" in result and "Exact" in result
     assert "| Basalt Analytics |" in result and "[1]" in result and "[2]" in result
+    narrowed, bad = (c["content"] for c in fake.calls[2]["messages"][-1]["content"])
+    header = next(line for line in narrowed.splitlines() if line.startswith("| Vendor"))
+    assert header.count("|") == 5 and "Annual cost" in header  # key, filter, asked, Source
+    assert "Not shown: " in narrowed and "risk_tier" in narrowed.split("Not shown: ")[1]
+    assert "No field cost in vendor_record" in bad
+    assert checked and "| Basalt Analytics |" in checked[0]
     titles = {s["title"] for s in message["sources"]}
     assert titles == {"Vendor record: Basalt Analytics", "Vendor record: Harbor Cloud"}
     steps = [s for s in message["trace"] if s["kind"] == "records"]
@@ -412,6 +472,93 @@ async def test_prose_extractions_are_grouped_typed_and_located(monkeypatch):
     example = calls[0]["examples"][0]
     assert all(e.extraction_text in example.text for e in example.extractions)
     assert "Use the exact words from the text" in calls[0]["prompt_description"]
+
+
+def test_llm_schemas_read_register_tables_row_by_row(monkeypatch):
+    """A prose schema's documents can hold a register: a table whose columns name the
+    key field and another field is read exactly (every row, under the right column) and
+    hidden from the model, which reads the rest. In other tables, a value the model puts
+    under a column named for a different field is dropped."""
+    import langextract
+
+    from app.records import extract
+
+    text = (
+        "# Contracts\n\n"
+        "| Vendor | Auto-Renew | Notice Period (days) | Customer Data Access |\n"
+        "|---|---|---|---|\n"
+        "| Stripe | Yes | 30 | Yes |\n"
+        "| Figma | No | 60 | No |\n\n"
+        "| Supplier | Termination for convenience |\n"
+        "|---|---|\n"
+        "| Okta | No |\n\n"
+        "Stripe's agreement is governed by the laws of Delaware.\n"
+    )
+    schema = NS(
+        name="contract_terms", label="Contract terms", key_field="vendor", origin="llm",
+        fields=[
+            {"name": "vendor", "label": "Vendor", "type": "text"},
+            {"name": "auto_renew", "label": "Renews automatically", "type": "boolean"},
+            {"name": "notice_days", "label": "Notice period (days)", "type": "number"},
+            {"name": "termination_for_convenience", "label": "Termination for convenience",
+             "type": "boolean"},
+            {"name": "governing_law", "label": "Governing law", "type": "text"},
+        ],
+    )  # fmt: skip
+    assert extract.column_field("Notice Period (days)", schema)["name"] == "notice_days"
+    assert extract.column_field("Auto-Renew", schema)["name"] == "auto_renew"
+    assert extract.column_field("Customer Data Access", schema) is None
+    assert extract.column_field("Renewal Date", schema) is None  # not "renewal price cap"
+    doc = NS(content=text, title="Contracts", source_updated_at=None)
+    structure = find_structure(text)
+    rows, spans = extract.from_tables(doc, structure, schema)
+    assert {r.key: r.values for r in rows} == {
+        "stripe": {"vendor": "Stripe", "auto_renew": True, "notice_days": 30},
+        "figma": {"vendor": "Figma", "auto_renew": False, "notice_days": 60},
+    }
+    assert all(r.method == "rows_table" for r in rows)
+    p = rows[0].provenance["notice_days"]
+    assert text[p["start"] : p["end"]] == "30"
+    assert len(spans) == 1  # the Supplier table has no key column: the model reads it
+    rest = extract._blank(text, spans)
+    assert len(rest) == len(text) and "Stripe | Yes" not in rest and "Okta" in rest
+
+    def span(s, cls, record, nth=0, value=None):
+        start = -1
+        for _ in range(nth + 1):
+            start = text.index(s, start + 1)
+        return NS(
+            extraction_class=cls, extraction_text=s,
+            attributes={"record": record, **({"value": value} if value else {})},
+            char_interval=NS(start_pos=start, end_pos=start + len(s)),
+        )  # fmt: skip
+
+    okta_no = text.index("| Okta | No |") + len("| Okta | ")
+    found = [
+        span("Okta", "vendor", "Okta"),
+        # The "No" under "Termination for convenience" isn't auto-renewal: dropped…
+        NS(extraction_class="auto_renew", extraction_text="No", attributes={"record": "Okta"},
+           char_interval=NS(start_pos=okta_no, end_pos=okta_no + 2)),
+        # …and is kept for the field its column names.
+        NS(extraction_class="termination_for_convenience", extraction_text="No",
+           attributes={"record": "Okta"}, char_interval=NS(start_pos=okta_no, end_pos=okta_no + 2)),
+        span("the laws of Delaware", "governing_law", "Stripe", value="Delaware"),
+    ]  # fmt: skip
+    calls = []
+    monkeypatch.setattr(
+        langextract, "extract", lambda **kw: calls.append(kw) or NS(extractions=found)
+    )
+    prose = extract._from_prose_sync(doc, schema, NS(max_workers=1), rest, structure, spans)
+    assert calls[0]["text_or_documents"] == rest
+    merged = {r.key: r for r in extract._merge(rows, prose)}
+    assert merged["okta"].values == {"vendor": "Okta", "termination_for_convenience": False}
+    assert merged["stripe"].values["governing_law"] == "Delaware"  # prose fills the row in
+    assert merged["stripe"].values["notice_days"] == 30
+    # A document that is only a register needs no model call.
+    only = "| Vendor | Auto-Renew |\n|---|---|\n| Stripe | Yes |\n"
+    _, only_spans = extract.from_tables(NS(content=only, title="", source_updated_at=None),
+                                        find_structure(only), schema)  # fmt: skip
+    assert not extract._blank(only, only_spans).strip()
 
 
 async def _run_jobs():
@@ -559,3 +706,28 @@ async def test_latest_only_and_schema_id_keep_collections_apart(app):
     assert (await admin.post(q, json=latest)).json()["total"] == 8
     only_b = (await admin.post(q, json={**latest, "schema_id": schemas[b]})).json()
     assert only_b["total"] == 4 and only_b["schemas"] == [schemas[b]]
+
+
+def test_per_document_types_are_named_by_their_titles_and_keyed_by_a_name():
+    """Postmortems with the same "Label: value" lines become one record type named after
+    the titles they share, keyed by a field that names each one: never a duration."""
+    from app.records.suggest import suggest_from
+
+    incidents = [
+        ("Postmortem: Map sync corruption", "2026-04-08", "SEV2", "6 hours", "Aisha Rahman"),
+        ("Postmortem: SSO outage", "2026-03-19", "SEV1", "1 hour 25 minutes", "Ines Carvalho"),
+        ("Postmortem: DNS outage", "2026-05-21", "SEV2", "38 minutes", "Pedro Alves"),
+        ("Postmortem: CI outage", "2026-09-29", "SEV4", "4 hours", "Pedro Alves"),
+    ]
+    docs = [
+        (NS(id=i, title=title), find_structure(
+            f"# {title}\n\nDate: {date}\nSeverity: {sev}\nDuration: {took}\n"
+            f"Incident commander: {who}\n\nWhat happened.\n"
+        ))
+        for i, (title, date, sev, took, who) in enumerate(incidents)
+    ]  # fmt: skip
+    (s,) = suggest_from(docs, NS(name="Engineering"))
+    assert (s.name, s.label, s.origin) == ("postmortem", "Postmortem", "field_lines")
+    types = {f["name"]: f["type"] for f in s.fields}
+    assert types["duration"] == "text" and types["date"] == "date"
+    assert s.key_field == "date"  # unique; the commander repeats, a duration measures

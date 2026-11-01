@@ -284,8 +284,9 @@ async def update_schema(
         status = changed.get("status", {}).get("to")
         action = {"active": "activated", "archived": "archived"}.get(status, "updated")
         audit.record_event(
-            ctx, f"record_schema.{action}", "record_schema", schema.id, schema.label, **changed
-        )
+            ctx, f"record_schema.{action}", "record_schema", schema.id, schema.label,
+            changes=changed,
+        )  # fmt: skip
     await ctx.db.commit()
     collection = await ctx.db.get(Collection, schema.collection_id)
     return _out(schema, {collection.id: collection}, await _extracting(ctx))

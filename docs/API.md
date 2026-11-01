@@ -328,7 +328,10 @@ documents, tables whose rows recur, and repeated `Label: value` lines; no LLM), 
 and edit the fields, and activate them. Admins can also write a schema for facts stated
 in prose; its records are extracted by the model with
 [LangExtract](https://github.com/google/langextract) (`RECORD_MODEL`, Haiku 5.5), keeping
-only values tied to the exact words they came from. Activating extracts in the worker;
+only values tied to the exact words they came from. In those documents, a table whose
+columns name the key field and another field (by name, label, alias, or the same words:
+"Notice Period (days)" → `notice_days`) is read row by row without the model, and a value
+the model places under a column named for a different field is dropped. Activating extracts in the worker;
 every later sync of the collection re-extracts changed documents.
 
 Members see active schemas in collections they can read and query their records. The
@@ -850,8 +853,9 @@ Records queries that return records (`POST /records/query` in list or count mode
 `query_records`, `/records/resolve`, MCP `resolve_role`) are logged as `search` with the
 query `records {type}: {filters}` and the documents they returned; a group-by returns
 counts, not documents, and isn't logged. `GET /records/{id}` is logged as `read`. Admin actions also
-include `agent.*`, `graph.rebuilt`, `record_schema.*` (suggested, created, updated,
-activated, archived, extracted, deleted), `doc_request.fulfilled` / `.dismissed` and
+include `agent.*` (`agent.updated` with `changes` to its name, mode, instructions or
+collections), `graph.rebuilt`, `record_schema.*` (suggested, created, updated,
+activated, archived, extracted, deleted; edits carry `changes`), `doc_request.fulfilled` / `.dismissed` and
 `slack.*` (connected, disconnected, and `channel_added` / `channel_removed` in each org a
 channel starts or stops answering from, never naming the channel's other orgs).
 Web results and attached files aren't org data and aren't

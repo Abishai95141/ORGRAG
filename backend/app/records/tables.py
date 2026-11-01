@@ -36,6 +36,7 @@ class Table:
     rows: list[list[Cell]]
     heading: str  # the nearest section heading above it ("" at the top)
     start: int
+    end: int = 0  # the end of its last line
 
     @property
     def labels(self) -> list[str]:
@@ -132,7 +133,9 @@ def find_structure(content: str) -> Structure:
                 if len(cells) == len(header):
                     rows.append(cells)
                 j += 1
-            out.tables.append(Table(header, rows, heading, offsets[i]))
+            out.tables.append(
+                Table(header, rows, heading, offsets[i], offsets[j - 1] + len(lines[j - 1]))
+            )
             i = j
             continue
         if (m := _FIELD_LINE.match(line)) and not line.lstrip().startswith("|"):

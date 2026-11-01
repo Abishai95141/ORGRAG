@@ -3,7 +3,10 @@
 Tables and "Label: value" lines are read deterministically (free and exact). Prose
 ("llm" schemas) goes through LangExtract with Claude Haiku, which aligns every value
 to its character offsets; values it can't align are dropped, so every stored value is
-citable. Each document is redone only when its content changed (`RecordRun`), and
+citable. In an "llm" schema's documents, a table whose columns name its key field and
+another field is read like a register (every row, exactly), and the model reads the
+rest: a model reading a register fills a few rows and puts a cell's "Yes" under the
+wrong column. Each document is redone only when its content changed (`RecordRun`), and
 commits on its own so an interrupted run resumes where it stopped."""
 
 import asyncio
@@ -32,6 +35,7 @@ class Extracted:
     key: str
     values: dict[str, Any] = field(default_factory=dict)
     provenance: dict[str, dict[str, Any]] = field(default_factory=dict)
+    method: str | None = None  # how it was read, when not the schema's way
 
 
 def key_of(text: str) -> str:
@@ -112,6 +116,107 @@ def from_structure(doc: Document, s: Structure, schema: RecordSchema) -> list[Ex
     return out
 
 
+# ── tables in an llm schema's documents ───────────────────────────────────
+MIN_PROSE = 40  # characters left outside register tables worth a model call
+_STOP = {"a", "an", "and", "for", "in", "is", "of", "or", "per", "the", "to"}
+
+
+def _words(name: str) -> frozenset[str]:
+    return frozenset(w for w in normalize(name).split("_") if w and w not in _STOP)
+
+
+def column_field(label: str, schema: RecordSchema) -> dict[str, Any] | None:
+    """The field a column (or a Field | Value row) holds: the one it names (name, label
+    or alias), else the only field whose words contain the column's or are contained in
+    them ("Notice Period (days)" → notice_days). None when nothing or several match."""
+    if exact := _index(schema).get(normalize(label)):
+        return exact
+    words = _words(label)
+    if not words:
+        return None
+    hits = [
+        f
+        for f in schema.fields
+        if any(
+            (w := _words(n)) and (w <= words or words <= w)
+            for n in [f["name"], f.get("label", ""), *f.get("aliases", [])]
+        )
+    ]
+    return hits[0] if len(hits) == 1 else None
+
+
+def _columns(table, schema: RecordSchema) -> list[dict[str, Any] | None]:
+    """Each header cell's field; a field claimed by two columns is left to neither."""
+    columns = [column_field(c.text, schema) for c in table.header]
+    names = [f["name"] for f in columns if f]
+    return [f if f and names.count(f["name"]) == 1 else None for f in columns]
+
+
+def _span(table) -> tuple[int, int]:
+    return table.start, table.end
+
+
+def from_tables(
+    doc: Document, s: Structure, schema: RecordSchema
+) -> tuple[list[Extracted], list[tuple[int, int]]]:
+    """An llm schema's records in register tables: tables whose columns name the key
+    field and at least one other field. Returns the records and those tables' spans."""
+    year = year_hint(doc)
+    out: list[Extracted] = []
+    spans: list[tuple[int, int]] = []
+    for table in s.tables:
+        if table.vertical:
+            continue
+        columns = _columns(table, schema)
+        names = {f["name"] for f in columns if f}
+        if schema.key_field not in names or len(names) < 2:
+            continue
+        for row in table.rows:
+            pairs = [(f, cell) for f, cell in zip(columns, row, strict=True) if f]
+            if rec := _record(pairs, schema, year):
+                rec.method = "rows_table"
+                out.append(rec)
+        spans.append(_span(table))
+    return out, spans
+
+
+def _cell_fields(s: Structure, schema: RecordSchema, skip: list[tuple[int, int]]):
+    """(start, end, field or None) for the value cells of the other tables: what their
+    column header (or a Field | Value row's label) says the cell holds."""
+    cells = []
+    for table in s.tables:
+        if _span(table) in skip:
+            continue
+        if table.vertical:
+            cells += [(r[1].start, r[1].end, column_field(r[0].text, schema)) for r in table.rows]
+            continue
+        columns = [column_field(c.text, schema) for c in table.header]
+        cells += [
+            (c.start, c.end, f) for row in table.rows for c, f in zip(row, columns, strict=True)
+        ]
+    return cells
+
+
+def _blank(text: str, spans: list[tuple[int, int]]) -> str:
+    """The text with those spans replaced by spaces: offsets stay the document's."""
+    for start, end in spans:
+        text = text[:start] + re.sub(r"[^\n]", " ", text[start:end]) + text[end:]
+    return text
+
+
+def _merge(rows: list[Extracted], prose: list[Extracted]) -> list[Extracted]:
+    """Table rows first; the model's reading of the same record fills in what the
+    table doesn't say."""
+    by_key = {r.key: r for r in prose}
+    for rec in rows:
+        if extra := by_key.pop(rec.key, None):
+            for name, value in extra.values.items():
+                if name not in rec.values:
+                    rec.values[name] = value
+                    rec.provenance[name] = extra.provenance[name]
+    return rows + list(by_key.values())
+
+
 # ── prose, through LangExtract ────────────────────────────────────────────
 def _sample(f: dict[str, Any]) -> tuple[str, str, str]:
     """(sentence, the words a value is extracted from, its normalised value) for the
@@ -178,11 +283,21 @@ def _prompt(schema: RecordSchema) -> str:
     )
 
 
-def _from_prose_sync(doc: Document, schema: RecordSchema, model) -> list[Extracted]:
+def _from_prose_sync(
+    doc: Document,
+    schema: RecordSchema,
+    model,
+    text: str | None = None,
+    structure: Structure | None = None,
+    skip: list[tuple[int, int]] | None = None,
+) -> list[Extracted]:
+    """`text` is the document with its register tables (`skip`) blanked out."""
     import langextract as lx
 
+    # A value the model places in a table cell must be what the cell's column holds.
+    cells = _cell_fields(structure or find_structure(doc.content), schema, skip or [])
     result = lx.extract(
-        text_or_documents=doc.content,
+        text_or_documents=text if text is not None else doc.content,
         prompt_description=_prompt(schema),
         examples=_examples(schema),
         model=model,
@@ -202,6 +317,9 @@ def _from_prose_sync(doc: Document, schema: RecordSchema, model) -> list[Extract
         start, end = e.char_interval.start_pos, e.char_interval.end_pos
         if f is None or start is None or end is None:
             continue
+        held = next((col for lo, hi, col in cells if lo <= start and end <= hi), f)
+        if held is not None and held["name"] != f["name"]:
+            continue  # "Yes" under Customer Data Access isn't auto-renewal
         owner = key_of((e.attributes or {}).get("record") or "") or current
         if e.extraction_class == schema.key_field:
             owner = key_of(e.extraction_text)
@@ -246,11 +364,18 @@ async def extract_document(db: AsyncSession, schema: RecordSchema, doc: Document
     """Replace one document's records for a schema. Caller commits."""
     cost = None
     if schema.origin == "llm":
-        model = _model()
-        try:
-            found = await asyncio.to_thread(_from_prose_sync, doc, schema, model)
-        finally:
-            cost = round(model.cost_usd, 6)
+        structure = find_structure(doc.content)
+        found, tables = from_tables(doc, structure, schema)
+        rest = _blank(doc.content, tables)
+        if len(re.sub(r"<!--.*?-->|\s", "", rest)) >= MIN_PROSE:
+            model = _model()
+            try:
+                prose = await asyncio.to_thread(
+                    _from_prose_sync, doc, schema, model, rest, structure, tables
+                )
+            finally:
+                cost = round(model.cost_usd, 6)
+            found = _merge(found, prose)
         method = "llm"
     else:
         found = from_structure(doc, find_structure(doc.content), schema)
@@ -271,7 +396,7 @@ async def extract_document(db: AsyncSession, schema: RecordSchema, doc: Document
                 key=rec.key[:512] if n == 1 else f"{rec.key[:500]} #{n}",
                 values=rec.values,
                 provenance=rec.provenance,
-                method=method,
+                method=rec.method or method,
             )
         )
     run = await db.get(RecordRun, (schema.id, doc.id))

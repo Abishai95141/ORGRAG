@@ -35,7 +35,7 @@ from app.agent.citations import (
     strip_citations,
 )
 from app.agent.prompts import PLAN_SYSTEM, build_system
-from app.agent.sanitize import strip_images
+from app.agent.sanitize import strip_images, strip_tool_markers
 from app.agent.tools import (
     READ_PAGE_CHARS,
     ToolBox,
@@ -68,6 +68,34 @@ log = logging.getLogger("strata.agent")
 
 MAX_TURNS = {"quick": 4, "deep": 10}
 HISTORY_MESSAGES = 12
+
+
+RESEARCH_STEPS = ("search", "records", "scan", "read", "web")
+
+
+def _earlier_answer(m: Message) -> str:
+    """An earlier answer as the model sees it in the history: its [n] markers removed
+    (each turn numbers its sources afresh, so old numbers would point at this turn's
+    sources), with a note of the research behind it and the sources it cited, so it
+    doesn't read as an unsourced claim to re-audit."""
+    text = strip_citations(m.content)
+    if not text.strip():
+        return text
+    research = [
+        f"{s['kind']}: {s.get('label', '')}"
+        for s in m.trace or []
+        if s.get("kind") in RESEARCH_STEPS and s.get("status") == "done"
+    ]
+    titles = {s.get("ref"): s.get("title") for s in m.sources or []}
+    cited = list(dict.fromkeys(t for n in cited_refs(m.content) if (t := titles.get(n))))
+    notes = []
+    if research:
+        notes.append(f"Research behind this answer: {'; '.join(research)}.")
+    if cited:
+        notes.append(f"Sources it cited: {'; '.join(cited)}.")
+    return text + (f"\n\n({' '.join(notes)})" if notes else "")
+
+
 # The quick-mode fast path's note ahead of its first search's passages: tools off (answer
 # now), or the loop starting from them.
 FIRST_SEARCH_ANSWER = (
@@ -83,8 +111,15 @@ PREAMBLE_CHARS = 160  # text shorter than this before a tool call is treated as 
 # A tool result: text, or (Claude path) a list of search_result blocks.
 ToolContent = str | list[dict[str, Any]]
 MAX_PARALLEL_TOOLS = 4  # tool calls from one turn running at once (each holds a DB session)
-# Tools whose results are evidence for the sufficient-context check.
-EVIDENCE_TOOLS = frozenset({"search_knowledge", "read_document", "search_web", "scan"})
+# Tools whose results are evidence for the sufficient-context check. The exact ones
+# (records, roles, the graph's full lists) count too: without them the check saw only
+# search passages and judged a register "cut off" that a records query had read whole.
+EVIDENCE_TOOLS = frozenset(
+    {
+        "search_knowledge", "read_document", "search_web", "scan", "query_records",
+        "resolve_role", "list_entities", "explore_entity",
+    }
+)  # fmt: skip
 MAX_COVERAGE_CHECKS = 2  # after the first research round, and after a follow-up
 
 # The toolbox (with its DB session) of the tool call running in the current task.
@@ -361,7 +396,7 @@ class AgentRun:
             rows = rows[:-1]
         history: list[dict[str, Any]] = []
         for m in rows:
-            text = m.content if m.role == "user" else strip_citations(m.content)
+            text = m.content if m.role == "user" else _earlier_answer(m)
             if not text.strip():
                 continue
             if history and history[-1]["role"] == m.role:
@@ -758,7 +793,7 @@ class AgentRun:
         max_turns = 1 if seed and seed[1] else MAX_TURNS["deep" if deep else "quick"]
         json_retries = 0
         turn = 0
-        evidence: list[str] = []  # search and read results so far, for the coverage check
+        evidence: list[str] = []  # research results so far, for the coverage check
 
         caching = get_settings().prompt_caching
         system_blocks: str | list[dict[str, Any]] = system
@@ -1210,7 +1245,7 @@ class AgentRun:
     # ── persistence ───────────────────────────────────────────────────────
     async def _persist(self, db, *, status: str, error: str | None = None) -> Message:
         message = await db.get(Message, self.req.assistant_message_id)
-        content = collapse_repeated_markers(strip_images(self.em.answer))
+        content = collapse_repeated_markers(strip_tool_markers(strip_images(self.em.answer)))
         if error and not content.strip():
             content = error
         message.content = content

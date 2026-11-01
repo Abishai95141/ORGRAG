@@ -62,11 +62,25 @@ _DEFAULT_DAY = dateparser.parse("2000-01-01")  # month-only dates read as the 1s
 _YEAR = re.compile(r"\b(19|20|21)\d{2}\b")
 
 
+_PERSON = re.compile(r"^[A-Z][a-z]+(?:[ '-][A-Z][a-z]+){1,2}$")
+_YEAR_ONLY = re.compile(r"(19|20|21)\d{2}")
+_TIME_UNIT = re.compile(r"\b(second|sec|minute|min|hour|hr|day|week|month|year)s?\b", re.I)
+
+
+def is_measure(text: str) -> bool:
+    """A quantity with a unit (a duration, an amount of money, a percentage): a value
+    that measures something rather than naming it."""
+    return bool(_TIME_UNIT.search(text) or re.search(r"[$€£%]", text))
+
+
 def parse_number(text: str) -> float | None:
     text = clean(text)
     m = _NUMBER.search(text)
     if not m or _MONTH.search(text[: m.start()] + text[m.end() : m.end() + 6]):
         return None  # "May 15" is a date, not 15
+    quantities = [x for x in _NUMBER.finditer(text) if not _YEAR_ONLY.fullmatch(x.group(0).strip())]
+    if len(quantities) > 1:
+        return None  # "1 hour 25 minutes", "$5,000 to $25,000": not one number
     value = float(m.group(1).replace(",", "") + (m.group(2) or ""))
     if text.lstrip().startswith("-") and not m.group(0).startswith("-"):
         value = -value
@@ -123,9 +137,15 @@ def infer_type(samples: list[str]) -> dict[str, Any]:
     heads = [head(v) for v in values]
     numeric = share(parse_number)
     words = sum(len(v.split()) for v in values) / len(values)
-    if numeric >= 0.8 and words <= 4:
+    # "47 minutes", "6 hours", "3 days" are durations in different units, not numbers.
+    units = {u.lower() for v in values for u in _TIME_UNIT.findall(v)}
+    if numeric >= 0.8 and words <= 4 and len(units) < 2:
         return {"type": "number"}
     distinct = sorted(set(heads), key=str.lower)
+    # People ("Kenji Watanabe") repeat across a register but aren't a fixed set: as a
+    # choice, the next new owner would be dropped.
+    if sum(bool(_PERSON.match(h)) for h in heads) >= 0.8 * len(heads):
+        return {"type": "text"}
     # A fixed set: some value repeats, and there are few of them for the record count.
     repeats = (
         len(values) >= 4

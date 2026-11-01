@@ -15,3 +15,12 @@ def test_images_are_removed_outside_code():
 def test_links_and_citations_survive():
     md = "See [the docs](https://docs.example) and [1][2]."
     assert strip_images(md) == md
+
+
+def test_tool_names_cited_as_sources_are_dropped():
+    from app.agent.sanitize import strip_tool_markers
+
+    text = "Customers and benefits providers, not vendors [list_entities]. Checked [Query Records]."
+    assert strip_tool_markers(text) == "Customers and benefits providers, not vendors. Checked."
+    kept = "Real citations [2], an editor's [sic], and code `x[scan]` stay."
+    assert strip_tool_markers(kept) == kept

@@ -229,14 +229,17 @@ Search returns the top few passages, so "which vendors…", "how many incidents�
   field/value table that recurs in ≥ 2 documents (`fields_table`), a table whose header
   recurs (`rows_table`) or repeated labelled lines (`field_lines`) become a suggested
   schema; each field's type is inferred from its values (`records/values.py`: dates
-  only with a stated or document year, identifiers like INC-2264 aren't numbers, few
-  distinct values make a choice). An admin reviews, edits and activates it.
+  only with a stated or document year, identifiers like INC-2264 aren't numbers, nor
+  are values holding two quantities or durations in mixed units, few distinct values
+  make a choice). An admin reviews, edits and activates it.
 * **Extraction** (`records/extract.py`, worker job `extract_records`): table and
   labelled-line schemas are read deterministically. Schemas an admin writes for prose
   (`llm`) go through LangExtract with a Claude provider (`langextract_claude.py`): every
   extraction must be words from the document, aligned to offsets, plus a normalised
   reading (yes/no, an option, a date) used only to type those words. Unaligned
-  extractions are dropped. A run per (schema, document) records the content hash, so a
+  extractions are dropped. Register tables in those documents (columns naming the key
+  field and another field) are read row by row without the model, and a value the model
+  puts under a column named for another field is dropped. A run per (schema, document) records the content hash, so a
   sync re-extracts only changed documents.
 * **Querying** (`records/query.py`): filters by type (ranges on numbers and dates,
   case-insensitive text), counts and group-bys in SQL over JSONB, scoped to the

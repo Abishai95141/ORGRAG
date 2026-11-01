@@ -59,6 +59,13 @@ QUERY_RECORDS = {
                 "(this year's and last year's), keep only the newest version's record.",
             },
             "limit": {"type": "integer", "minimum": 1, "maximum": records_query.MAX_ROWS},
+            "fields": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "The fields your answer needs, to show as columns (list "
+                "mode). The key and filtered fields are always shown; without this, the "
+                "first others up to 8 columns.",
+            },
         },
         "required": ["record_type"],
     },
@@ -84,7 +91,8 @@ RESOLVE_ROLE = {
     },
 }
 
-MAX_COLUMNS = 8  # fields shown per row (key and filtered fields always included)
+MAX_COLUMNS = 8  # fields shown per row by default (key and filtered fields always included)
+MAX_ASKED_COLUMNS = 16  # with `fields`: the key, filtered and asked-for fields, up to this
 
 
 def describe(schemas: list[RecordSchema], collections: dict, orgs: dict) -> str:
@@ -248,6 +256,13 @@ async def run(toolbox, schemas: list[RecordSchema], args: dict[str, Any]):
     limit = args.get("limit") or (40 if mode == "count" else 100)
     if not isinstance(limit, int):
         raise ToolInputError("'limit' must be an integer")
+    fields = [f for s in matching for f in s.fields]
+    asked = args.get("fields") or []
+    if not isinstance(asked, list) or not all(isinstance(x, str) for x in asked):
+        raise ToolInputError("'fields' must be a list of field names")
+    if unknown := [x for x in asked if not any(f["name"] == x for f in fields)]:
+        known = ", ".join(dict.fromkeys(f["name"] for f in fields))
+        raise ToolInputError(f"No field {', '.join(unknown)} in {name}. Fields: {known}")
     try:
         result = await records_query.run(
             toolbox.db,
@@ -278,17 +293,19 @@ async def run(toolbox, schemas: list[RecordSchema], args: dict[str, Any]):
     key_fields = {s.id: s.key_field for s in matching}
     new, refs, ref_of_doc = await _cite(toolbox, result.rows, key_fields)
 
-    fields = [f for s in matching for f in s.fields]
     names: list[str] = []
     for f in [
         matching[0].key_field,
         *(x.get("field") for x in filters),
-        *(f["name"] for f in fields),
+        *asked,
+        *([] if asked else (f["name"] for f in fields)),
     ]:
         if f and f not in names and any(x["name"] == f for x in fields):
             names.append(f)
-    names = names[:MAX_COLUMNS]
+    names = names[: MAX_ASKED_COLUMNS if asked else MAX_COLUMNS]
     labels = {f["name"]: f.get("label", f["name"]) for f in fields}
+    if hidden := [n for n in dict.fromkeys(f["name"] for f in fields) if n not in names]:
+        head += f" Not shown: {', '.join(hidden)} (pass fields to see them)."
     lines = [head]
     if result.rows:
         lines += [

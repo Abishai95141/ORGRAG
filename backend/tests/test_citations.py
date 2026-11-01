@@ -66,3 +66,34 @@ def test_cited_refs_and_strip():
     text = "Deploys stop on Friday [2]. Rollbacks anytime [1][2]. Not a cite [x]."
     assert cited_refs(text) == [2, 1]
     assert strip_citations(text) == "Deploys stop on Friday . Rollbacks anytime . Not a cite [x]."
+
+
+def test_earlier_answers_keep_their_research_and_sources():
+    """In the history an earlier answer loses its [n] (this turn numbers sources afresh)
+    but says what research it rests on and what it cited, so the model doesn't take it
+    for an unsourced claim to re-audit."""
+    from app.agent.engine import _earlier_answer
+
+    sources = [
+        {"ref": 1, "title": "Travel policy"},
+        {"ref": 2, "title": "Team directory"},
+        {"ref": 3, "title": "Retrieved, never cited"},
+    ]
+    trace = [
+        {"kind": "plan", "label": "Planned 2 sub-questions", "status": "done"},
+        {"kind": "records", "label": "Found 1 match", "status": "done"},
+        {"kind": "scan", "label": "Found 5 of 16", "status": "done"},
+        {"kind": "search", "label": "Searching", "status": "error"},
+    ]
+    m = SimpleNamespace(
+        content="Amara approves it [2][1]. Her email is listed [2].", sources=sources, trace=trace
+    )
+    text = _earlier_answer(m)
+    assert "[1]" not in text and "[2]" not in text
+    assert text.endswith(
+        "(Research behind this answer: records: Found 1 match; scan: Found 5 of 16. "
+        "Sources it cited: Team directory; Travel policy.)"
+    )
+    assert "Retrieved, never cited" not in text and "Planned" not in text
+    plain = SimpleNamespace(content="Hello! How can I help?", sources=[], trace=[])
+    assert _earlier_answer(plain) == "Hello! How can I help?"
