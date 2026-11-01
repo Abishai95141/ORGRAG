@@ -2,6 +2,45 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results, and [PLAN-WEEKS-3-5.md](PLAN-WEEKS-3-5.md) the plan these entries follow.
 
+## 2026-11-01 (late night) — End-to-end verification on a realistic scenario
+
+`backend/e2e/` (README there) drives a running API and worker the way two real
+organizations would.
+
+**Setup.**
+- A fresh database (migrations 0001→0016), Haiku 5.5 and the NVIDIA reranker.
+- Northwind Robotics: an owner, an admin, a member, a viewer, and a removed member. Partner Helix Labs: an owner; Northwind's owner is also a member.
+- 36 documents in 10 formats, in four collections, two of them restricted.
+- About 22 questions.
+
+**Coverage.** Every REST endpoint (107), the 8 MCP tools, SSE streaming, cancelling an answer, and the Slack bot (in-process: real app, database and models, with only Slack's Web API simulated).
+
+**Method.** Reading every answer, not only the keyword checks, found most of the bugs below.
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D63 | **Edits to a record type or an agent are audited with their diff under `changes`**, like org, collection, source and verified-answer edits. | Renaming a record type returned 500: the diff's `label` key collided with `record_event`'s own `label` argument. | `PATCH /record-schemas/{id} {label}` 500 → 200 with `record_schema.updated`; `test_agent_changes_are_recorded_with_their_diff`; the audit page renders both. | — |
+| D64 | **Prose (`llm`) record types read register tables in their documents row by row, without the model.** A table qualifies when its columns name the key field and another field (by name, label, alias, or the same words: "Notice Period (days)" → `notice_days`). The model reads the rest of the document. A value it places under a column named for a different field is dropped. | On the vendor register, LangExtract filled 1 of 30 rows. It also grounded Stripe's Auto-Renew "Yes" as *termination for convenience*, and its Customer Data Access "Yes" as *auto-renewal*. The words were verbatim, so the alignment check passed. | `contract_terms` over 8 documents. Before: 7 records, 1 wrong, $0.0033. After: 37 records (30 exact register rows; all 5 summaries with every term right), $0.0020. `test_llm_schemas_read_register_tables_row_by_row`. | Drop `from_tables` from `extract_document`. |
+| D65 | **Inferred types and keys.** A value holding two quantities isn't a number ("1 hour 25 minutes", "$5,000 to $25,000"). Durations in mixed units are text. A column of people's names is text, not a choice. A measurement never names a record: unique dates come first. A per-document type is named after its documents' shared title prefix (`postmortem`, not the collection's name). A saved type with the same origin and fields counts as the same type, so it isn't suggested again under a new name. | "1 hour 25 minutes" was stored as 1, and the agent reported "duration 1". A choice of today's 7 owners would drop the next new owner. Postmortems were keyed by duration and named "Engineering". | Scenario: the SSO outage keeps "1 hour 25 minutes"; owners are text; the type is `postmortem`, keyed by date. Re-suggesting on a database with the old name returned the active type, not a duplicate (live check). Unit tests in `test_records.py`. | — |
+| D66 | **Earlier answers in the history carry a note** of the research behind them (their trace's search, records, scan, read and web steps) and the sources they cited. The system prompt says: answer the current question, and correct an earlier answer only when this turn's results contradict it. | The history strips `[n]`, because each turn renumbers sources. The model then saw its own cited answers as unsourced, and opened follow-ups with "I also need to correct my previous answer…" about correct answers. | The same replay of the scenario's two multi-turn conversations (3 times each; 15 follow-up answers, same database): **8 of 15** retracted or doubted a correct earlier answer before, **0 of 15** after. Scenario: 6 of 22 answers (run 2) → 0 (run 4) and 1 (run 5, before the rule's wording was tightened to "add no notes about earlier answers"). `test_earlier_answers_keep_their_research_and_sources`. | Revert `_earlier_answer`. |
+| D67 | **`query_records` takes `fields`**: the columns the answer needs (up to 16; the key and filtered fields are always shown). Without it the first 8 are shown, and the result names the fields left out. | With three filters, the 8-column cap cut "Business Owner" from a question that asked for owners. The model rebuilt the owners from the tallies, then "corrected" itself the next turn. | Q1 reads each owner from its row (4.4 s, one records call). `test_the_agent_queries_records_and_cites_them` also covers an unknown field, which is rejected before any query runs. | — |
+| D68 | **Exact results are evidence for the coverage check**: `query_records`, `resolve_role` and the graph's lists, alongside search, read, web and scan. | Deep mode's check saw only search passages. It judged a register "cut off" that a records query had read whole, sent the agent searching again (40–49 s), and logged the answer as an *incomplete* knowledge gap. | The coverage prompt now holds the records table (test). Scenario Q3 is no longer an incomplete gap (run 5). | — |
+| D69 | **A bracketed tool name isn't a citation.** "[list_entities]" is dropped from stored answers, outside code. | The model sometimes cites a tool instead of a source. | `test_tool_names_cited_as_sources_are_dropped`. | — |
+
+**OCR and vision.** RapidOCR dropped a clause from a scan that was tilted 0.6° with its title running off the page. The weak-page detector flagged the page (debris 0.32 ≥ 0.06), and `VISION_PARSING=true` recovered every word for $0.0004. With the text inside the page, OCR reads every clause. `VISION_PARSING` stays off by default (indexing uses no LLM).
+
+**Gaps found and left.**
+- Weak pages aren't shown to admins: `weak_pages` is stored on the document but neither the API nor the UI exposes it.
+- A Slack channel question about data held only in a restricted collection counts as an *unanswered* gap, though the document exists.
+
+**Results.**
+- Run 2 (before the fixes): 466/470 checks, plus the problems above found by reading the answers.
+- Run 4: 498/498. Slack: 58/58.
+- Run 5, on a fresh database: 498/500. One follow-up still added a note doubting an earlier answer, so the rule was tightened (replay above). The other failure was the check's own mistake: deep mode rightly flagged real conflicts in the fixtures (Datadog's register renewal date doesn't match its contract's anniversary), and the check now asserts what D68 fixed. Slack: 58/58.
+- Run 6, the final code: **500/500** checks in 12 minutes. Slack: 58/58. Every REST endpoint (107) and MCP tool (8) called.
+- About $0.2 of model calls per run: $0.035 of answers (25 answers, 80 calls), about $0.1 of graph extraction, $0.002 of record extraction.
+- Tests: 374 passed, 1 skipped, on Postgres 17 with and without pg_textsearch.
+
 ## 2026-11-01 (night) — The exhaustive scan tool (roadmap §4 item 2)
 
 Records (D39) answer "which / how many" exactly, but only where a schema exists. `scan` (`app/agent/scan_tool.py`) covers the rest: every document a filter matches, one cheap check each.

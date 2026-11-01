@@ -152,6 +152,11 @@ make test-db
 TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/strata_test make test
 ```
 
+The end-to-end scenario ([backend/e2e/README.md](backend/e2e/README.md)) drives a
+running API and worker the way two real organizations would: every endpoint, every file
+type, records, scan, roles, gaps, audit, MCP and the Slack bot, with real models
+(about ten minutes, under a dollar).
+
 *Postgres without Docker:* install Postgres 17 with the `pgvector` extension
 (macOS: `brew install postgresql@17 pgvector`), create a `strata` database, and set
 `DEV_DB_URL=postgresql+asyncpg://<user>:<password>@localhost:5432/strata` when
@@ -272,7 +277,8 @@ settings:
 ## Repository layout
 
 ```
-backend/   FastAPI app, agent engine, connectors, ingestion, worker, migrations, tests
+backend/   FastAPI app, agent engine, connectors, ingestion, worker, migrations, tests,
+           e2e/ (the end-to-end scenario)
 web/       Next.js app, design system, icons and illustrations
 docs/      ARCHITECTURE.md · API.md (the contract) · DESIGN.md
            EVALUATION.md (measured quality) · AUDIT.md · API_AUDIT.md
