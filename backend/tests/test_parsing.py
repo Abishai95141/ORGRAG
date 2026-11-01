@@ -76,6 +76,15 @@ def test_weak_pages_are_sparse_pictorial_or_garbled():
     assert not weak({"chars": 3000, "pictures": 1, "picture_share": 0.05, "debris": 0.01})
 
 
+def test_the_api_reads_the_stored_parse_of_older_and_pageless_documents():
+    from app.api.serializers import document_parse
+
+    assert document_parse({"parse": {"parser": "docling"}}) is None  # Word, HTML: no pages
+    assert document_parse({}) is None and document_parse(None) is None
+    old = document_parse({"parse": {"parser": "docling", "pages": 2}})  # before weak pages
+    assert old is not None and old.weak_pages == [] and old.vision_pages is None
+
+
 def _zip(entries: dict[str, bytes], compression=zipfile.ZIP_DEFLATED) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression) as z:

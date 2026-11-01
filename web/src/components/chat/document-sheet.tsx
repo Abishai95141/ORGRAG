@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { IconBoost, IconExternal, IconEye, IconEyeOff, IconGlobe, IconPaperclip, IconThumbDown, IconThumbUp } from "@/components/icons";
 import { OrgMark } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
+import { WeakPagesNotice } from "@/components/sources/weak-pages";
 import { Badge, Segmented, Sheet, Skeleton, Tooltip } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { qk, useMe } from "@/lib/queries";
@@ -71,6 +72,7 @@ export function DocumentSheet({ source, onClose }: { source: SourceRef | null; o
       subtitle={source ? <Subtitle source={source} doc={doc.data} size={file.data?.size_bytes} /> : null}
     >
       {isDoc && doc.data ? <DocumentActions slug={docSlug} doc={doc.data} canCurate={atLeast(role, "admin")} /> : null}
+      {isDoc && doc.data && atLeast(role, "admin") ? <WeakPagesNotice doc={doc.data} /> : null}
 
       {source?.snippet && source.origin !== "attachment" ? (
         <div className="border-b border-line bg-surface-2/50 px-5 py-3">

@@ -7,10 +7,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { DocumentSheet } from "@/components/chat/document-sheet";
 import { SourceKindIcon, SOURCE_KIND_LABEL } from "@/components/chat/source-kind";
-import { IconArrowLeft, IconBoost, IconExternal, IconEyeOff, IconRefresh, IconSearch, IconThumbDown, IconThumbUp, IconTrash } from "@/components/icons";
+import { IconArrowLeft, IconBoost, IconExternal, IconEyeOff, IconRefresh, IconScan, IconSearch, IconThumbDown, IconThumbUp, IconTrash } from "@/components/icons";
 import { NoResultsArt } from "@/components/illustrations";
 import { useCurrentOrg } from "@/components/layout/org-context";
 import { Dropzone, INTERVALS, StatusPill, SyncProgress } from "@/components/sources/shared";
+import { WeakPagesLine } from "@/components/sources/weak-pages";
 import { Badge, Button, Card, EmptyState, Input, Select, Skeleton, Stat } from "@/components/ui";
 import { confirmAction } from "@/components/ui/confirm";
 import { api, ApiError } from "@/lib/api";
@@ -28,13 +29,14 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
   const source = useSource(org.slug, id);
   const [q, setQ] = useState("");
   const [offset, setOffset] = useState(0);
+  const [weakOnly, setWeakOnly] = useState(false);
   const [preview, setPreview] = useState<SourceRef | null>(null);
   const isAdmin = atLeast(org.role, "admin");
   const canUpload = atLeast(org.role, "member");
 
   const docs = useQuery({
-    queryKey: qk.documents(org.slug, id, q, offset),
-    queryFn: () => api.documents(org.slug, id, { limit: PAGE, offset, q: q || undefined }),
+    queryKey: qk.documents(org.slug, id, q, offset, weakOnly),
+    queryFn: () => api.documents(org.slug, id, { limit: PAGE, offset, q: q || undefined, weak: weakOnly || undefined }),
     placeholderData: (prev) => prev,
     refetchInterval: source.data && ["queued", "syncing"].includes(source.data.status) ? 2500 : false,
   });
@@ -194,21 +196,40 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
               </div>
             ) : null}
 
-            <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-[15px] font-semibold">
                 Documents <span className="font-mono text-[12px] font-normal text-ink-3">{total}</span>
               </h2>
-              <div className="relative w-64">
-                <IconSearch size={15} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-ink-3" />
-                <Input
-                  placeholder="Filter by title"
-                  value={q}
-                  onChange={(e) => {
-                    setQ(e.target.value);
-                    setOffset(0);
-                  }}
-                  className="h-8 pl-8 text-[13px]"
-                />
+              <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
+                {isAdmin && (s.weak_document_count > 0 || weakOnly) ? (
+                  <button
+                    type="button"
+                    aria-pressed={weakOnly}
+                    onClick={() => {
+                      setWeakOnly(!weakOnly);
+                      setOffset(0);
+                    }}
+                    title="Documents with pages that may have been read poorly (scanned or mostly pictures)"
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1.5 rounded-[9px] border px-2.5 text-[12.5px] font-medium whitespace-nowrap transition-colors",
+                      weakOnly ? "border-warn/40 bg-warn-soft text-warn" : "border-line text-ink-2 hover:border-line-strong hover:text-ink",
+                    )}
+                  >
+                    <IconScan size={14} /> {s.weak_document_count} may be missing text
+                  </button>
+                ) : null}
+                <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+                  <IconSearch size={15} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-ink-3" />
+                  <Input
+                    placeholder="Filter by title"
+                    value={q}
+                    onChange={(e) => {
+                      setQ(e.target.value);
+                      setOffset(0);
+                    }}
+                    className="h-8 pl-8 text-[13px]"
+                  />
+                </div>
               </div>
             </div>
 
@@ -221,7 +242,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
                 </div>
               ) : !docs.data?.items.length ? (
                 <p className="px-4 py-10 text-center text-[13px] text-ink-3">
-                  {q ? "No documents match that filter." : s.status === "syncing" || s.status === "queued" ? "Documents will appear as they're indexed." : "No documents yet."}
+                  {q || weakOnly ? "No documents match that filter." : s.status === "syncing" || s.status === "queued" ? "Documents will appear as they're indexed." : "No documents yet."}
                 </p>
               ) : (
                 <table className="w-full text-[13px]">
@@ -243,6 +264,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ id: str
                             <DocBadges doc={d} />
                           </div>
                           {d.url ? <div className="truncate font-mono text-[11px] text-ink-3">{d.url.replace(/^https?:\/\//, "")}</div> : null}
+                          {isAdmin ? <WeakPagesLine doc={d} /> : null}
                         </td>
                         <td className="hidden px-4 py-2.5 text-right text-ink-2 tabular-nums sm:table-cell">{d.chunk_count}</td>
                         <td className="hidden px-4 py-2.5 text-right text-ink-2 tabular-nums md:table-cell">{formatNumber(d.token_count)}</td>

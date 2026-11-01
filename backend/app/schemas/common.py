@@ -226,6 +226,7 @@ class SourceOut(BaseModel):
     error: str | None
     document_count: int
     chunk_count: int
+    weak_document_count: int  # documents with pages that may have been read poorly
     sync_interval_minutes: int | None
     last_synced_at: datetime | None
     created_at: datetime
@@ -256,6 +257,16 @@ class UploadResult(BaseModel):
     source: SourceOut
 
 
+class DocumentParse(BaseModel):
+    """How a page-by-page parse went (PDFs, slides, images). Weak pages yielded little
+    text or look like a poor OCR read; `vision_pages` are the ones the vision model
+    re-read (null when that pass didn't run)."""
+
+    pages: int
+    weak_pages: list[int]
+    vision_pages: list[int] | None
+
+
 class DocumentRow(BaseModel):
     id: uuid.UUID
     source_id: uuid.UUID
@@ -271,6 +282,7 @@ class DocumentRow(BaseModel):
     feedback_down: int
     source_updated_at: datetime | None
     updated_at: datetime
+    parse: DocumentParse | None = None
 
 
 class DocumentDetail(DocumentRow):

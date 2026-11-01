@@ -114,6 +114,7 @@ type Source = {
                                       // on create/patch, read back only `<name>_set: boolean`.
   status: SourceStatus; error: string | null;
   document_count: number; chunk_count: number;
+  weak_document_count: number;       // documents with weak pages vision parsing didn't re-read
   sync_interval_minutes: number | null;
   last_synced_at: string | null; created_at: string;
   progress: { done: number; total: number | null; message: string | null } | null;
@@ -127,6 +128,14 @@ type DocumentRow = {
   feedback_up: number; feedback_down: number;   // reader votes
   source_updated_at: string | null;             // last change in the source system (drives recency)
   updated_at: string;
+  parse: DocumentParse | null;                  // null: parsed without pages (text, Markdown, Word, HTML…)
+};
+
+// How a page-by-page parse went (PDFs, slides, images), from the last time the document was indexed.
+type DocumentParse = {
+  pages: number;
+  weak_pages: number[];          // pages that may have been read poorly (see below), 1-based
+  vision_pages: number[] | null; // weak pages the vision model re-read; null when that pass didn't run
 };
 
 type Agent = {
@@ -251,7 +260,7 @@ the same list applies to agents).
 | DELETE | `/orgs/{slug}/sources/{id}` `[admin]` | – | `204` |
 | POST | `/orgs/{slug}/sources/{id}/sync` `[admin]` | – | `Source` (status `queued`) |
 | POST | `/orgs/{slug}/sources/{id}/files` `[member]` | multipart `files[]` (upload sources only; ≤ 25 MB each, ≤ 20 per request — 400 `too_many_files`) | `{accepted: number, source: Source}` (the whole batch is checked first; a rejected batch stores nothing) |
-| GET | `/orgs/{slug}/sources/{id}/documents?limit=50&offset=0&q=` | – | `Page<DocumentRow>` |
+| GET | `/orgs/{slug}/sources/{id}/documents?limit=50&offset=0&q=&weak=` | – | `Page<DocumentRow>` (`weak`: as on `/documents`) |
 
 Supported upload types: `.pdf .docx .md .markdown .txt .html .htm .csv .json`.
 
@@ -265,11 +274,19 @@ listing that comes back empty never deletes anything (it usually means lost acce
 
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| GET | `/orgs/{slug}/documents?q=&collection_id=&source_id=&hidden=&sort=title\|updated\|feedback\|boost&limit=&offset=` | – | `Page<DocumentRow>` (only collections the caller can see; `q` is a literal substring of title or URL, ≤ 200 chars) |
+| GET | `/orgs/{slug}/documents?q=&collection_id=&source_id=&hidden=&weak=&sort=title\|updated\|feedback\|boost&limit=&offset=` | – | `Page<DocumentRow>` (only collections the caller can see; `q` is a literal substring of title or URL, ≤ 200 chars; `weak=true` keeps documents with weak pages vision parsing didn't re-read, `false` the rest) |
 | GET | `/orgs/{slug}/documents/{id}` | – | `DocumentRow & {content: string, my_vote: "up" \| "down" \| null}` (each read is recorded in the [audit log](#audit-log-admin)) |
 | PATCH | `/orgs/{slug}/documents/{id}` `[admin]` | `{boost?: -3..3, hidden?: boolean}` | `DocumentRow & {content, my_vote}` |
 | POST | `/orgs/{slug}/documents/{id}/feedback` | `{vote: "up" \| "down" \| null, message_id?}` | `{document_id, vote, feedback_up, feedback_down}` (one vote per person; `null` clears; `message_id` must be an answer in one of the caller's own conversations, else 404) |
 | DELETE | `/orgs/{slug}/documents/{id}` `[admin]` | – | `204` |
+
+**Weak pages.** A page is weak when it yielded little text but has pictures, when
+pictures cover ≥ 30% of it, or when its OCR text is debris (≥ 6% of words are stray
+fragments): a scan read badly, a chart, a slide that is a picture. With
+`VISION_PARSING=true` the vision model re-reads them as the file is indexed; with it off
+(the default) their text may be incomplete. The web app tells admins on the document and
+on its source. An unchanged file isn't parsed again, so after turning vision parsing on,
+remove the document and upload or sync it again to re-read it.
 
 Ranking: hybrid search (vector + full text, RRF) → up to 40 candidates (at most 3 per
 document) reranked by a cross-encoder (NVIDIA Nemotron, or a local model) when

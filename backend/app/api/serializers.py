@@ -18,12 +18,37 @@ from app.models import (
 )
 from app.schemas.common import (
     CollectionOut,
+    DocumentParse,
     OrgOut,
     OrgSettings,
     OrgSummary,
     SourceOut,
     SourceProgress,
 )
+
+
+def document_parse(meta: dict | None) -> DocumentParse | None:
+    """The page-by-page parse summary stored when the document was indexed; None for
+    documents parsed without pages (text, Markdown, Word, HTML…)."""
+    info = (meta or {}).get("parse")
+    if not isinstance(info, dict) or not isinstance(info.get("pages"), int):
+        return None
+    return DocumentParse(
+        pages=info["pages"],
+        weak_pages=info.get("weak_pages") or [],
+        vision_pages=info.get("vision_pages"),
+    )
+
+
+def _page_count(key: str):
+    return func.jsonb_array_length(
+        func.coalesce(Document.meta[("parse", key)], func.jsonb_build_array())
+    )
+
+
+# Documents with weak pages the vision pass didn't re-read. It only re-reads weak pages,
+# so comparing the two counts is enough.
+WEAKLY_READ = _page_count("weak_pages") > _page_count("vision_pages")
 
 
 async def org_summaries(
@@ -171,6 +196,15 @@ async def sources_out(db: AsyncSession, sources: list[Source]) -> list[SourceOut
             )
         ).all()
     )
+    weak = dict(
+        (
+            await db.execute(
+                select(Document.source_id, func.count())
+                .where(Document.source_id.in_(ids), WEAKLY_READ)
+                .group_by(Document.source_id)
+            )
+        ).all()
+    )
     names = dict(
         (
             await db.execute(
@@ -193,6 +227,7 @@ async def sources_out(db: AsyncSession, sources: list[Source]) -> list[SourceOut
             error=s.error,
             document_count=docs.get(s.id, 0),
             chunk_count=chunks.get(s.id, 0),
+            weak_document_count=weak.get(s.id, 0),
             sync_interval_minutes=s.sync_interval_minutes,
             last_synced_at=s.last_synced_at,
             created_at=s.created_at,
