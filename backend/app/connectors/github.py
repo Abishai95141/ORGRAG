@@ -26,6 +26,10 @@ _TEXT_EXT = {".md", ".markdown", ".txt", ".rst", ".mdx"}
 _IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".tif", ".tiff", ".webp", ".ico"}
 _API = "https://api.github.com"
 _WEB = "https://github.com"
+_FRONT_MATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---[ \t]*\r?\n", re.DOTALL)
+_ERB_LAYOUT = re.compile(r"<%\s*content_for\b.*?<%\s*end\s*%>", re.DOTALL)
+_ERB_TITLE = re.compile(r"<%=\s*current_page\.data\.title\s*%>")
+_ERB_TAG = re.compile(r"<%.*?%>", re.DOTALL)
 MAX_FILES = 1000
 MAX_FILE_BYTES = 1_000_000
 MAX_ARCHIVE_BYTES = 300 * 1024 * 1024
@@ -162,7 +166,7 @@ class GitHubConnector(Connector):
             yield RawDocument(
                 external_id=f.path,
                 title=f"{repo}: {f.path}",
-                data=f.data,
+                data=_rendered(f.path, f.data),
                 mime=supported.get(_ext(f.path), "text/markdown"),
                 url=f"{_WEB}/{repo}/blob/{at}/{f.path}",
                 metadata={
@@ -200,6 +204,24 @@ def _download_error(repo: str, ref: str, resp: httpx.Response, has_token: bool) 
         )
         return f"GitHub is rate-limiting this token{when}; the next sync will retry"
     return f"GitHub returned HTTP {status} for {repo}; the next sync will retry"
+
+
+def _rendered(path: str, data: bytes) -> bytes:
+    """A Middleman page as it reads on its site. Its title is in the front matter and its
+    heading is the ERB that prints it, so indexed as written every page would be titled
+    `<%= current_page.data.title %>`. Anything else in ERB is layout, not content."""
+    if not path.lower().endswith(".erb"):
+        return data
+    text = data.decode("utf-8", errors="replace")
+    title = ""
+    if match := _FRONT_MATTER.match(text):
+        found = re.search(r"^title:\s*(.+?)\s*$", match.group(1), re.MULTILINE)
+        title = found.group(1).strip("\"'") if found else ""
+        text = text[match.end() :]
+    text = _ERB_LAYOUT.sub("", text)
+    text = _ERB_TITLE.sub(lambda _: title, text)
+    text = _ERB_TAG.sub("", text)
+    return re.sub(r"^#+[ \t]*$", "", text, flags=re.MULTILINE).strip().encode() + b"\n"
 
 
 def _ext(path: str) -> str:

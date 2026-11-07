@@ -128,6 +128,43 @@ async def test_markdown_templates_are_read_but_other_templates_are_not(monkeypat
     ]
 
 
+async def test_a_template_page_is_indexed_as_the_page_it_renders(monkeypatch):
+    """Middleman pages keep their title in front matter and render it with ERB: indexed
+    as written, every page was titled `<%= current_page.data.title %>`."""
+    page = b"""---
+title: "How to review code"
+last_reviewed_on: 2025-06-17
+---
+
+<% content_for :sidebar do %>
+<ul><li>Sidebar</li></ul>
+<% end %>
+
+<%= partial 'partials/site-banner' %>
+
+# <%= current_page.data.title %>
+
+Reviews keep code maintainable.
+"""
+    untitled = b"<%= partial 'banner' %>\n\nNo heading here.\n"
+    files = {"source/review.html.md.erb": page, "source/plain.md.erb": untitled}
+    _github(monkeypatch, lambda request: httpx.Response(200, content=_tarball(files)))
+    _, docs = await _docs({"repo": "alphagov/gds-way"})
+    by_path = {d.external_id: d.data.decode() for d in docs}
+    review = by_path["source/review.html.md.erb"]
+    assert review.startswith("# How to review code")
+    assert "Reviews keep code maintainable." in review
+    assert "<%" not in review and "Sidebar" not in review and "last_reviewed_on" not in review
+    assert by_path["source/plain.md.erb"].strip() == "No heading here."
+
+
+async def test_ordinary_markdown_is_left_exactly_as_written(monkeypatch):
+    text = b"---\ntitle: Kept\n---\n\n# Page\n\nShows `<%= tag %>` in a code sample.\n"
+    _github(monkeypatch, lambda request: httpx.Response(200, content=_tarball({"a.md": text})))
+    _, docs = await _docs({"repo": "acme/handbook"})
+    assert docs[0].data == text
+
+
 async def test_a_capped_listing_is_marked_incomplete(monkeypatch):
     monkeypatch.setattr(github, "MAX_FILES", 1)
     _github(monkeypatch, lambda request: httpx.Response(200, content=_tarball(FILES)))

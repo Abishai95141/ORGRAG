@@ -223,7 +223,11 @@ def _key(name: str) -> str:
 
 
 async def extract_document(db: AsyncSession, doc: Document, model: str | None) -> dict[str, int]:
-    """(Re)build what one document contributes to the graph. Caller commits."""
+    """(Re)build what one document contributes to the graph. Caller commits.
+
+    A chunk that fails doesn't lose the document: what was read is stored, and the
+    document stays pending (`failed_chunks` in the result) so a retry reads it again.
+    If every chunk fails nothing was learned, so this raises and what's stored stays."""
     chunks = list(
         (
             await db.execute(
@@ -233,15 +237,19 @@ async def extract_document(db: AsyncSession, doc: Document, model: str | None) -
     )
     sem = asyncio.Semaphore(CHUNK_CONCURRENCY)
 
-    async def run(chunk: Chunk) -> Extraction:
+    async def run(chunk: Chunk) -> Extraction | None:
         async with sem:
             try:
                 return await extract_chunk(model, chunk, doc.title)
             except Exception as exc:  # one failed chunk must not lose the document
                 log.warning("Extraction failed for chunk %s of %s: %s", chunk.ordinal, doc.id, exc)
-                raise
+                return None
 
-    results = await asyncio.gather(*(run(c) for c in chunks))
+    outcomes = await asyncio.gather(*(run(c) for c in chunks))
+    failed = sum(o is None for o in outcomes)
+    if chunks and failed == len(chunks):
+        raise RuntimeError(f"Extraction failed for every chunk of {doc.title!r}")
+    results = [o or Extraction() for o in outcomes]
 
     await db.execute(delete(KGMention).where(KGMention.document_id == doc.id))
     wanted: dict[str, tuple[str, str]] = {}
@@ -277,9 +285,11 @@ async def extract_document(db: AsyncSession, doc: Document, model: str | None) -
             )  # fmt: skip
     if mentions:
         await db.execute(insert(KGMention).values([{"id": uuid.uuid4(), **m} for m in mentions]))
-    doc.graph_hash = doc.content_hash
+    if not failed:
+        doc.graph_hash = doc.content_hash
     return {
         "chunks": len(chunks),
+        "failed_chunks": failed,
         "entities": sum(len(r.entities) for r in results),
         "relations": sum(len(r.relations) for r in results),
     }

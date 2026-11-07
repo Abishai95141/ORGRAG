@@ -109,12 +109,13 @@ SEARCH_WEB = {
 LIST_ENTITIES = {
     "name": "list_entities",
     "description": (
-        "List ALL entities of a kind from the knowledge graph built from the org's "
-        "documents — people, teams, vendors/organizations, systems, policies, projects, "
-        "roles. Unlike search (which returns only the top few passages), this returns the "
-        "complete set and its total count, so use it for 'which…' / 'how many…' / 'list "
-        "every…' questions. Filter with `contains` (matched against names and what the "
-        "documents say about each entity), then check the details before answering."
+        "List entities of a kind from the knowledge graph built from the org's documents "
+        "— people, teams, vendors/organizations, systems, policies, projects, roles — with "
+        "the total found. Search returns only the top few passages, so use this alongside "
+        "it for 'which…' / 'how many…' / 'list every…' questions. The graph is extracted "
+        "automatically and can miss items: don't treat this as the complete set. Filter "
+        "with `contains` (matched against names and what the documents say about each "
+        "entity), then check the details before answering."
     ),
     "input_schema": {
         "type": "object",

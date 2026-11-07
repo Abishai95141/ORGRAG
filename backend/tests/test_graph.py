@@ -382,6 +382,68 @@ async def test_name_variants_merge_and_lists_show_links(app, monkeypatch):
 
 
 @pytest.mark.integration
+async def test_a_failed_chunk_keeps_the_rest_and_leaves_the_document_for_a_retry(app, monkeypatch):
+    """One bad chunk no longer loses a document: what was read is stored, and the document
+    stays pending so a retry reads the chunk it missed."""
+    from sqlalchemy import func, select
+
+    from app.core.db import SessionLocal
+    from app.graph import extract
+    from app.models import Chunk, Document, KGMention
+
+    admin = await _signup(app, "admin")
+    org = await _org(admin, "Partial Co")
+    cols = (await admin.get(f"/api/orgs/{org['slug']}/collections")).json()
+    await _ingest(admin, org["slug"], _general(org, cols), {"a.md": "VENDOR-MARK one."})
+
+    async with SessionLocal() as db:
+        doc = (
+            await db.execute(select(Document).where(Document.org_id == uuid.UUID(org["id"])))
+        ).scalar_one()
+        doc_id = doc.id
+        chunk = (
+            (await db.execute(select(Chunk).where(Chunk.document_id == doc_id))).scalars().first()
+        )
+        db.add(Chunk(document_id=doc.id, org_id=doc.org_id, collection_id=doc.collection_id,
+                     ordinal=chunk.ordinal + 1, heading="", content="BROKEN-CHUNK two.",
+                     embedding=chunk.embedding, token_count=1))  # fmt: skip
+        await db.commit()
+
+    good = _fake_extractor({"VENDOR-MARK": VENDOR})
+
+    async def mentions(db) -> int:
+        stmt = select(func.count()).select_from(KGMention).where(KGMention.document_id == doc_id)
+        return await db.scalar(stmt)
+
+    async def flaky(*, model, system, prompt, max_tokens):
+        if "BROKEN-CHUNK" in prompt:
+            raise RuntimeError("model unavailable")
+        return await good(model=model, system=system, prompt=prompt, max_tokens=max_tokens)
+
+    monkeypatch.setattr(extract, "complete_text", flaky)
+    async with SessionLocal() as db:
+        doc = await db.get(Document, doc_id)
+        stats = await extract.extract_document(db, doc, None)
+        await db.commit()
+        assert stats["failed_chunks"] == 1
+        assert doc.graph_hash != doc.content_hash  # still pending
+        kept = await mentions(db)
+        assert kept > 0
+
+    async def down(*, model, system, prompt, max_tokens):
+        raise RuntimeError("model unavailable")
+
+    # Every chunk failing tells us nothing, so what's stored stays.
+    monkeypatch.setattr(extract, "complete_text", down)
+    async with SessionLocal() as db:
+        doc = await db.get(Document, doc_id)
+        with pytest.raises(RuntimeError, match="every chunk"):
+            await extract.extract_document(db, doc, None)
+        await db.rollback()
+    async with SessionLocal() as db:
+        assert await mentions(db) == kept
+
+
 async def test_a_failing_document_doesnt_stop_the_graph_job(app, monkeypatch):
     """A document whose extraction fails (its chunks replaced or deleted under it, as
     when it is re-indexed or deleted mid-run) is retried later; the others are

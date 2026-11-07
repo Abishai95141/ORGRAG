@@ -93,6 +93,7 @@ async def handle_extract_graph(db, job: Job) -> None:
             stats = await extract_document(db, doc, model)
             await db.commit()
             log.info("Graph: %s → %s", title, stats)
+            failed += bool(stats["failed_chunks"])  # stored what it could; retried below
         except Exception as exc:
             await db.rollback()
             if await db.get(Document, doc_id) is None:
