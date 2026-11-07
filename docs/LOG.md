@@ -2,6 +2,28 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results.
 
+## 2026-11-07 — A harder evaluation set, and a rule for what counts as a real difference
+
+The standard sets were near their ceiling: 132 of 135 answerable questions fully right, 301 of 304 facts, 17.3 of 18 on joins, 68 of 69 on the real corpus. Reruns of one configuration move by 3 to 5 questions, so a real gain of that size can't be told from noise. [EVALUATION.md](EVALUATION.md#the-hard-set) has the method and the results.
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D90 | **A hard set in its own database: a pruned copy of the `strata` org (523 real documents) plus 630 generated for a fictional division** (`eval/hard/`). 146 test and 56 dev questions. Gold answers are computed from the world's truth, and `check.py` proves each one from the stored text. | A pilot on the real documents alone scored about 90%, four-hop chains included: Harbourline is small enough that one search returns all of it. Difficulty had to come from what real organisations have, such as look-alike documents, stale pages and facts that exist only in Slack. | Today's system scores 57.1% over 6 repeats. Handed only the gold documents, the same model scores 97.7%. | Delete `eval/hard/`. Nothing in the app depends on it. |
+| D91 | **Configurations are compared as repeat sets: a difference is real when it's past the noise floor and its paired 95% interval is clear of zero** (`eval/repeats.py`, frozen in `eval/hard/baseline.json`). | One run ranged from 54.1% to 61.0% here. The floor answers "is this more than flipping?", and the interval, which resamples whole questions, answers "would it carry over to other questions?". | With 3 repeats against the frozen 6: same system called different 1.3% of the time, a true +5 points caught 95% of the time. Controls: reranker and recency bias off −5.5 (worse), deep mode +19.4 (better). | `harness compare` still compares two single runs. |
+| D92 | **The harness refuses to truncate a database not named `strata_eval*`, and `ingest` does nothing on the hard corpus.** | `ingest` truncates organizations when its corpus marker doesn't match, so one wrong setting could empty a live database. | Tests in `test_hard_set.py`. | Remove `assert_eval_database`. |
+| D93 | **`rejudge` and `label` use the question file the run recorded, or `--questions`, and refuse a file that lacks any of the run's questions.** | `rejudge` ignored `--questions`, so a run on another set was scored against the default file. | Checked end to end on hard-set runs. Tests in `test_hard_set.py`. | — |
+| D94 | **The judge sees at most 6 facts a call, and a verdict of the wrong length is refused.** A changed judge format changes the recorded prompt hash, so `compare` warns about older runs. | Asked about 11 facts, the judge answered 10, even when told 11, and the short verdict was padded with "no", which failed correct answers. | A sample of 16 failed answers that held every fact as a substring: 1 judge error, now fixed, and 1 borderline hedge. | Set `FACTS_PER_CALL` high and drop the check in `parse_verdict`. |
+
+**Results.**
+- Baseline, Haiku 5.5, quick mode, records on, 6 repeats, Sonnet 5.5 judge, facts only: 57.1% (SD 2.2). Aggregate 30.2%, chain 36.6%, superseded 39.1%, as of 72.2%, real corpus 80.3%, near duplicate 95.0%, permissions 100%, unanswerable 100%. $0.25 per repeat for answers.
+- Of 376 failed answers, 73% never reached a gold document, 14% had them all and were still wrong, and 14% got no answer at all.
+- Near duplicates and permissions turned out not to be hard. Spread-out facts, Slack-only evidence and project names did.
+- **Defect found, not fixed:** on the Claude loop an empty forced final turn has no retry, so 51 of 876 answers apologised with sources in hand. The NVIDIA loop retries that case.
+- Gold: `check.py` proves all 202 questions. An independent review on the final build took 60 of them and found no wrong answer. Two required a fact they never asked for, now dropped.
+- Suites: 434 passed, 1 skipped.
+
+Result files: `eval/hard/baseline.json`, `eval/results/hard-fusion.json`, `eval/results/hard-deep.json`.
+
 ## 2026-11-07 — Knowledge graph audit; NVIDIA Auto Ontology evaluated, not adopted
 
 The graph was off in every org and empty (0 of 757 documents), so everything was measured fresh. Haiku 5.5, quick mode, required-fact scoring unless noted. Reruns of one configuration move by 3 to 5 questions, so only larger differences mean anything.

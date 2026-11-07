@@ -1,0 +1,1339 @@
+{
+"kind": "repeats",
+"name": "base-hard-claude-haiku-5-5",
+"repeats": 6,
+"settings": {
+"rerank": true,
+"recency_bias": "low",
+"model": "claude-haiku-5-5",
+"fast_path": false,
+"scan": true
+},
+"corpus": "317b645b87675d8f",
+"judge_model": "claude-sonnet-5-5",
+"facts_prompt": "c7ca6258ba",
+"questions": "eval/hard/questions.jsonl",
+"outcomes": {
+"chain-oncall-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-oncall-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-oncall-4": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-oncall-5": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-oncall-6": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-oncall-7": [
+1,
+1,
+1,
+1,
+0,
+0
+],
+"chain-handover-2": [
+0,
+0,
+1,
+0,
+1,
+0
+],
+"chain-handover-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-handover-4": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-handover-5": [
+1,
+0,
+0,
+0,
+1,
+0
+],
+"chain-handover-6": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-escalation-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-escalation-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-escalation-4": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-escalation-5": [
+0,
+0,
+0,
+0,
+1,
+0
+],
+"chain-handover-oncall-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-handover-oncall-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-handover-oncall-4": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-action-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"chain-action-3": [
+1,
+1,
+1,
+1,
+1,
+0
+],
+"chain-decision-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"chain-decision-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"chain-standby-2": [
+0,
+1,
+0,
+0,
+1,
+0
+],
+"chain-standby-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"chain-standby-4": [
+1,
+1,
+0,
+0,
+1,
+0
+],
+"chain-standby-5": [
+0,
+0,
+0,
+0,
+0,
+1
+],
+"chain-standby-6": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"chain-lead-pay-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"chain-dependency-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"chain-dependency-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"chain-dependency-4": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"agg-count-2": [
+1,
+1,
+0,
+1,
+1,
+1
+],
+"agg-count-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"agg-count-4": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-count-5": [
+1,
+1,
+0,
+1,
+1,
+0
+],
+"agg-owner-2": [
+0,
+0,
+1,
+0,
+0,
+0
+],
+"agg-owner-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-owner-4": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-impact-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-impact-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-impact-4": [
+0,
+0,
+0,
+0,
+1,
+0
+],
+"agg-actions-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-actions-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-actions-4": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-actions-5": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-actions-6": [
+0,
+0,
+1,
+1,
+1,
+0
+],
+"agg-slo-2": [
+0,
+0,
+1,
+1,
+1,
+0
+],
+"agg-slo-3": [
+0,
+1,
+0,
+0,
+1,
+0
+],
+"agg-slo-4": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-slo-5": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-slo-6": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-renewals-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-renewals-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-renewals-4": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"agg-cause-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"agg-cause-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"agg-lead-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"agg-lead-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-owner-2": [
+1,
+1,
+1,
+1,
+1,
+0
+],
+"asof-owner-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"asof-owner-4": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-owner-5": [
+0,
+0,
+0,
+0,
+0,
+1
+],
+"asof-announced-2": [
+0,
+1,
+0,
+1,
+1,
+0
+],
+"asof-announced-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"asof-announced-4": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-announced-5": [
+0,
+0,
+0,
+0,
+1,
+0
+],
+"asof-announced-6": [
+1,
+1,
+1,
+1,
+1,
+0
+],
+"asof-event-rto-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-event-lead-2": [
+1,
+0,
+0,
+0,
+0,
+0
+],
+"asof-event-lead-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-event-join-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-event-join-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-lead-2": [
+1,
+1,
+0,
+1,
+0,
+1
+],
+"asof-lead-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-travel-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-travel-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-schedule-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-schedule-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-schedule-4": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-person-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-person-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-action-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-action-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"asof-rto-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"asof-rto-3": [
+1,
+0,
+0,
+0,
+0,
+0
+],
+"latest-owner-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"latest-owner-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"latest-owner-4": [
+0,
+0,
+0,
+0,
+0,
+1
+],
+"latest-owner-5": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"latest-owner-6": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"latest-called-off-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"latest-called-off-3": [
+1,
+1,
+1,
+0,
+1,
+1
+],
+"latest-policy-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"latest-policy-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"latest-rto-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"latest-rto-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"latest-renewal-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"latest-renewal-3": [
+0,
+0,
+0,
+1,
+0,
+0
+],
+"latest-renewal-4": [
+0,
+0,
+0,
+1,
+0,
+0
+],
+"latest-renewal-5": [
+0,
+1,
+0,
+0,
+0,
+0
+],
+"latest-renewal-6": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"latest-renewal-7": [
+1,
+0,
+1,
+0,
+0,
+1
+],
+"latest-impact-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"latest-impact-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"latest-availability-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"latest-availability-3": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"latest-decision-2": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"latest-decision-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"dup-runbook-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"dup-runbook-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"dup-report-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"dup-report-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"dup-rota-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"dup-rota-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"dup-incident-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"dup-incident-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"dup-namesake-2": [
+0,
+1,
+1,
+0,
+1,
+1
+],
+"dup-namesake-3": [
+0,
+1,
+1,
+1,
+1,
+1
+],
+"perm-budget-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"perm-contract-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"perm-contract-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"perm-contract-4": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"perm-golive-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"perm-golive-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"perm-golive-4": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"perm-reorg-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"perm-pay-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"none-rpo-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"none-rpo-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"none-incident-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"none-comms-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"none-comms-3": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"none-vendor-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"none-policy-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"none-decision-2": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"real-rfc-proposed": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"real-dependabot-chain": [
+1,
+0,
+1,
+1,
+1,
+1
+],
+"real-vwg-meetings": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"real-dsa-standin": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"real-dsa-chair-change": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"real-adr-march": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"real-inc-actions": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"real-domains-parish": [
+0,
+0,
+0,
+0,
+0,
+0
+],
+"real-dma": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"real-gcloud-term": [
+1,
+1,
+1,
+1,
+1,
+1
+],
+"real-tribunals": [
+1,
+1,
+1,
+1,
+1,
+1
+]
+},
+"categories": {
+"chain-oncall-2": "chain",
+"chain-oncall-3": "chain",
+"chain-oncall-4": "chain",
+"chain-oncall-5": "chain",
+"chain-oncall-6": "chain",
+"chain-oncall-7": "chain",
+"chain-handover-2": "chain",
+"chain-handover-3": "chain",
+"chain-handover-4": "chain",
+"chain-handover-5": "chain",
+"chain-handover-6": "chain",
+"chain-escalation-2": "chain",
+"chain-escalation-3": "chain",
+"chain-escalation-4": "chain",
+"chain-escalation-5": "chain",
+"chain-handover-oncall-2": "chain",
+"chain-handover-oncall-3": "chain",
+"chain-handover-oncall-4": "chain",
+"chain-action-2": "chain",
+"chain-action-3": "chain",
+"chain-decision-2": "chain",
+"chain-decision-3": "chain",
+"chain-standby-2": "chain",
+"chain-standby-3": "chain",
+"chain-standby-4": "chain",
+"chain-standby-5": "chain",
+"chain-standby-6": "chain",
+"chain-lead-pay-2": "chain",
+"chain-dependency-2": "chain",
+"chain-dependency-3": "chain",
+"chain-dependency-4": "chain",
+"agg-count-2": "aggregate",
+"agg-count-3": "aggregate",
+"agg-count-4": "aggregate",
+"agg-count-5": "aggregate",
+"agg-owner-2": "aggregate",
+"agg-owner-3": "aggregate",
+"agg-owner-4": "aggregate",
+"agg-impact-2": "aggregate",
+"agg-impact-3": "aggregate",
+"agg-impact-4": "aggregate",
+"agg-actions-2": "aggregate",
+"agg-actions-3": "aggregate",
+"agg-actions-4": "aggregate",
+"agg-actions-5": "aggregate",
+"agg-actions-6": "aggregate",
+"agg-slo-2": "aggregate",
+"agg-slo-3": "aggregate",
+"agg-slo-4": "aggregate",
+"agg-slo-5": "aggregate",
+"agg-slo-6": "aggregate",
+"agg-renewals-2": "aggregate",
+"agg-renewals-3": "aggregate",
+"agg-renewals-4": "aggregate",
+"agg-cause-2": "aggregate",
+"agg-cause-3": "aggregate",
+"agg-lead-2": "aggregate",
+"agg-lead-3": "aggregate",
+"asof-owner-2": "as_of",
+"asof-owner-3": "as_of",
+"asof-owner-4": "as_of",
+"asof-owner-5": "as_of",
+"asof-announced-2": "as_of",
+"asof-announced-3": "as_of",
+"asof-announced-4": "as_of",
+"asof-announced-5": "as_of",
+"asof-announced-6": "as_of",
+"asof-event-rto-2": "as_of",
+"asof-event-lead-2": "as_of",
+"asof-event-lead-3": "as_of",
+"asof-event-join-2": "as_of",
+"asof-event-join-3": "as_of",
+"asof-lead-2": "as_of",
+"asof-lead-3": "as_of",
+"asof-travel-2": "as_of",
+"asof-travel-3": "as_of",
+"asof-schedule-2": "as_of",
+"asof-schedule-3": "as_of",
+"asof-schedule-4": "as_of",
+"asof-person-2": "as_of",
+"asof-person-3": "as_of",
+"asof-action-2": "as_of",
+"asof-action-3": "as_of",
+"asof-rto-2": "as_of",
+"asof-rto-3": "as_of",
+"latest-owner-2": "superseded",
+"latest-owner-3": "superseded",
+"latest-owner-4": "superseded",
+"latest-owner-5": "superseded",
+"latest-owner-6": "superseded",
+"latest-called-off-2": "superseded",
+"latest-called-off-3": "superseded",
+"latest-policy-2": "superseded",
+"latest-policy-3": "superseded",
+"latest-rto-2": "superseded",
+"latest-rto-3": "superseded",
+"latest-renewal-2": "superseded",
+"latest-renewal-3": "superseded",
+"latest-renewal-4": "superseded",
+"latest-renewal-5": "superseded",
+"latest-renewal-6": "superseded",
+"latest-renewal-7": "superseded",
+"latest-impact-2": "superseded",
+"latest-impact-3": "superseded",
+"latest-availability-2": "superseded",
+"latest-availability-3": "superseded",
+"latest-decision-2": "superseded",
+"latest-decision-3": "superseded",
+"dup-runbook-2": "near_duplicate",
+"dup-runbook-3": "near_duplicate",
+"dup-report-2": "near_duplicate",
+"dup-report-3": "near_duplicate",
+"dup-rota-2": "near_duplicate",
+"dup-rota-3": "near_duplicate",
+"dup-incident-2": "near_duplicate",
+"dup-incident-3": "near_duplicate",
+"dup-namesake-2": "near_duplicate",
+"dup-namesake-3": "near_duplicate",
+"perm-budget-2": "permissions",
+"perm-contract-2": "permissions",
+"perm-contract-3": "permissions",
+"perm-contract-4": "permissions",
+"perm-golive-2": "permissions",
+"perm-golive-3": "permissions",
+"perm-golive-4": "permissions",
+"perm-reorg-2": "permissions",
+"perm-pay-2": "permissions",
+"none-rpo-2": "unanswerable",
+"none-rpo-3": "unanswerable",
+"none-incident-2": "unanswerable",
+"none-comms-2": "unanswerable",
+"none-comms-3": "unanswerable",
+"none-vendor-2": "unanswerable",
+"none-policy-2": "unanswerable",
+"none-decision-2": "unanswerable",
+"real-rfc-proposed": "real_corpus",
+"real-dependabot-chain": "real_corpus",
+"real-vwg-meetings": "real_corpus",
+"real-dsa-standin": "real_corpus",
+"real-dsa-chair-change": "real_corpus",
+"real-adr-march": "real_corpus",
+"real-inc-actions": "real_corpus",
+"real-domains-parish": "real_corpus",
+"real-dma": "real_corpus",
+"real-gcloud-term": "real_corpus",
+"real-tribunals": "real_corpus"
+},
+"errors": 0,
+"no_answer": 51,
+"rerank_failures": 1,
+"cost_usd": 0.2536,
+"problems": []
+}

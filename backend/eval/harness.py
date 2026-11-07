@@ -12,8 +12,8 @@ Loads the seed corpus plus eval/corpus into a dedicated database, then measures:
 
 Judge replies are cached in eval/.data, keyed by judge model and prompt, so
 re-scoring the same answers is free. `rejudge` re-scores a saved run, `compare`
-tests differences with a paired bootstrap, and `label` / `kappa` measure how often
-the judge agrees with a human.
+tests differences with a paired bootstrap (eval/repeats.py when each side has several
+repeats), and `label` / `kappa` measure how often the judge agrees with a human.
 
 Variants (rerank on/off, recency, and later the concept / graph layers) are org
 settings, so each run states exactly what was switched on.
@@ -25,6 +25,9 @@ settings, so each run states exactly what was switched on.
     .venv/bin/python -m eval.harness rejudge results/a.json
     .venv/bin/python -m eval.harness label results/a.json --n 50
     .venv/bin/python -m eval.harness kappa labels/a.jsonl
+
+EVAL_CORPUS=hard runs the hard set (docs/EVALUATION.md): several repeats with --repeats,
+compared with eval/repeats.py.
 """
 
 import argparse
@@ -32,6 +35,7 @@ import asyncio
 import contextlib
 import hashlib
 import json
+import logging
 import os
 import random
 import re
@@ -54,7 +58,17 @@ SCALE_CORPUS = HERE / "corpus_scale"
 # own questions, instead of the Markdown corpus. Needs the `parsing` extra.
 PUBLIC = os.environ.get("EVAL_CORPUS", "").lower() == "public"
 PUBLIC_DIR = HERE / ".data" / "public"
-QUESTIONS = HERE / ("questions_public.jsonl" if PUBLIC else "questions.jsonl")
+# EVAL_CORPUS=hard: the hard set (docs/EVALUATION.md). Its database is a pruned copy of a
+# real org plus an overlay, built by eval/hard/build.py; the harness never ingests into it.
+HARD = os.environ.get("EVAL_CORPUS", "").lower() == "hard"
+HARD_DIR = HERE / "hard"
+QUESTIONS = (
+    HERE / "questions_public.jsonl"
+    if PUBLIC
+    else HARD_DIR / "questions.jsonl"
+    if HARD
+    else HERE / "questions.jsonl"
+)
 RESULTS = HERE / "results"
 LABELS = HERE / "labels"
 DATA = HERE / ".data"
@@ -75,6 +89,7 @@ INDEX_CONFIG = {
     **({"context": CONTEXT_VERSION} if CONTEXTUAL else {}),
     # Parsing changes the index too: the public corpus, with or without vision.
     **({"corpus": "public", "vision": VISION} if PUBLIC else {}),
+    **({"corpus": "hard"} if HARD else {}),
 }
 INDEX_KEY = (
     ""
@@ -85,6 +100,7 @@ INDEX_KEY = (
 INDEX_SUFFIX = "-".join(
     [*(["public"] if PUBLIC else []),
      *(["vision"] if PUBLIC and VISION else []),
+     *(["hard"] if HARD else []),
      *(["ctx"] if CONTEXTUAL else []),
      *([INDEX_CONFIG["embedding"].rsplit("/", 1)[-1]]
        if INDEX_CONFIG["embedding"] != DEFAULT_INDEX["embedding"] else [])]
@@ -92,7 +108,7 @@ INDEX_SUFFIX = "-".join(
 EVAL_DB = os.environ.get(
     "EVAL_DATABASE_URL",
     "postgresql+asyncpg://postgres:postgres@localhost:55432/strata_eval"
-    + (f"_{INDEX_KEY}" if INDEX_KEY else ""),
+    + ("_hard" if HARD else f"_{INDEX_KEY}" if INDEX_KEY else ""),
 )
 # Settings are read at import time, so point the app at the eval database first.
 os.environ["DATABASE_URL"] = EVAL_DB
@@ -108,7 +124,6 @@ from app.core.db import SessionLocal  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
 from app.ingestion import contextual  # noqa: E402
 from app.ingestion.pipeline import sync_source  # noqa: E402
-from app.llm import nvidia  # noqa: E402
 from app.llm.client import complete_text  # noqa: E402
 from app.models import (  # noqa: E402
     Collection,
@@ -123,6 +138,7 @@ from app.retrieval.access import resolve_scope  # noqa: E402
 from app.retrieval.hybrid import RankingOptions, assemble_window, hybrid_search  # noqa: E402
 from app.schemas.common import OrgSettings  # noqa: E402
 from eval import grounding  # noqa: E402
+from eval.scoring import forbidden_hits, judge_json, parse_verdict, substring_hits  # noqa: E402
 from eval.stats import cohen_kappa, paired_bootstrap  # noqa: E402
 
 EVAL_EMAIL = "eval@strata.dev"
@@ -156,6 +172,8 @@ class Question:
     facts: list[dict[str, Any]]
     notes: str = ""
     smoke: bool = False  # in the 15-question set run on every change
+    asker: str | None = None  # who asks (hard set): a user in hard/world.json; None = eval user
+    forbidden: list[str] = field(default_factory=list)  # fails if the answer states any of these
 
 
 def load_questions(
@@ -190,6 +208,9 @@ def corpus_files() -> list[tuple[str, str, Path]]:
 
 
 def corpus_hash() -> str:
+    if HARD:  # what build.py recorded; `eval/hard/check.py` proves the database still matches
+        manifest = HARD_DIR / "manifest.json"
+        return json.loads(manifest.read_text())["digest"] if manifest.exists() else "unbuilt"
     h = hashlib.sha256()
     for org, col, path in corpus_files():
         h.update(f"{org}/{col}/{path.name}".encode())
@@ -221,8 +242,20 @@ def ensure_database() -> None:
     )
 
 
+def assert_eval_database() -> None:
+    """Ingesting truncates organizations, so it refuses anything but an eval database."""
+    name = EVAL_DB.rsplit("/", 1)[1]
+    if not name.startswith("strata_eval"):
+        sys.exit(f"Refusing to truncate {name!r}: eval databases are named strata_eval*")
+
+
 async def ingest(force: bool = False) -> None:
     """(Re)build the eval orgs when the corpus changed. One upload source per collection."""
+    if HARD:  # built once by eval/hard/build.py, never from here
+        async with SessionLocal() as db:
+            if not (await db.execute(select(User).where(User.email == EVAL_EMAIL))).first():
+                sys.exit(f"{EVAL_DB.rsplit('/', 1)[1]} isn't built: run eval/hard/build.py")
+        return
     digest = corpus_hash()
     marker = DATA / (f"corpus-{INDEX_KEY}.hash" if INDEX_KEY else "corpus.hash")
     async with SessionLocal() as db:
@@ -230,6 +263,7 @@ async def ingest(force: bool = False) -> None:
     if not force and have and marker.exists() and marker.read_text() == digest:
         return
     print(f"Ingesting corpus {digest}…", flush=True)
+    assert_eval_database()
     async with SessionLocal() as db:
         await db.execute(text("TRUNCATE organizations, users CASCADE"))
         await db.commit()
@@ -371,7 +405,7 @@ def judge_versions() -> dict[str, str]:
     digest = lambda s: hashlib.sha256(s.encode()).hexdigest()[:10]  # noqa: E731
     return {
         "judge_model": JUDGE_MODEL,
-        "facts_prompt": digest(JUDGE_SYSTEM),
+        "facts_prompt": digest(JUDGE_SYSTEM + FACTS_FORMAT),
         "grounding_prompt": f"{grounding.PROMPT_VERSION}:{digest(grounding.SYSTEM)}",
     }
 
@@ -422,6 +456,16 @@ async def _context():
     return user, orgs
 
 
+async def asker(q: Question, default):
+    """The user a question is asked as: its `asker` (the part of the email before the
+    @), else the eval user. Scope comes from that user's memberships and grants."""
+    if not q.asker:
+        return default
+    async with SessionLocal() as db:
+        found = await db.execute(select(User).where(User.email.startswith(f"{q.asker}@")))
+        return found.scalar_one()
+
+
 # ── retrieval ────────────────────────────────────────────────────────────────
 @dataclass
 class RetrievalResult:
@@ -435,6 +479,7 @@ class RetrievalResult:
 
 
 async def retrieval_one(q: Question, user, orgs, k: int = 10) -> RetrievalResult:
+    user = await asker(q, user)
     primary = orgs[q.scope[0]]
     settings = OrgSettings(**(primary.settings or {}))
     started = time.perf_counter()
@@ -486,6 +531,7 @@ class AnswerResult:
     status: str
     fact_hits_substring: list[bool] = field(default_factory=list)
     fact_hits_judge: list[bool] = field(default_factory=list)
+    forbidden_hits: list[str] = field(default_factory=list)  # what it mustn't have stated
     abstained: bool = False
     contradiction: bool = False
     cited_titles: list[str] = field(default_factory=list)
@@ -545,25 +591,33 @@ async def parse_recall(questions: list[Question]) -> dict[str, Any]:
     return {"ALL": {"facts": len(found_any), "recall": recall}, **rows}
 
 
-def substring_hits(answer: str, facts: list[dict[str, Any]]) -> list[bool]:
-    norm = re.sub(r"\s+", " ", answer.lower().replace(" ", " ").replace("‑", "-"))
-    return [any(p.lower() in norm for p in f.get("any_of", [])) for f in facts]
+FACTS_PER_CALL = 6  # a judge asked about 11 facts at once answered 10, even when told 11
+# Part of a run's judge version: verdicts from before it were padded with False when the
+# judge came up short, so they don't compare with these. `rejudge` brings a run up to date.
+FACTS_FORMAT = "batched, a short verdict refused"
 
 
 async def judge(q: Question, answer: str) -> dict[str, Any]:
-    facts = "\n".join(f"{i}. {f['fact']}" for i, f in enumerate(q.facts)) or "(none — the "
-    facts += "" if q.facts else "knowledge base does not contain the answer)"
-    prompt = f"Question: {q.question}\n\nRequired facts:\n{facts}\n\nAnswer:\n{answer}"
+    parts = [
+        await judge_facts(q, q.facts[i : i + FACTS_PER_CALL], answer)
+        for i in range(0, max(len(q.facts), 1), FACTS_PER_CALL)
+    ]
+    return {
+        "facts": [hit for part in parts for hit in part["facts"]],
+        "abstained": all(part["abstained"] for part in parts),
+        "contradiction": any(part["contradiction"] for part in parts),
+    }
+
+
+async def judge_facts(q: Question, required: list[dict[str, Any]], answer: str) -> dict[str, Any]:
+    facts = "\n".join(f"{i}. {f['fact']}" for i, f in enumerate(required)) or "(none — the "
+    facts += "" if required else "knowledge base does not contain the answer)"
+    prompt = (
+        f"Question: {q.question}\n\nRequired facts ({len(required)}):\n{facts}\n\nAnswer:\n{answer}"
+    )
 
     def parse(text: str) -> dict[str, Any]:
-        verdict = nvidia.extract_json(text)
-        hits = [bool(x) for x in verdict.get("facts", [])][: len(q.facts)]
-        hits += [False] * (len(q.facts) - len(hits))
-        return {
-            "facts": hits,
-            "abstained": bool(verdict.get("abstained")),
-            "contradiction": bool(verdict.get("contradiction")),
-        }
+        return parse_verdict(judge_json(text), len(required))
 
     return await judge_call(JUDGE_SYSTEM, prompt, parse, max_tokens=2048)
 
@@ -691,6 +745,7 @@ async def score_answer(
     gold = set(q.gold_docs)
     result.gold_cited = len(gold & set(result.cited_titles)) / len(gold) if gold else 0.0
     result.fact_hits_substring = substring_hits(answer, q.facts)
+    result.forbidden_hits = forbidden_hits(answer, q.forbidden)
     if status == "complete" and with_judge:
         verdict = await judge(q, answer)
         result.fact_hits_judge = verdict["facts"]
@@ -700,7 +755,9 @@ async def score_answer(
             result.grounding = await grade_grounding(q, answer, result.sources)
     if not with_judge:
         result.passed = False  # unknown until `rejudge`
-    elif q.category == "unanswerable":
+    elif result.forbidden_hits:
+        result.passed = False  # deterministic: a leak or a known wrong value, stated
+    elif not q.facts:
         # The answer must say it couldn't find this, without asserting a made-up answer.
         result.passed = status == "complete" and result.abstained and not result.contradiction
     else:
@@ -716,6 +773,7 @@ async def score_answer(
 async def answer_one(
     q: Question, user, orgs, mode: str, with_grounding: bool = True, with_judge: bool = True
 ) -> AnswerResult:
+    user = await asker(q, user)
     primary = orgs[q.scope[0]]
     scope_ids = [orgs[s].id for s in q.scope]
     async with SessionLocal() as db:
@@ -984,18 +1042,31 @@ def paired_report(a: dict, b: dict) -> None:
 
 
 # ── re-scoring and judge reliability ─────────────────────────────────────────
-async def rejudge(run: dict, source_name: str, with_grounding: bool) -> Path:
+def questions_for(run: dict, path: str | None) -> dict[str, Question]:
+    """The questions a saved run answered: `--questions`, else the file the run recorded,
+    else the default. Every row must have its question, or re-scoring would quietly keep
+    its old verdict."""
+    chosen = Path(path or run.get("questions") or QUESTIONS)
+    if not chosen.is_absolute() and not chosen.exists():
+        chosen = BACKEND / chosen
+    questions = {q.id: q for q in load_questions(path=chosen)}
+    missing = sorted({r["id"] for r in run["rows"]} - questions.keys())
+    if missing:
+        sys.exit(f"{chosen} has no question for {len(missing)} rows: {', '.join(missing[:8])}")
+    return questions
+
+
+async def rejudge(
+    run: dict, source_name: str, with_grounding: bool, questions: dict[str, Question]
+) -> Path:
     """Re-score a saved answers run with the current judges, without re-answering
     (free when the verdicts are cached). Rows from runs before sources were saved are
     looked up by message id; older rows get facts only."""
-    questions = {q.id: q for q in load_questions()}
     fields = AnswerResult.__dataclass_fields__
     sem = asyncio.Semaphore(3)
 
     async def one(row: dict) -> dict:
-        q = questions.get(row["id"])
-        if q is None:
-            return row
+        q = questions[row["id"]]
         result = AnswerResult(**{k: v for k, v in row.items() if k in fields})
         if not result.sources and result.message_id:
             async with SessionLocal() as db:
@@ -1024,6 +1095,25 @@ async def rejudge(run: dict, source_name: str, with_grounding: bool) -> Path:
     return save("answers", f"{run['variant']}-rejudged", rows, summary, extra)
 
 
+def questions_path(path: str | None) -> str:
+    """A run's question file, relative to backend/ when it's inside it, so a run can be
+    re-scored from another checkout."""
+    chosen = Path(path or QUESTIONS).resolve()
+    return str(chosen.relative_to(BACKEND)) if chosen.is_relative_to(BACKEND) else str(chosen)
+
+
+class RerankFailures(logging.Handler):
+    """Counts searches that fell back to fusion order because the reranker failed. Search
+    carries on without it, so a rate limit would otherwise pass for run-to-run noise."""
+
+    def __init__(self) -> None:
+        super().__init__(logging.WARNING)
+        self.count = 0
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.count += record.getMessage().startswith("Reranking with")
+
+
 def _balanced(pool: list[dict], n: int, rng: random.Random) -> list[dict]:
     """Up to n items, alternating judge-yes and judge-no so κ isn't dominated by the
     common verdict."""
@@ -1039,15 +1129,14 @@ def _balanced(pool: list[dict], n: int, rng: random.Random) -> list[dict]:
     return out
 
 
-async def label_items(run: dict, n: int, seed: int) -> list[dict]:
+async def label_items(run: dict, n: int, seed: int, questions: dict[str, Question]) -> list[dict]:
     rng = random.Random(seed)
-    questions = {q.id: q for q in load_questions()}
     facts, claims = [], []
     for row in run["rows"]:
-        q = questions.get(row["id"])
-        if q is None or row["status"] != "complete":
+        q = questions[row["id"]]
+        if row["status"] != "complete":
             continue
-        if q.category == "unanswerable":
+        if not q.facts:
             facts.append(
                 {"key": f"{q.id}:abstain", "kind": "abstain", "qid": q.id,
                  "question": q.question, "answer": row["answer"],
@@ -1082,7 +1171,7 @@ async def label_items(run: dict, n: int, seed: int) -> list[dict]:
     return picked
 
 
-def label(path: Path, n: int, seed: int) -> Path:
+def label(path: Path, n: int, seed: int, questions_path: str | None = None) -> Path:
     """Walk through n judge verdicts without showing them, record the human's call,
     then report agreement. Resumable: labelled items are skipped."""
     run = json.loads(path.read_text())
@@ -1090,7 +1179,8 @@ def label(path: Path, n: int, seed: int) -> Path:
     done = {}
     if out.exists():
         done = {json.loads(line)["key"] for line in out.read_text().splitlines() if line.strip()}
-    items = [i for i in asyncio.run(label_items(run, n, seed)) if i["key"] not in done]
+    questions = questions_for(run, questions_path)
+    items = [i for i in asyncio.run(label_items(run, n, seed, questions)) if i["key"] not in done]
     LABELS.mkdir(exist_ok=True)
     print(f"{len(done)} labelled already, {len(items)} to go. y = yes, n = no, s = skip, q = quit")
     for k, item in enumerate(items, 1):
@@ -1131,7 +1221,10 @@ def kappa(path: Path) -> None:
 async def main_async(args) -> None:
     await ingest(force=args.reingest)
     questions = load_questions(
-        args.limit, args.ids.split(",") if args.ids else None, Path(args.questions), args.set
+        args.limit,
+        args.ids.split(",") if args.ids else None,
+        Path(args.questions or QUESTIONS),
+        args.set,
     )
     overrides = await apply_variant(args.variant, args.chat_model)
     overrides["records"] = await apply_records(args.records)
@@ -1148,26 +1241,34 @@ async def main_async(args) -> None:
         name = (args.name or args.variant) + (f"-{INDEX_SUFFIX}" if INDEX_SUFFIX else "")
         print("saved", save("retrieval", name, rows, summary, {"settings": overrides}))
     else:
-        answered = await run_answers(
-            questions, args.mode, args.concurrency, not args.no_grounding, not args.no_judge
-        )
-        rows = [r.__dict__ for r in answered]
-        summary = summarize_answers(rows)
-        print_table(summary)
-        print(f"judge cache: {CACHE.hits} hits, {CACHE.misses} misses")
         name = (
             (f"{args.name}" if args.name else f"{args.variant}-{args.mode}")
             + (f"-{INDEX_SUFFIX}" if INDEX_SUFFIX else "")
             + (f"-{args.chat_model.split(':')[-1]}" if args.chat_model else "")
             + ("-smoke" if args.set == "smoke" else "")
         )
-        extra = {
-            "settings": overrides,
-            "question_set": args.set,
-            "judged": not args.no_judge,
-            "same_family_judge": model_family(overrides.get("model")) == model_family(JUDGE_MODEL),
-        }
-        print("saved", save("answers", name, rows, summary, extra))
+        counter = RerankFailures()
+        logging.getLogger("strata.retrieval").addHandler(counter)
+        for repeat in range(1, args.repeats + 1):
+            counter.count = 0
+            answered = await run_answers(
+                questions, args.mode, args.concurrency, not args.no_grounding, not args.no_judge
+            )
+            rows = [r.__dict__ for r in answered]
+            summary = summarize_answers(rows)
+            print_table(summary)
+            print(f"judge cache: {CACHE.hits} hits, {CACHE.misses} misses")
+            extra = {
+                "settings": overrides,
+                "questions": questions_path(args.questions),
+                "question_set": args.set,
+                "judged": not args.no_judge,
+                "same_family_judge": model_family(overrides.get("model"))
+                == model_family(JUDGE_MODEL),
+                "rerank_failures": counter.count,
+            }
+            suffix = f"-r{repeat}" if args.repeats > 1 else ""
+            print("saved", save("answers", name + suffix, rows, summary, extra))
 
 
 def main() -> None:
@@ -1185,8 +1286,17 @@ def main() -> None:
     p.add_argument("--limit", type=int)
     p.add_argument("--ids")
     p.add_argument("--concurrency", type=int, default=3)
+    p.add_argument(
+        "--repeats",
+        type=int,
+        default=1,
+        help="answers: run N times, saved as <name>-r1… (see eval/repeats.py)",
+    )
     p.add_argument("--reingest", action="store_true")
-    p.add_argument("--questions", default=str(QUESTIONS))
+    p.add_argument(
+        "--questions",
+        help=f"question file (default: {QUESTIONS.name}; rejudge and label: the run's own)",
+    )
     p.add_argument("--set", default="all", choices=["all", "smoke"], help="question subset")
     p.add_argument("--name", help="answers: result name (default: <variant>-<mode>)")
     p.add_argument("--no-grounding", action="store_true", help="skip faithfulness/citations")
@@ -1234,15 +1344,16 @@ def main() -> None:
                 "smoke" if run["variant"].endswith("-smoke") else "all"
             )
             print(f"judge: {use_judge(args.judge, question_set)}")
-            saved = asyncio.run(rejudge(run, Path(path).name, not args.no_grounding))
+            questions = questions_for(run, args.questions)
+            saved = asyncio.run(rejudge(run, Path(path).name, not args.no_grounding, questions))
             print("saved", saved)
         return
     if args.cmd == "parse-recall":
-        report = asyncio.run(parse_recall(load_questions(path=Path(args.questions))))
+        report = asyncio.run(parse_recall(load_questions(path=Path(args.questions or QUESTIONS))))
         print("saved", save("parse", args.name or "recall", [], report, {}))
         return
     if args.cmd == "label":
-        label(Path(args.paths[0]), args.n, args.seed)
+        label(Path(args.paths[0]), args.n, args.seed, args.questions)
         return
     if args.cmd == "ingest":
         asyncio.run(ingest(force=True))
