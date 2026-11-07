@@ -812,6 +812,10 @@ class AgentRun:
         json_retries = 0
         turn = 0
         evidence: list[tuple[str, str]] = []  # research results so far, for the coverage check
+        # Sources in hand, so an empty turn is worth one retry. Not on the confident fast
+        # path: when that comes back empty, the caller researches normally.
+        researched = bool(seed) and not seed[1]
+        retried_empty = False
 
         caching = get_settings().prompt_caching
         system_blocks: str | list[dict[str, Any]] = system
@@ -928,11 +932,22 @@ class AgentRun:
                     await self.em.delta("I can't help with that request.")
                 break
             if not tool_uses:
+                if researched and not retried_empty and not self.em.answer.strip():
+                    # Seen in the hard set: a turn with no text and no tool call, and the
+                    # run then said it couldn't answer. Ask once more, tools off. The empty
+                    # turn is dropped, not resent, and the instruction joins the last user
+                    # message so the roles keep alternating.
+                    retried_empty = True
+                    messages.pop()
+                    messages[-1]["content"].append({"type": "text", "text": ANSWER_NOW})
+                    max_turns = turn + 1 - self.extra_turns  # the next turn is the last
+                    continue
                 break
             if final.stop_reason == "max_tokens":
                 # A truncated tool input parses as a partial object; never run it.
                 break
 
+            researched = True
             results = []
             outcomes = await self._run_tools(
                 [(b.name, b.input if isinstance(b.input, dict) else {}) for b in tool_uses]

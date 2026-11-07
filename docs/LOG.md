@@ -2,6 +2,12 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results.
 
+## 2026-11-07 (latest) — An empty turn no longer ends a Claude answer
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D95 | **On the Claude path, an empty turn with sources in hand gets one retry with tools off.** The empty turn is dropped, `ANSWER_NOW` joins the last user message after the tool results, and that turn is the last. If it's empty too, the "I wasn't able to put together an answer" message stays. | In the hard evaluation set, 51 of 876 answers, 14% of all failures, apologised with sources in hand: a forced last turn with no text and no tool call ended the loop. The NVIDIA loop already asked once more. A turn with research budget left and a seeded fast-path turn fail the same way, so they get the same retry. The confident fast path doesn't: its fallback is to research normally. Nor does an empty turn before any research, which has nothing to answer from. | `test_empty_final_turn_is_retried_without_tools` and the tests after it in `test_agent_loop.py`: 5 of the 6 new cases failed before the fix and all pass after; the sixth guards the no-research case. Suite: 440 passed, 1 skipped (Python 3.14). The hard set hasn't been rerun and the request hasn't been sent to the live API, so the gain isn't measured. | Remove the `retried_empty` branch in `_claude_loop`. |
+
 ## 2026-11-07 — A harder evaluation set, and a rule for what counts as a real difference
 
 The standard sets were near their ceiling: 132 of 135 answerable questions fully right, 301 of 304 facts, 17.3 of 18 on joins, 68 of 69 on the real corpus. Reruns of one configuration move by 3 to 5 questions, so a real gain of that size can't be told from noise. [EVALUATION.md](EVALUATION.md#the-hard-set) has the method and the results.
@@ -18,7 +24,7 @@ The standard sets were near their ceiling: 132 of 135 answerable questions fully
 - Baseline, Haiku 5.5, quick mode, records on, 6 repeats, Sonnet 5.5 judge, facts only: 57.1% (SD 2.2). Aggregate 30.2%, chain 36.6%, superseded 39.1%, as of 72.2%, real corpus 80.3%, near duplicate 95.0%, permissions 100%, unanswerable 100%. $0.25 per repeat for answers.
 - Of 376 failed answers, 73% never reached a gold document, 14% had them all and were still wrong, and 14% got no answer at all.
 - Near duplicates and permissions turned out not to be hard. Spread-out facts, Slack-only evidence and project names did.
-- **Defect found, not fixed:** on the Claude loop an empty forced final turn has no retry, so 51 of 876 answers apologised with sources in hand. The NVIDIA loop retries that case.
+- **Defect found, fixed in D95:** on the Claude loop an empty forced final turn has no retry, so 51 of 876 answers apologised with sources in hand. The NVIDIA loop retries that case.
 - Gold: `check.py` proves all 202 questions. An independent review on the final build took 60 of them and found no wrong answer. Two required a fact they never asked for, now dropped.
 - Suites: 434 passed, 1 skipped.
 
