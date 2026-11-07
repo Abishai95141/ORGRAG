@@ -431,3 +431,79 @@ async def test_an_empty_answer_from_the_fast_path_falls_back_to_the_loop(app, mo
         "tool_choice" not in second
         and "keep researching" in (second["messages"][-1]["content"][0]["text"])
     )
+
+
+def _empty_turn(*content):
+    return [], NS(stop_reason="end_turn", content=list(content))
+
+
+def _spend_research_budget():
+    """Tool turns up to quick mode's forced last turn."""
+    from app.agent.engine import MAX_TURNS
+
+    return [_tool_turn("friday deploy policy")] * (MAX_TURNS["quick"] - 1)
+
+
+def _content(events):
+    return events[-1][1]["message"]["content"]
+
+
+@pytest.mark.parametrize(
+    "content",
+    [[], [NS(type="thinking", thinking="Nothing to add.", signature="sig")]],
+    ids=["no content", "thinking only"],
+)
+async def test_empty_final_turn_is_retried_without_tools(app, monkeypatch, content):
+    """Seen in the hard set: the forced last turn came back empty with sources in hand."""
+    from app.agent.engine import ANSWER_NOW
+
+    answer = "Friday deploys need manager approval [1]."
+    turns = [*_spend_research_budget(), _empty_turn(*content), _answer_turn(answer)]
+    fake, events = await _run(app, monkeypatch, "quick", turns)
+    assert _content(events) == answer
+    forced, retry = fake.calls[-2:]
+    assert forced["tool_choice"] == retry["tool_choice"] == {"type": "none"}
+    # The empty turn isn't resent: the request ends on the tool results, then the instruction.
+    assert len(retry["messages"]) == len(forced["messages"])
+    last = retry["messages"][-1]
+    assert last["role"] == "user" and last["content"][0]["type"] == "tool_result"
+    assert last["content"][-1] == {"type": "text", "text": ANSWER_NOW}
+
+
+async def test_a_second_empty_turn_keeps_the_fallback_message(app, monkeypatch):
+    turns = [*_spend_research_budget(), _empty_turn(), _empty_turn()]
+    fake, events = await _run(app, monkeypatch, "quick", turns)
+    assert "wasn't able to put together an answer" in _content(events)
+    assert len(fake.calls) == len(turns)  # one retry, no more
+
+
+async def test_an_empty_turn_with_research_budget_left_gets_the_same_retry(app, monkeypatch):
+    answer = "Friday deploys need manager approval [1]."
+    turns = [_tool_turn("friday deploy policy"), _empty_turn(), _answer_turn(answer)]
+    fake, events = await _run(app, monkeypatch, "quick", turns)
+    assert _content(events) == answer
+    assert "tool_choice" not in fake.calls[1]
+    assert fake.calls[2]["tool_choice"] == {"type": "none"}
+
+
+async def test_an_empty_turn_on_seeded_passages_is_retried(app, monkeypatch):
+    from app.agent import fastpath
+    from app.agent.engine import ANSWER_NOW
+
+    monkeypatch.setattr(fastpath, "confident", lambda scores, documents: False)
+    answer = "Friday deploys need manager approval [1]."
+    fake, events = await _run(
+        app, monkeypatch, "quick", [_empty_turn(), _answer_turn(answer)], fast_path=True
+    )
+    assert _content(events) == answer
+    first, retry = fake.calls
+    assert retry["tool_choice"] == {"type": "none"}
+    assert len(retry["messages"]) == len(first["messages"])
+    assert retry["messages"][-1]["content"][-1] == {"type": "text", "text": ANSWER_NOW}
+
+
+async def test_an_empty_turn_before_any_research_is_not_retried(app, monkeypatch):
+    """No sources to answer from, so there's nothing for the retry to ask for."""
+    fake, events = await _run(app, monkeypatch, "quick", [_empty_turn()])
+    assert "wasn't able to put together an answer" in _content(events)
+    assert len(fake.calls) == 1

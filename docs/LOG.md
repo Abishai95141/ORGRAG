@@ -2,6 +2,12 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results.
 
+## 2026-11-07 (latest) — An empty turn no longer ends a Claude answer
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D90 | **On the Claude path, an empty turn with sources in hand gets one retry with tools off.** The empty turn is dropped, `ANSWER_NOW` joins the last user message after the tool results, and that turn is the last. If it's empty too, the "I wasn't able to put together an answer" message stays. | In the hard evaluation set, 51 of 876 answers, 14% of all failures, apologised with sources in hand: a forced last turn with no text and no tool call ended the loop. The NVIDIA loop already asked once more. A turn with research budget left and a seeded fast-path turn fail the same way, so they get the same retry. The confident fast path doesn't: its fallback is to research normally. Nor does an empty turn before any research, which has nothing to answer from. | `test_empty_final_turn_is_retried_without_tools` and the tests after it in `test_agent_loop.py`: 5 of the 6 new cases failed before the fix and all pass after; the sixth guards the no-research case. Suite: 421 passed, 1 skipped (Python 3.14). The hard set hasn't been rerun and the request hasn't been sent to the live API, so the gain isn't measured. | Remove the `retried_empty` branch in `_claude_loop`. |
+
 ## 2026-11-07 — Knowledge graph audit; NVIDIA Auto Ontology evaluated, not adopted
 
 The graph was off in every org and empty (0 of 757 documents), so everything was measured fresh. Haiku 5.5, quick mode, required-fact scoring unless noted. Reruns of one configuration move by 3 to 5 questions, so only larger differences mean anything.
