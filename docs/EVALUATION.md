@@ -126,7 +126,7 @@ SD is across the 6 repeats. The noise floor is defined below. 69 questions alway
 | Who's asking | No | Permissions score 100%. None of the 42 answers checked for a restricted value contained one, nor did any of the 42 in the two controls. Access is a SQL filter, so this category only guards against regressions. |
 | "As of" a date | Partly | As of scores 72.2%. Versioned documents with effective dates pass (100%). Reconstructing the past from Slack doesn't (`asof-rto` 8%, `asof-announced` 50%). |
 
-Two things cut across the categories. Questions whose evidence is a post using a project name score 17%, against 65% for the rest, and those needing a rota swap 17% against 57%: the fact is there, but no search for the question's words reaches it. That's the gap an entity layer would have to close, and this set can now measure it.
+Two things cut across the categories. Questions whose evidence is a post using a project name score 17%, against 65% for the rest, and those needing a rota swap 17% against 57%: the fact is there, but no search for the question's words reaches it. That's the gap an entity layer would have to close, and this set can now measure it. A graph does close it, but only that gap; see [Knowledge graph](#knowledge-graph-2026-11-08).
 
 The 376 failed answers in the 6 repeats:
 
@@ -181,6 +181,50 @@ Both land where they should, and each says something the score alone doesn't.
 
 - **Fusion** is only just called worse, at 5.5 points, because it's a mixed change: 15 questions fell by half or more and 6 rose. A mixed change of that size is near the edge of what 3 repeats can call. Aggregate (−10.5) and as of (−9.3) are worse on their own, and near duplicate (−15, 10 questions) is unclear.
 - **Deep mode** gains in every category that has room: chain +29.0, superseded +30.4, aggregate +24.1, as of +15.4. It costs 3.6 times as much ($0.91 a repeat) and takes 29 seconds an answer, not 8. The empty final turn almost disappears (1 of 438 answers). Research rounds were much of the gap, then, but not all of it: at 76.5% it's still 21 points short of the gold-documents score. Rota swaps nearly close (61% against 76% for the rest), while project-name posts don't (40% against 85%), and `chain-escalation` stays at 8%.
+
+### Knowledge graph (2026-11-08)
+
+Does the knowledge graph earn its place here? It was built on a copy of the hard set (`strata_eval_hard_graph`), with Haiku 5.5 extracting. Every arm below is Haiku 5.5, quick mode, records on, the Sonnet 5.5 judge, facts only, 3 repeats, compared with the frozen baseline. Like the baseline, none has the empty-turn retry (D95).
+
+**Building it.** 1,153 documents, 6,560 chunks and 6,560 model calls: **65 minutes at 16 in flight, $6.75** (19.4M tokens in, 9.6M out). It stored 31,217 entities, 43,223 relations and 104,739 mentions, and 90.6% of entities appear in one document only. All 24 links between a service and its project name were stored. Three documents of 253 to 468 chunks failed to store: `extract_document` writes all of a document's mentions in one statement, which passes asyncpg's limit of 32,767 parameters at about 250 chunks, and each queue retry reads the whole document again. A batched insert outside the product code stored them, so the graph covers every document. With the wasted retries, the build cost $10.12 in all (`eval/results/hard-graph-build.json`).
+
+| Arm | Pass | Difference | 95% interval | Floor | Verdict |
+|---|---|---|---|---|---|
+| Graph tools offered (6 repeats) | 55.8% | −1.3 points | −3.9 to +1.3 | ±2.1 | noise |
+| **Terms-first**: graph facts about names in the question, before the first turn | 72.6% | +15.5 points | +10.2 to +21.1 | ±2.8 | better |
+| **Plain-first**: the question's top 20 search passages, in the same place and size | 70.8% | +13.7 points | +8.5 to +19.1 | ±2.4 | better |
+| Terms-first minus plain-first | | +1.8 points | −5.0 to +8.7 | ±3.1 | noise |
+
+| Category | Baseline | Tools offered | Terms-first | Plain-first |
+|---|---|---|---|---|
+| Aggregate | 30.2% | 32.7% | 51.9% | 54.3% |
+| Chain | 36.6% | 33.9% | 46.2% | 54.8% |
+| Superseded | 39.1% | 35.5% | 79.7% | 69.6% |
+| As of | 72.2% | 71.0% | 88.9% | 74.1% |
+| Real corpus | 80.3% | 78.8% | 78.8% | 87.9% |
+| Near duplicate | 95.0% | 91.7% | 100% | 90.0% |
+| Permissions | 100% | 100% | 96.3% | 100% |
+| Unanswerable | 100% | 100% | 100% | 100% |
+
+- **Offered as tools, the graph goes unused.** 7 and 11 of 438 answers in the two sets called a graph tool (1.6% and 2.5%), and 2 of 174 chain and aggregate answers in the first. That matches the 150-question set (D86). A graph that's never asked proves nothing about what it holds, so the next two arms put it in front of the model.
+- **Most of terms-first's gain is front-loaded context, not the graph.** A plain search in the same place gets 13.7 of the 15.5 points with no graph at all. Against each other the two are noise, except as of, where terms-first is better (+14.8, +2.5 to +28.4).
+- **The graph wins one kind of question and loses the rest.**
+
+  | Questions | Baseline | Plain-first | Terms-first | Terms minus plain |
+  |---|---|---|---|---|
+  | Evidence is a post using a project name (32) | 16.7% | 19.8% | 66.7% | +46.9 (+32.3 to +62.5) |
+  | Needs a rota swap (15) | 24.4% | 55.6% | 33.3% | −22.2 (−40.0 to −6.7) |
+  | All but the project-name questions (114) | 68.4% | 85.1% | 74.3% | −10.8 (−17.0 to −5.3) |
+
+  The graph reaches posts that use a service's project name, which no search for the question's words finds. Everywhere else its relation summaries are a worse lead than the passages themselves.
+- **Caveats.** Terms-first ranks alias links first, a choice made after checking how many questions naming a service it showed the project name for: 24 of 27 in test, 12 of 12 in dev. It never read gold, but the project-name gain is where that choice could flatter it. Plain-first's search takes 6.3 seconds at the median (13.6 at p95), because it reranks 20 passages; terms-first's lookup takes 12 ms. Both front-loaded arms gave fewer empty answers (2.3% and 2.7%, against 5.8%), which D95's retry addresses too, so with it in place each gain may shrink by up to about 3 points. Every run on the copy averaged 13 to 16 seconds an answer, against the baseline's 8. Plain-first averaged 20, counting its search. That includes a tools-offered run with almost no graph calls, so the slowdown comes from load on those days, not from the graph.
+- **The copy.** A graph build rewrites every document row, and `records.suggest()` reads documents in no fixed order, so a fresh `--records` on the copy suggested a 38th schema. It was removed and suggestion held off, so every arm has the baseline's 37 schemas and 2,107 records. The harness also writes a variant's settings into the org, so a `--variant default` run on the copy still had the graph's tools: the second tools-offered set was meant as a graph-off control. Both tools-offered sets are noise against the baseline, so the copy didn't move results.
+
+**A side result: records off.** One run accidentally had records off. With the tools offered, it scored 72.1% against 55.7% with records on: **+16.4 points** (+10.3 to +22.6). Chain went from 34.4% to 69.9% and superseded from 36.2% to 71.0%. The records tool appears in every chain answer and in 86% of superseded ones. With records off, terms-first reached 84.7% (+12.6 points over records off alone, +6.6 to +18.5). This wasn't planned and hasn't been looked into.
+
+**Recommendation: retire the graph.** Keep it off by default and don't build on it. As tools it isn't called. As context it ties with a plain search that needs no build, which here took an hour and $6.75. Its one strength, linking a service to its project name, comes from the "Also known as" line every service page carries, so taking aliases from those lines next to a pre-search is the cheaper thing to test. The ontology graph wasn't repeated, because any graph's facts face the same comparison with plain passages. The code stays; removing it is a separate decision.
+
+Result files: `eval/results/hard-graph.json`, `hard-graph-repeat.json`, `hard-terms.json`, `hard-plain.json`, `hard-norecords.json`, `hard-norecords-terms.json`. The two context arms are `eval/hard/preload/`.
 
 ### Limits
 
@@ -410,6 +454,8 @@ The same build on NVIDIA's free-tier rate limits managed 7 documents in about an
 
 **Decision:** keep the graph as an **opt-in** setting (off by default), and use Haiku 5.5 as the chat model where an Experiential Labs key is available. The real fix for registers and lists is **structured field extraction**: parse table rows and `Field: value` lines into typed columns (owner, status, risk tier, renewal date), then filter and count them exactly in SQL. That's deterministic and costs almost nothing per document. It's proposed as the next step.
 
+**On the hard set (2026-11-08)** the tools went unused again (1.6% to 2.5% of answers), and graph facts given before the first turn did no better than a plain search given the same way. The recommendation there is to retire the graph; see [The hard set → Knowledge graph](#knowledge-graph-2026-11-08).
+
 **Bugs the graph work found and fixed along the way**
 - With tools offered but forbidden, Nemotron sometimes wrote nothing; final turns now offer no tools.
 - Name variants ("High Risk Tier" / "Risk Tier High") are merged when looked up.
@@ -455,6 +501,10 @@ export EVAL_CORPUS=hard                                  # uses strata_eval_hard
 .venv/bin/python -m eval.repeats compare --a eval/hard/baseline.json --b eval/results/answers-try-hard-claude-haiku-5-5-r*.json
 .venv/bin/python -m eval.repeats power eval/hard/baseline.json --repeats 3
 .venv/bin/python -m eval.repeats freeze eval/results/answers-try-hard-claude-haiku-5-5-r*.json --out eval/hard/baseline.json
+# the graph arms, on a copy: createdb -T strata_eval_hard strata_eval_hard_graph, then build-graph
+EVAL_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:55432/strata_eval_hard_graph \
+  .venv/bin/python -m eval.hard.preload terms answers --name terms --variant graph --records \
+  --chat-model claude-haiku-5-5 --judge claude-sonnet-5-5 --no-grounding --concurrency 4 --repeats 3
 ```
 
-Three repeats take about 20 minutes and cost about $0.75 for answers, plus the Sonnet judge. `eval/hard/baseline.json` holds the 6 baseline repeats as pass or fail per question. The two controls are `eval/results/hard-fusion.json` and `hard-deep.json`. Freeze a new baseline only after a change ships, and say so in [LOG.md](LOG.md). A baseline is only comparable with runs on the same corpus digest and judge, and `compare` warns when they differ.
+Three repeats take about 20 minutes and cost about $0.75 for answers, plus the Sonnet judge. `eval/hard/baseline.json` holds the 6 baseline repeats as pass or fail per question. The two controls are `eval/results/hard-fusion.json` and `hard-deep.json`. On the graph copy, a `--variant default` run keeps the graph's tools on, because the harness writes each variant's settings into the org. Check `knowledge_graph` in the org settings before calling a run graph-off. Freeze a new baseline only after a change ships, and say so in [LOG.md](LOG.md). A baseline is only comparable with runs on the same corpus digest and judge, and `compare` warns when they differ.

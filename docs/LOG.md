@@ -2,7 +2,26 @@
 
 What was decided, why, and what was measured, newest first. Each entry links to the code and the result files; [EVALUATION.md](EVALUATION.md) has the method and the standing results.
 
-## 2026-11-07 (latest) — An empty turn no longer ends a Claude answer
+## 2026-11-08 (latest) — The knowledge graph on the hard set: retire it
+
+The graph was built on a copy of the hard set with Haiku 5.5 and measured three ways. Each arm: Haiku 5.5, quick mode, records on, Sonnet 5.5 judge, facts only, 3 repeats, against the frozen 6-repeat baseline (57.1%). Method and caveats are in [EVALUATION.md → Knowledge graph](EVALUATION.md#knowledge-graph-2026-11-08).
+
+| # | Decision | Why | Evidence | To reverse |
+|---|---|---|---|---|
+| D96 | **Retire the knowledge graph: it stays off by default and nothing more is built on it.** The code stays; removing it is a separate decision. The ontology graph wasn't tried here. | Offered as tools, it's almost never called. Put in front of the model, it does no better than a plain search of the question put there the same way, which needs no build. Its one strength, a service's project name, comes from the "Also known as" line every service page carries. | Tools offered: 55.8% (6 repeats, −1.3, noise), called in 1.6% to 2.5% of answers. Graph facts before the first turn: 72.6% (+15.5, better). The question's top 20 search passages in the same place: 70.8% (+13.7, better). Graph over plain: +1.8, noise. On the 32 project-name questions the graph scores 66.7% to plain's 19.8% (+46.9); on the other 114 it's 10.8 points behind. Build: 1,153 documents, 65 minutes, $6.75. | A pre-search plus aliases from the graph beats a pre-search alone, on dev and then test. |
+
+**Results.**
+- Neither the copy nor the graph's tools moved results. Both tools-offered sets are noise against the baseline. One was meant as a graph-off control, but the copy's org kept the graph setting from the run before.
+- Front-loading context is what helped. Plain-first gained on aggregate (+24.1), superseded (+30.4) and chain (+18.3). Its search takes 6.3 seconds at the median.
+- **A side result, unplanned and not investigated:** with records off, the same setup scored 72.1% against 55.7% with records on (+16.4, +10.3 to +22.6). Chain rose from 34.4% to 69.9% and superseded from 36.2% to 71.0%. With records off, terms-first reached 84.7%.
+- **Defects found, not fixed:**
+  - `extract_document` can't store a document over about 250 chunks. It writes every mention in one statement, past asyncpg's limit of 32,767 parameters, and each queue retry reads the whole document again (3 of 1,153 documents; $3.37 of the $10.12 spent).
+  - `records.suggest()` reads documents in no fixed order, so after a graph build a fresh `--records` suggested a 38th schema.
+  - The harness writes a variant's settings into the org, so `--variant default` after `--variant graph` keeps the graph's tools on.
+
+Result files: `eval/results/hard-graph.json`, `hard-graph-repeat.json`, `hard-terms.json`, `hard-plain.json`, `hard-norecords.json`, `hard-norecords-terms.json`, `hard-graph-build.json`. Context arms: `eval/hard/preload/`.
+
+## 2026-11-07 — An empty turn no longer ends a Claude answer
 
 | # | Decision | Why | Evidence | To reverse |
 |---|---|---|---|---|
@@ -42,7 +61,7 @@ The graph was off in every org and empty (0 of 757 documents), so everything was
 | D88 | **A Middleman page is indexed as it renders**: its front-matter title fills the heading, and front matter and other ERB are dropped. Other Markdown is untouched. | Reading `.html.md.erb` (D79) titled 64 GDS Way documents `<%= current_page.data.title %>` and indexed ERB as text. | 66 of 66 template pages in `alphagov/gds-way` get their real title, none keep ERB. `test_a_template_page_is_indexed_as_the_page_it_renders`. | — |
 | D89 | **`list_entities` no longer claims a complete list.** | Its description said it "returns the complete set" while its result said it may miss items, and over-trusting that list is what made a capable model stop searching. | Wording change. | — |
 
-## 2026-11-01 (latest) — A CSV's rows share passages; tables fit the chunk size cap; the reranker reads a list's matching rows
+## 2026-11-01 — A CSV's rows share passages; tables fit the chunk size cap; the reranker reads a list's matching rows
 
 Indexing the 11 sample uploads made 8,673 chunks. 7,932 of them came from one single-column CSV (`gov-uk-domain-names-2026-03-31.csv`), one chunk per row. Each chunk is embedded on its own and, where they're on, gets its own context and graph calls.
 

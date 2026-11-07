@@ -1,0 +1,35 @@
+{
+ "corpus": "hard",
+ "corpus_digest": "317b645b87675d8f",
+ "model": "claude-haiku-5-5",
+ "documents": 1153,
+ "chunks": 6560,
+ "chunks_with_mentions": 6527,
+ "in_flight": 16,
+ "clean_build": {
+  "model_calls": 6560,
+  "seconds": 3933,
+  "usd": 6.75,
+  "input_tokens": 19410000,
+  "output_tokens": 9610000,
+  "stopped_at_max_tokens": 1
+ },
+ "failed": [
+  {"title": "ai playbook for uk government 2025", "chunks": 253},
+  {"title": "The Patent Office Annual Report and Accounts 2025 to 2026 - GOV.UK", "chunks": 278},
+  {"title": "gov uk domain names 2026 03 31", "chunks": 468}
+ ],
+ "failure": "extract_document inserts every mention in one statement; past about 250 chunks that exceeds asyncpg's 32,767 query parameters. The queue retries and re-reads the whole document each time. These three were stored by a scratch batched insert, so the graph covers all 1,153 documents.",
+ "spent_in_total": {
+  "model_calls": 8841,
+  "usd": 10.12,
+  "includes": "the clean build, one wasted retry pass and part of another over the three failing documents, and the 999-call batched store"
+ },
+ "stored": {
+  "entities": 31217,
+  "entities_without_mentions": 5,
+  "relations": 43223,
+  "mentions": 104739,
+  "entities_in_one_document_pct": 90.6
+ }
+}
