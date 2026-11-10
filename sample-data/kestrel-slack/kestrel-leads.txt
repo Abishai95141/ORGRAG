@@ -1,0 +1,7 @@
+# purpose: Kestrel Labs leadership: budget, hiring and customer terms.
+# private: true
+Owen Clarke: Budget for the second half: research compute £180,000. Labelling cut from £30,000 to £10,000, because DREAM-style training removes most of the pair labelling.
+Owen Clarke: Approved: the second GPU node at £21,500 a month from 1 December, on a 12-month commitment.
+Mei Tanaka: Hiring: one more RL engineer for Lens. An offer went out on 3 November, in the £95,000 to £110,000 band.
+Hannah Kowalski: The Fernhill beta is worth £64,000 for the 6 weeks. Their renewal decision is due on 31 January 2027.
+  Owen Clarke: And if the beta misses 8 December, Fernhill can cut the fee by 25%. Keep that between us.

@@ -2,6 +2,10 @@
 
     python3 sample-data/slack/seed.py            # post
     python3 sample-data/slack/seed.py --dry-run  # show what would be posted
+    python3 sample-data/slack/seed.py sample-data/kestrel-slack   # another set
+
+Another set is a folder with its own people.json and channel files; its *-general
+channel is posted first, the rest in name order.
 
 Needs SLACK_SEED_TOKEN (a bot token, xoxb-…) in the environment or in the repo's .env,
 from an app made with seed-app-manifest.json: it creates the channels, then posts each
@@ -23,7 +27,9 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-PEOPLE = json.loads((HERE / "people.json").read_text())
+_FOLDERS = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
+SET = Path(_FOLDERS[0]).resolve() if _FOLDERS else HERE
+PEOPLE = json.loads((SET / "people.json").read_text())
 # Prefixed so the sample never posts into a workspace's real channels (#general).
 ORDER = [
     "harbourline-general",
@@ -138,7 +144,11 @@ class Slack:
 
 def main() -> int:
     dry = "--dry-run" in sys.argv
-    channels = [parse(HERE / f"{name}.txt") for name in ORDER]
+    names = ORDER
+    if SET != HERE:
+        stems = (path.stem for path in SET.glob("*.txt"))
+        names = sorted(stems, key=lambda name: (not name.endswith("-general"), name))
+    channels = [parse(SET / f"{name}.txt") for name in names]
     if dry:
         for c in channels:
             n = sum(1 + len(m["replies"]) for m in c["messages"])

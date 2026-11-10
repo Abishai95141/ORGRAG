@@ -1,0 +1,18 @@
+# purpose: Kestrel Search retrieval: the embedder, the index and the DREAM work.
+Arjun Mehta: Where we start. The production embedder is bge-base-en-v1.5 (768 dimensions), fine-tuned with InfoNCE on our 9,000 labelled ticket–article pairs. On KestrelDocs-QA (1,850 questions over 64,000 help-centre chunks) it scores nDCG@10 0.612.
+Arjun Mehta: DREAM plan. Phase 1: Llama-3.2-1B backbone on their recipe (LoRA rank 32, alpha 64, learning rate 1e-4, 1,500 steps, 16 candidates, top-16 heads). Target: BEIR average 0.4888 ± 0.02. Phase 2: the same recipe on our help-centre corpus, with queries written by Qwen3-14B from our articles.
+  Mei Tanaka: Approved. Arjun owns phase 1, Leo owns the eval harness.
+Arjun Mehta: Head selection on our own probe set (300 KestrelDocs questions) picks a different top 16 from the paper's: only 9 of its 16 heads overlap with theirs, and most are in layers 14 to 19. Phase 2 uses our 16.
+Arjun Mehta: Memory: 16 candidates of 512 tokens plus the target don't fit on one H100 with the 8B judge in bf16 unless we use gradient checkpointing. With it a step takes 3.9 s, so 1,500 steps is about 1.6 hours a run.
+Arjun Mehta: Phase 1 result: BEIR average 0.4712 at 1B (paper 0.4888), within the 0.02 target. RTEB isn't run yet: 3 of its 14 tasks need data licences we don't have.
+  Leo Brandt: Correction: 0.4712 is the step-1,200 checkpoint. The step-1,500 checkpoint gives 0.4791. I updated the eval sheet on 4 August.
+  Arjun Mehta: Thanks. 0.4791 is the number of record for phase 1.
+Arjun Mehta: Phase 2 on KestrelDocs-QA: DREAM-1B 0.587, DREAM-3B 0.634, production bge-base 0.612. So the 3B beats production and the 1B doesn't.
+  Hannah Kowalski: What does the 3B cost at query time compared with bge-base?
+  Arjun Mehta: 41 ms at p50 to embed a query on our T4 inference boxes, against 6 ms for bge-base. And the index would be about 3 times bigger (3,072 dimensions against 768) unless we add a projection.
+  Owen Clarke: 41 ms is fine for search, the index size isn't. Try a 768-dimension projection before we decide.
+Arjun Mehta: With a 768-dimension linear projection trained for 300 extra steps, DREAM-3B scores 0.627 on KestrelDocs-QA (0.634 without it), with the same index size as today.
+Mei Tanaka: Decision, 2 October: Kestrel Search moves to DREAM-3B with the 768-dimension projection, behind a flag on 10% of traffic first. Owner: Arjun. Rollback: switch the flag back to bge-base.
+  Hannah Kowalski: The 10% rollout started on 14 October.
+Arjun Mehta: Update, 28 October: on the 10% arm, click-through on the first result is 38.1% against 35.4% for bge-base, over 21,400 searches. Moving to 50%.
+  Owen Clarke: Hold at 50% until after the holiday freeze. No 100% before 5 January.

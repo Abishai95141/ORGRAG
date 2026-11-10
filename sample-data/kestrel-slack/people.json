@@ -1,0 +1,10 @@
+{
+  "Owen Clarke": {"role": "CTO, Kestrel Labs", "icon": ":briefcase:"},
+  "Mei Tanaka": {"role": "Head of Research", "icon": ":microscope:"},
+  "Arjun Mehta": {"role": "Retrieval Engineer", "icon": ":mag_right:"},
+  "Sofia Marin": {"role": "ML Engineer, agents and RL", "icon": ":robot_face:"},
+  "Nadia Rahman": {"role": "Applied Scientist, multimodal", "icon": ":frame_with_picture:"},
+  "Leo Brandt": {"role": "Evaluation Engineer", "icon": ":straight_ruler:"},
+  "Daniel Osei": {"role": "Infrastructure Lead", "icon": ":desktop_computer:"},
+  "Hannah Kowalski": {"role": "Product Manager, Kestrel Search and Lens", "icon": ":dart:"}
+}

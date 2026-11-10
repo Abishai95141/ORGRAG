@@ -1,0 +1,16 @@
+# purpose: Weekly research reading group, Thursdays 16:00. Presenter posts notes here afterwards.
+Mei Tanaka: 9 July: "DREAM: Dense Retrieval Embeddings via Autoregressive Modeling" (HKUST, arXiv 2606.24667). Arjun presents. Why this one: it trains a retriever from a frozen LLM's next-token loss with no labelled positives or negatives, and labelling is our bottleneck. We paid £14,200 for 9,000 labelled ticket–article pairs last year.
+  Arjun Mehta: I'll take it. I'll focus on how the scores get into the attention heads, and whether that could work on our help-centre corpus.
+Arjun Mehta: DREAM notes, short version. The retriever's scores reweight 16 query-focused heads in a frozen Llama-3.1-8B-Instruct while it predicts a target passage, and only the retriever gets gradients. The number I care about: at 1B, BEIR 0.4888 against Revela's 0.4075. At inference it's a plain embedding model, so the LLM is a training cost only.
+  Leo Brandt: Their headline comparison is against other LLM-supervised methods. Against embedders you can download, their 8B roughly ties E5-mistral on BEIR and is well below Qwen3-Embedding-8B. So it's a better training signal, not yet a better embedder than what's on the shelf.
+  Mei Tanaka: Fair. For us the question is whether it beats our own contrastive fine-tune on our own data, not a leaderboard.
+  Nadia Rahman: Their training data is Wikipedia NQ chunks with queries written by Qwen3-14B. Our support tickets look nothing like Wikipedia, and that's the risk.
+  Arjun Mehta: Agreed, which is why phase 2 of the plan trains on our corpus, not theirs.
+Mei Tanaka: Takeaways from 9 July. (1) Reproduce at 1B on BEIR first and check we land within 0.02 of the paper. (2) Then train on our own corpus. (3) Keep the judge frozen: their ablation says updating it with LoRA was worse in all four comparisons. Arjun owns the reproduction.
+Mei Tanaka: 23 July: "ProMSA: Progressive Multimodal Search Agents for Knowledge-Based Visual Question Answering" (OPPO, Tsinghua, NTU; arXiv 2606.27974). Nadia presents. It matters for Lens: the agent chooses image search, text search or stop under a call budget.
+  Nadia Rahman: The result that matters for Lens is the tools ablation. Text search alone gets 27.6 on E-VQA and image search alone 21.4 on InfoSeek. With both they get 52.6 and 53.4. Fernhill's questions mix "what is this jacket" with "is it waterproof", so we need both tools too.
+  Sofia Marin: The RL part interests me most. TN-GSPO normalises each update by the number of tool calls as well as by length. I want to run it against plain GRPO on our own trajectories.
+  Daniel Osei: They trained on 8× A800. We have one 8× H100 node shared by everyone until December, so book early.
+Nadia Rahman: One thing ProMSA doesn't address is a latency target. Their agent takes 1.8 s a sample against 1.2 s for EchoSight. Fernhill wants under 3 s at p95 end to end, including summarising the pages, so we can't copy their Qwen3-VL-8B summariser as it is.
+Mei Tanaka: No session on 6 August (summer break). We resume on 20 August with late-interaction retrieval: Leo picks the paper.
+  Leo Brandt: I'll pick and post it by 13 August.

@@ -74,6 +74,18 @@ it; with a different app for Strata, type `/invite @Strata` there first.
 To test permissions, use two Slack sources: the public channels into a collection the
 whole org sees, and `#harbourline-leads` into a restricted collection (question 22).
 
+A second set, `kestrel-slack/`, goes with two arXiv papers you upload yourself:
+2606.24667 (DREAM, dense retrievers trained from a frozen LLM's next-token loss) and
+2606.27974 (ProMSA, a multimodal search agent). A small AI lab, Kestrel Labs, plans
+around them: reproduces DREAM, rolls a DREAM embedder out to its search product, and
+builds a visual search agent on ProMSA's recipe. The Slack has its own numbers, dates and
+owners, and refers to the papers' results. Some numbers are corrected later in a thread
+or another channel, and `#kestrel-leads` is private. 7 channels, 76 messages:
+
+```bash
+python3 sample-data/slack/seed.py sample-data/kestrel-slack
+```
+
 ## 7. Notion
 
 1. At [notion.so/my-integrations](https://www.notion.so/my-integrations), create an

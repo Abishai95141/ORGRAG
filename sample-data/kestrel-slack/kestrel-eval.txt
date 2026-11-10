@@ -1,0 +1,8 @@
+# purpose: Evaluation: the harness, benchmarks and the eval sheet. A number counts once it's in the sheet.
+Leo Brandt: The harness covers BEIR (the 9 tasks DREAM averages over), KestrelDocs-QA, and the 600-question Lens test set. Results go in the eval sheet; numbers posted in Slack are drafts until they're there.
+Leo Brandt: About RTEB: 3 of its 14 tasks need data licences we don't have, so our RTEB numbers are 11-task averages. They can't be compared with the paper's.
+Leo Brandt: Scoring for Lens. ProMSA uses BEM for E-VQA. We use an exact product-ID match for "what is this" questions and an LLM judge (Claude Haiku) for attribute questions. Nadia spot-checked 100 judged answers: the judge agreed with her on 94.
+Leo Brandt: KestrelDocs-QA v2 from 1 October: 1,850 questions became 2,400 (550 ticket questions from Q3 added). Scores on v1 and v2 can't be compared. Production bge-base scores 0.598 on v2.
+  Arjun Mehta: So the DREAM-3B numbers behind the 2 October decision were on v1?
+  Leo Brandt: Yes. On v2, DREAM-3B with the projection scores 0.619 against bge-base's 0.598, so the gap holds.
+Leo Brandt: Holdout rule from 1 November: 300 KestrelDocs-QA questions are kept back and only run once per release candidate. Nobody tunes on them.

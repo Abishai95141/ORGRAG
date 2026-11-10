@@ -1,0 +1,18 @@
+# purpose: Kestrel Lens: the visual search agent for Fernhill Outdoor's catalogue.
+Sofia Marin: Lens agent v0: Qwen2.5-VL-7B with two tools, image_search (SigLIP over Fernhill's 48,000 photos) and text_search (bge-base over the 3,200 product pages), plus stop. Like ProMSA, each call passes the products already seen as an exclusion list.
+  Nadia Rahman: Why SigLIP rather than EVA-CLIP like the paper?
+  Sofia Marin: Licence and speed. SigLIP-so400m indexed the 48,000 photos in 22 minutes. We haven't benchmarked EVA-CLIP.
+Sofia Marin: Budget. ProMSA found 3 image and 3 text calls best on E-VQA (52.6); 4 and 4 only helped on InfoSeek (54.3). We're using 2 and 2, because of Fernhill's 3 s p95.
+  Hannah Kowalski: What's the measured p95 with 2 and 2?
+  Sofia Marin: 2.6 s at p95 on 500 test questions. That includes summarising pages with Qwen2.5-VL-3B instead of an 8B summariser.
+Sofia Marin: Cold start: 1,200 rejection-sampled trajectories from 5,000 Fernhill questions, keeping at most one valid trajectory per question as the paper does. On our 600-question test set accuracy went from 41.0% (no training) to 55.3%.
+Sofia Marin: RL comparison, same 8,000 questions, 2 epochs each: GRPO 61.2%, GSPO 63.0%, TN-GSPO 64.8%. Clipping 0.2 low and 0.28 high as in the paper, tool-cost penalty 0.5.
+  Mei Tanaka: TN-GSPO's lead over GSPO here (1.8 points) is smaller than in the paper (3.3 on E-VQA). Is it within noise?
+  Leo Brandt: With 600 questions it's about ±2 points at 95%, so we can't call TN-GSPO better than GSPO yet. Both beat GRPO.
+  Sofia Marin: Running 3 seeds of each. Results by 20 November.
+Nadia Rahman: I went through 100 wrong answers: 46 are colour variants (the same jacket in another colour, with its own product page), 31 are a wrong attribute taken from the summary, 23 are other. The exclusion list doesn't help with colour variants, because they really are different products.
+  Sofia Marin: Then let's group colour variants under one parent product in the index, so image search returns the parent.
+  Nadia Rahman: Grouping done on 3 November: 48,000 photos now map to 2,150 parent products. Colour-variant errors on the same 100 questions fell from 46 to 9.
+Sofia Marin: Decision, 6 November: the Lens beta ships with the TN-GSPO policy, a 2 and 2 budget and colour-variant grouping. Sofia owns the beta. Ship date stays 15 December.
+  Hannah Kowalski: Change: Fernhill asked on 7 November to have the beta before their winter sale, so the ship date is now 8 December.
+  Sofia Marin: Understood, 8 December. That means the 3-seed results must be in by 20 November, as planned, or we ship GSPO.

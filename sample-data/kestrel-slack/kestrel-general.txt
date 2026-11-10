@@ -1,0 +1,7 @@
+# purpose: Kestrel Labs: company-wide announcements.
+Owen Clarke: Priorities for the second half of 2026. One: stop paying for labelled pairs to fine-tune our search embedder, and find a training signal that doesn't need them. Two: ship the Kestrel Lens beta to Fernhill Outdoor by 15 December 2026.
+Hannah Kowalski: Fernhill Outdoor signed the Lens pilot on 1 July: 48,000 product photos, 3,200 product pages, a 6-week beta. Their shoppers photograph a jacket or a tent and ask about it.
+  Owen Clarke: Great news. Hannah is the single point of contact for Fernhill. Everything they ask for goes through her.
+Mei Tanaka: The research reading group moves to Thursdays at 16:00 from 9 July. The schedule and notes are in #kestrel-reading-group.
+Daniel Osei: The second GPU node, kestrel-h2 (8× H200), goes live on 1 December. Until then everything runs on kestrel-h1, booked in #kestrel-gpu-cluster.
+Owen Clarke: Holiday freeze: no production deploys from 18 December to 5 January. Lens is the only exception, and only for fixes Fernhill reports.
