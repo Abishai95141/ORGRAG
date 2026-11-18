@@ -180,6 +180,8 @@ One Postgres is the vector index, the keyword index, the job queue and the store
 From the evaluation set of 150 questions over two organizations (single facts, multi-hop,
 tables, lists, cross-org vocabulary, superseded policies and unanswerable questions).
 Method and every run are in [`docs/EVALUATION.md`](docs/EVALUATION.md).
+[`docs/EVIDENCE.md`](docs/EVIDENCE.md) recomputes each figure below from the stored
+per-question rows (`backend/eval/verify_claims.py`).
 
 | | |
 |---|---|
@@ -188,7 +190,7 @@ Method and every run are in [`docs/EVALUATION.md`](docs/EVALUATION.md).
 | Citation precision | **0.98** |
 | Retrieval recall@5, reranked | **0.94** |
 | Mean time to answer | **5.4 s** |
-| Cost per answer | **about $0.001** |
+| Cost per answer (mean; median $0.0010) | **$0.0011** |
 | End-to-end scenario: two orgs, every endpoint, real models | **509 / 509 checks** |
 
 ## Quickstart
